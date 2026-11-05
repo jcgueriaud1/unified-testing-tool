@@ -15,3 +15,7 @@ _Avoid_: Engine, backend, driver, runner
 **Escape Hatch**:
 A deliberate way out of the Unified API to call a specific Testing Tool directly, for behaviour the tools don't share.
 _Avoid_: Workaround, native access
+
+**Core Set**:
+The Vaadin components the Unified API spec designs in full, one per interaction pattern; every other component follows a documented pattern derived from them.
+_Avoid_: Supported components, MVP components
