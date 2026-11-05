@@ -19,3 +19,7 @@ _Avoid_: Workaround, native access
 **Core Set**:
 The Vaadin components the Unified API spec designs in full, one per interaction pattern; every other component follows a documented pattern derived from them.
 _Avoid_: Supported components, MVP components
+
+**Auto-Wait**:
+The Unified API's guarantee that an action waits for its component to be usable before acting and for the server round-trip to finish after, on every Testing Tool.
+_Avoid_: Implicit wait, waitForVaadin
