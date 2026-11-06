@@ -31,3 +31,7 @@ _Avoid_: Vaadin test, browser test, integration test
 **Capability**:
 Something a Unified UI Test can require from the Testing Tool running it, such as a real browser; a test whose Capability is missing is skipped.
 _Avoid_: Feature flag, tag
+
+**Wrapper**:
+The Unified API's object for one component of a given type, named with the `Unified` prefix, which re-finds its component on every use.
+_Avoid_: Element, tester, locator, page object
