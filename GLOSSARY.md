@@ -39,3 +39,7 @@ _Avoid_: Element, tester, locator, page object
 **Unified Page**:
 The Unified API's view of one browser tab or window showing the application: what a Unified UI Test receives, navigates and searches in.
 _Avoid_: UI, window, driver, browser
+
+**Unified Element**:
+The portable, low-level handle to one component (properties, attributes, text, user actions) that every Testing Tool supports and on which Wrappers are written.
+_Avoid_: Raw element, WebElement, locator
