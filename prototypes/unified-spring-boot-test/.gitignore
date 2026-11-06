@@ -1,0 +1,7 @@
+target/
+src/main/frontend/
+node_modules/
+package*.json
+vite.*.ts
+tsconfig.json
+types.d.ts
