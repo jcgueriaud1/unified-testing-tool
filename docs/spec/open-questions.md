@@ -7,17 +7,21 @@ What the spec does not decide yet. Each item is either an open ticket on the [ma
 | Question | Ticket |
 |---|---|
 | Grid wrapper | [What does the Grid wrapper look like?](https://github.com/jcgueriaud1/unified-testing-tool/issues/28) |
-| Modules and artifacts | [What are the Unified API's modules and artifacts?](https://github.com/jcgueriaud1/unified-testing-tool/issues/29) |
 
 ## Not yet specified
 
 | Topic | Question |
 |---|---|
-| Licensing | TestBench is commercial: how are the Unified API and its adapters licensed? (depends on packaging) |
 | Migration from TestBench | Guidance or tooling for moving existing tests |
 | Multiple users and windows | Browserless `newUser().newWindow()` vs browser contexts and pages: does `UnifiedPage` support several in one test? |
 | Quarkus | `@QuarkusTest` for browsers, `QuarkusBrowserlessTest` for Browserless; likely the `@UnifiedSpringBootTest` pattern |
 | Authentication | Browserless `@WithMockUser` vs a real login in browsers: running a test as a given user everywhere |
+
+## To verify during implementation
+
+| Item | Detail |
+|---|---|
+| Unused TestBench on the classpath | Confirm a Browserless or Playwright run with `unified-test-selenium` present never triggers TestBench's license check ([10-packaging.md](10-packaging.md)) |
 
 ## Wording chosen while writing the spec (to confirm)
 
