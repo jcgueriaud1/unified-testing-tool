@@ -1,10 +1,12 @@
-// PROTOTYPE V3: "type token" (closest to "find(TextField)" from #7, and to TestBench's $(X.class)).
-// A typed constant per component selects the query type, so filters stay per type:
-//   ui.find(TEXT_FIELD).withLabel("Name").single()
-// + open: a custom component ships its own QueryType constant; no change to the entry object (#18).
-// + one find() method, IDE completion after the token.
-// - needs a static import of the token constants; a plain TextField.class can't work, because
-//   Java erases Class<T> overloads, so the token type carries the query type instead.
+// PROTOTYPE V3 (chosen): class-literal lookups with per-type queries.
+//   ui.find(UnifiedTextField.class).withLabel("Name").single()
+// Each wrapper type names its own query type (Findable<Q>), so Java infers the query from the
+// class literal and filters stay per type (ADR 0001).
+// + open: a custom component's wrapper just declares `extends Findable<MyQuery>` (#18).
+// + reads like TestBench's $(TextFieldElement.class); no constants to static-import.
+// Wrappers use the Unified prefix: TextField, TextFieldElement (Dramafinder AND TestBench),
+// TextFieldTester and TextFieldLocator (Browserless) are all taken, and unwrap() can bring them
+// into the same file.
 package proto.v3;
 
 import java.util.List;
@@ -19,17 +21,11 @@ import proto.common.Wrapper;
 public final class Api {
     private Api() {}
 
-    /** Selects which query (and therefore which filters and wrapper) find() returns. */
-    public interface QueryType<Q> {}
-
-    public static final QueryType<TextFieldQuery> TEXT_FIELD = null;
-    public static final QueryType<ButtonQuery> BUTTON = null;
-    public static final QueryType<NotificationQuery> NOTIFICATION = null;
-    public static final QueryType<DialogQuery> DIALOG = null;
-    public static final QueryType<ContainerQuery> CONTAINER = null;
+    /** Implemented by every wrapper type; Q is the query find() returns for it. */
+    public interface Findable<Q> {}
 
     public interface Scope {
-        <Q extends Query<?, Q>> Q find(QueryType<Q> type);
+        <Q> Q find(Class<? extends Findable<Q>> type);
     }
 
     public interface UI extends Scope {
@@ -39,26 +35,32 @@ public final class Api {
     }
 
     public interface Query<W, SELF> extends CommonFilters<SELF> {
-        W single();
+        W single();            // lazy: exactly one match, checked when first used
         List<W> all();
         boolean exists();
     }
 
-    public interface TextFieldQuery extends Query<TextField, TextFieldQuery>,
+    // --- wrappers ---
+
+    public interface UnifiedTextField extends Components.TextField, Findable<TextFieldQuery> {}
+    public interface UnifiedButton extends Components.Button, Findable<ButtonQuery> {}
+    public interface UnifiedNotification extends Components.Notification, Findable<NotificationQuery> {}
+    public interface UnifiedDialog extends Components.Dialog, Scope, Findable<DialogQuery> {}
+    public interface UnifiedContainer extends Wrapper, Scope, Findable<ContainerQuery> {}
+
+    // --- per-type queries ---
+
+    public interface TextFieldQuery extends Query<UnifiedTextField, TextFieldQuery>,
             LabelFilter<TextFieldQuery>, PlaceholderFilter<TextFieldQuery> {}
 
-    public interface ButtonQuery extends Query<Components.Button, ButtonQuery>, TextFilter<ButtonQuery> {}
+    public interface ButtonQuery extends Query<UnifiedButton, ButtonQuery>, TextFilter<ButtonQuery> {}
 
-    public interface NotificationQuery extends Query<Components.Notification, NotificationQuery>,
+    public interface NotificationQuery extends Query<UnifiedNotification, NotificationQuery>,
             TextFilter<NotificationQuery> {}
 
-    public interface DialogQuery extends Query<Dialog, DialogQuery> {
+    public interface DialogQuery extends Query<UnifiedDialog, DialogQuery> {
         DialogQuery withHeaderTitle(String title);
     }
 
-    public interface ContainerQuery extends Query<Container, ContainerQuery> {}
-
-    public interface TextField extends Components.TextField {}
-    public interface Dialog extends Components.Dialog, Scope {}
-    public interface Container extends Wrapper, Scope {}
+    public interface ContainerQuery extends Query<UnifiedContainer, ContainerQuery> {}
 }
