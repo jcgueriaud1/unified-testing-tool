@@ -23,3 +23,7 @@ _Avoid_: Supported components, MVP components
 **Auto-Wait**:
 The Unified API's guarantee that an action waits for its component to be usable before acting and for the server round-trip to finish after, on every Testing Tool.
 _Avoid_: Implicit wait, waitForVaadin
+
+**Unified UI Test**:
+A test written only against the Unified API, so it runs on whichever Testing Tool the test run selects.
+_Avoid_: Vaadin test, browser test, integration test
