@@ -5,6 +5,7 @@ import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 
@@ -20,6 +21,9 @@ public final class UnifiedAssertions {
     public static ButtonAssert assertThat(UnifiedButton button) { throw new UnsupportedOperationException("sketch"); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { throw new UnsupportedOperationException("sketch"); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { throw new UnsupportedOperationException("sketch"); }
+    public static GridAssert assertThat(UnifiedGrid grid) { throw new UnsupportedOperationException("sketch"); }
+    public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { throw new UnsupportedOperationException("sketch"); }
+    public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { throw new UnsupportedOperationException("sketch"); }
     public static WrapperAssert<?> assertThat(UnifiedWrapper wrapper) { throw new UnsupportedOperationException("sketch"); }
 
     public interface PageAssert {
@@ -61,5 +65,23 @@ public final class UnifiedAssertions {
         DialogAssert isOpen();
         DialogAssert isClosed();
         DialogAssert hasHeaderTitle(String expected);
+    }
+
+    public interface GridAssert extends WrapperAssert<GridAssert> {
+        GridAssert hasRowCount(int expected);
+        GridAssert isEmpty();
+    }
+
+    public interface GridRowAssert extends WrapperAssert<GridRowAssert> {
+        GridRowAssert isSelected();
+        GridRowAssert isNotSelected();
+        GridRowAssert hasCellText(String columnHeader, String expected);
+        GridRowAssert hasDetailsOpen();
+    }
+
+    public interface GridColumnAssert extends WrapperAssert<GridColumnAssert> {
+        GridColumnAssert hasCellTexts(String... expected);
+        GridColumnAssert isSortedAscending();
+        GridColumnAssert isSortedDescending();
     }
 }

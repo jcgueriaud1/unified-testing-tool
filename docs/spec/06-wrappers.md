@@ -15,7 +15,7 @@ One component per interaction pattern. Every other component follows the same pa
 | Multi selection | `UnifiedMultiSelectComboBox` | pattern only |
 | Action | `UnifiedButton` | in the sketch |
 | Overlays | `UnifiedDialog`, `UnifiedNotification` | in the sketch |
-| Data | `UnifiedGrid` | open: [07-grid.md](07-grid.md) |
+| Data | `UnifiedGrid` | in the sketch: [07-grid.md](07-grid.md) |
 | Navigation | `UnifiedTabSheet` | pattern only |
 | (layouts, for scoping) | `UnifiedContainer` | in the sketch |
 

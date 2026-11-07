@@ -36,6 +36,18 @@ How each Unified API call maps onto the three Testing Tools today. "Adapter" mar
 | `assertThat(field).hasValue("x")` | retry with `roundTrip()` + signals (adapter) | `assertValue` | retry loop (adapter) |
 | `page.waitUntil(…)` | poll + flush (adapter) | poll | `waitUntil` |
 
+## Grid
+
+| Unified API | Browserless | Dramafinder | TestBench |
+|---|---|---|---|
+| `rows().withCellText(col, text)` | scan `getCellText(row, col)` | `findRowIndexesWithColumnText` | scan `getCell(row, col).getText()` |
+| `row.getCellText(col)` | `getCellText(row, col)` | `getCell(..).getText()` | `getCell(row, col).getText()` |
+| `row.cell(col).find(..)` | `getCellComponent(row, col)` | cell content locator | cell element `$(..)` |
+| `row.select()` | `select(row)` | row checkbox / click | `select(row)` |
+| `column.sort(dir)` | `sortByColumn(col, dir)` | header sorter click | header sorter click |
+| row access, lazy data | in memory | `waitForGridToStopLoading` | `scrollToRow` |
+| `getRowCount()` | `size()` | `getTotalRowCount()` | `getRowCount()` |
+
 ## Escape Hatch
 
 | `unwrap(…)` | Browserless | Dramafinder | TestBench |

@@ -6,12 +6,13 @@ What the spec does not decide yet. Each item is either an open ticket on the [ma
 
 | Question | Ticket |
 |---|---|
-| Grid wrapper | [What does the Grid wrapper look like?](https://github.com/jcgueriaud1/unified-testing-tool/issues/28) |
+| (none) | |
 
 ## Not yet specified
 
 | Topic | Question |
 |---|---|
+| Grid extras | TreeGrid, column reordering, Grid context menu, Grid Pro editing, drag and drop ([07-grid.md](07-grid.md)) |
 | Migration from TestBench | Guidance or tooling for moving existing tests |
 | Multiple users and windows | Browserless `newUser().newWindow()` vs browser contexts and pages: does `UnifiedPage` support several in one test? |
 | Quarkus | `@QuarkusTest` for browsers, `QuarkusBrowserlessTest` for Browserless; likely the `@UnifiedSpringBootTest` pattern |
@@ -29,4 +30,4 @@ What the spec does not decide yet. Each item is either an open ticket on the [ma
 |---|---|---|
 | Base URL setting | `vaadin.testing.base-url` | Name not decided in a ticket |
 | Timeout setting | `vaadin.testing.timeout` | Name not decided in a ticket |
-| Core Set wrappers beyond Button, TextField, Dialog, Notification, Container | "pattern only" | Their methods follow the same pattern; not sketched |
+| Core Set wrappers beyond Button, TextField, Dialog, Notification, Grid, Container | "pattern only" | Their methods follow the same pattern; not sketched |

@@ -75,7 +75,7 @@ Java 21, JUnit 6 (Jupiter), Vaadin 25, Spring Boot 4 for the Spring integration.
 | 4 | [04-locating.md](04-locating.md) | Finding components |
 | 5 | [05-waiting.md](05-waiting.md) | Auto-Wait, retrying assertions, timeouts |
 | 6 | [06-wrappers.md](06-wrappers.md) | Core Set, wrapper shape, Unified Element, add-ons |
-| 7 | [07-grid.md](07-grid.md) | Grid (open) |
+| 7 | [07-grid.md](07-grid.md) | Grid: rows, columns, cells, selection, sorting, details |
 | 8 | [08-escape-hatch.md](08-escape-hatch.md) | Leaving the Unified API |
 | 9 | [09-capabilities.md](09-capabilities.md) | Capabilities and limitations per Testing Tool |
 | 10 | [10-packaging.md](10-packaging.md) | Modules, artifacts, versioning, licenses |
