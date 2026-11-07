@@ -15,11 +15,11 @@ Where a Testing Tool lacks something the Unified API needs, its adapter fills th
 
 ## TestBench
 
-[TestBench: close the gaps with the Unified API](https://github.com/jcgueriaud1/unified-testing-tool/issues/21): no element-state wait before actions, no retrying assertions, no accessible-name lookup, filters not per type, test id only from 25.4, elements can go stale, deprecated `first()` in docs, no route-class navigation, no documented Spring Boot test integration.
+[TestBench: close the gaps with the Unified API](https://github.com/jcgueriaud1/unified-testing-tool/issues/21): no element-state wait before actions, no retrying assertions, no accessible-name lookup, filters not per type, test id only from 25.4, elements can go stale, deprecated `first()` in docs, no route-class navigation, no documented Spring Boot test integration, Grid without sorting or row details API.
 
 ## Browserless Test
 
-[Browserless Test: close the gaps with the Unified API](https://github.com/jcgueriaud1/unified-testing-tool/issues/22): no accessible-name filter, few type-specific filters, background work needs manual flushing, no retrying assertions, no generated typed locators for custom testers.
+[Browserless Test: close the gaps with the Unified API](https://github.com/jcgueriaud1/unified-testing-tool/issues/22): no accessible-name filter, few type-specific filters, background work needs manual flushing, no retrying assertions, no generated typed locators for custom testers, Grid without row details API or row lookup by cell text.
 
 ## Outside the Testing Tools
 
