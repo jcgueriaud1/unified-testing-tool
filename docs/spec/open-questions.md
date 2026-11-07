@@ -6,17 +6,17 @@ What the spec does not decide yet. Each item is either an open ticket on the [ma
 
 | Question | Ticket |
 |---|---|
-| (none) | |
+| Authentication, several users and windows | [How does a test run as a given user, and drive several users or windows?](https://github.com/jcgueriaud1/unified-testing-tool/issues/34) |
 
-## Not yet specified
+## Left to implementation
 
-| Topic | Question |
+Deliberately not decided in this spec.
+
+| Topic | Guidance |
 |---|---|
-| Grid extras | TreeGrid, column reordering, Grid context menu, Grid Pro editing, drag and drop ([07-grid.md](07-grid.md)) |
-| Migration from TestBench | Guidance or tooling for moving existing tests |
-| Multiple users and windows | Browserless `newUser().newWindow()` vs browser contexts and pages: does `UnifiedPage` support several in one test? |
-| Quarkus | `@QuarkusTest` for browsers, `QuarkusBrowserlessTest` for Browserless; likely the `@UnifiedSpringBootTest` pattern |
-| Authentication | Browserless `@WithMockUser` vs a real login in browsers: running a test as a given user everywhere |
+| Grid extras | TreeGrid, column reordering, Grid context menu, Grid Pro editing, drag and drop: same pattern as [07-grid.md](07-grid.md) |
+| Quarkus | Same pattern as `@UnifiedSpringBootTest`: `@QuarkusTest` with its test port for browser Testing Tools, `QuarkusBrowserlessTest` for Browserless |
+| Migration from TestBench | Guidance or tooling, built from [appendix-mapping.md](appendix-mapping.md) |
 
 ## To verify during implementation
 
