@@ -5,7 +5,10 @@ import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.ComponentQuery;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.router.Location;
+import com.vaadin.flow.router.NavigationTrigger;
+import com.vaadin.flow.router.PreserveOnRefresh;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.AdapterSession;
@@ -104,8 +107,18 @@ final class BrowserlessSession implements AdapterSession {
 
     @Override
     public void reload() {
-        throw new UnsupportedOperationException(
-                "page.reload() is not implemented on Browserless yet (Unified API first version)");
+        UI ui = window.getUI();
+        Location location = activeLocation();
+        if (location == null) {
+            return;
+        }
+        boolean preserved = ui.getInternals().getActiveRouterTargetsChain().stream()
+                .anyMatch(target -> target.getClass().isAnnotationPresent(PreserveOnRefresh.class));
+        if (!preserved) {
+            // a browser creates the views again; with @PreserveOnRefresh it keeps them, as here
+            ui.getInternals().getRouter().navigate(ui, location, NavigationTrigger.REFRESH, null, true, true);
+        }
+        window.roundTrip();
     }
 
     @Override
@@ -143,8 +156,8 @@ final class BrowserlessSession implements AdapterSession {
 
     @Override
     public void pressKey(String key) {
-        throw new UnsupportedOperationException(
-                "page.pressKey is not implemented on Browserless yet (Unified API first version)");
+        List<Dialog> open = window.find(Dialog.class).all().stream().filter(Dialog::isOpened).toList();
+        BrowserlessElement.pressKey(this, BrowserlessKeys.pageTarget(window.getUI(), open), key);
     }
 
     @Override
