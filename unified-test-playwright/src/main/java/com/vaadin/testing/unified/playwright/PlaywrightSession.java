@@ -4,9 +4,6 @@ import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.AdapterSession;
@@ -20,27 +17,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.RouteNavigation;
-import org.vaadin.addons.dramafinder.element.ButtonElement;
-import org.vaadin.addons.dramafinder.element.TextFieldElement;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
 import org.vaadin.addons.dramafinder.element.query.ElementQueries;
 
 /** One test on Playwright: one browser context and page. */
 final class PlaywrightSession implements AdapterSession {
-
-    /** Core Set components with a Dramafinder element: found through Dramafinder's query builder. */
-    private static final Map<Class<? extends Component>, Class<? extends VaadinElement>> DRAMAFINDER = Map.of(
-            TextField.class, TextFieldElement.class,
-            Button.class, ButtonElement.class);
-
-    /** Components whose visible part is not their own tag. */
-    private static final Map<Class<? extends Component>, String> TAG_OVERRIDES = Map.of(
-            Notification.class, "vaadin-notification-card[slot]");
 
     private final BrowserContext context;
     private final Page page;
@@ -60,12 +45,12 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public List<UnifiedElement> find(QuerySpec spec) {
-        Class<? extends VaadinElement> dramafinderType = DRAMAFINDER.get(spec.componentType());
+        PlaywrightComponents.Support support = PlaywrightComponents.of(spec.componentType());
         Locator scope = spec.parent() == null ? null : ((PlaywrightElement) spec.parent()).locator();
-        if (dramafinderType != null) {
-            return findWithDramafinder(dramafinderType, scope, spec.filters());
+        if (support.dramafinderElement() != null) {
+            return findWithDramafinder(support, scope, spec.filters());
         }
-        String tag = TAG_OVERRIDES.getOrDefault(spec.componentType(), spec.tag());
+        String tag = spec.tag() == null ? null : support.selector(spec.tag());
         if (tag == null) {
             throw new IllegalArgumentException(spec.componentType().getName()
                     + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
@@ -73,7 +58,7 @@ final class PlaywrightSession implements AdapterSession {
         Locator candidates = scope == null ? page.locator(tag) : scope.locator(tag);
         List<UnifiedElement> result = new ArrayList<>();
         for (Locator locator : candidates.all()) {
-            PlaywrightElement element = new PlaywrightElement(this, locator, null);
+            PlaywrightElement element = new PlaywrightElement(this, locator, null, support);
             if (spec.filters().stream().allMatch(f -> element.matches(f))) {
                 result.add(element);
             }
@@ -81,8 +66,9 @@ final class PlaywrightSession implements AdapterSession {
         return result;
     }
 
-    private List<UnifiedElement> findWithDramafinder(Class<? extends VaadinElement> type, Locator scope,
+    private List<UnifiedElement> findWithDramafinder(PlaywrightComponents.Support support, Locator scope,
             List<Filter> filters) {
+        Class<? extends VaadinElement> type = support.dramafinderElement();
         Object query = scope == null
                 ? invokeStatic("find", new Class<?>[] { Page.class, Class.class }, page, type)
                 : invokeStatic("find", new Class<?>[] { Locator.class, Class.class }, scope, type);
@@ -108,7 +94,8 @@ final class PlaywrightSession implements AdapterSession {
         }
         @SuppressWarnings("unchecked")
         List<VaadinElement> found = (List<VaadinElement>) invoke(query, "all", new Class<?>[0]);
-        return found.stream().map(e -> (UnifiedElement) new PlaywrightElement(this, e.getLocator(), e)).toList();
+        return found.stream()
+                .map(e -> (UnifiedElement) new PlaywrightElement(this, e.getLocator(), e, support)).toList();
     }
 
     private static Object refine(Object query, java.util.function.UnaryOperator<Locator> refinement) {

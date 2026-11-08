@@ -7,7 +7,6 @@ import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.Focusable;
 import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.testing.unified.UnifiedElement;
 import java.lang.reflect.InvocationTargetException;
@@ -23,10 +22,12 @@ final class BrowserlessElement implements UnifiedElement {
 
     private final BrowserlessSession session;
     private final Component component;
+    private final BrowserlessComponents.Support support;
 
     BrowserlessElement(BrowserlessSession session, Component component) {
         this.session = session;
         this.component = component;
+        this.support = BrowserlessComponents.of(component.getClass());
     }
 
     Component component() {
@@ -50,10 +51,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public String getText() {
-        if (component instanceof Notification) {
-            return (String) invokeTester("getText");
-        }
-        return element().getTextRecursively();
+        return support.text(component, session.window()).orElseGet(() -> element().getTextRecursively());
     }
 
     @Override
@@ -77,8 +75,9 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public Boolean getPropertyBoolean(String name) {
-        if ("opened".equals(name) && component instanceof Notification notification) {
-            return notification.isOpened();
+        Optional<Boolean> special = support.booleanProperty(component, name);
+        if (special.isPresent()) {
+            return special.get();
         }
         if (element().hasProperty(name)) {
             return element().getProperty(name, false);
@@ -101,8 +100,9 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public boolean isVisible() {
-        if (component instanceof Notification notification) {
-            return notification.isOpened();
+        Optional<Boolean> special = support.visible(component);
+        if (special.isPresent()) {
+            return special.get();
         }
         if (!component.isAttached()) {
             return false;

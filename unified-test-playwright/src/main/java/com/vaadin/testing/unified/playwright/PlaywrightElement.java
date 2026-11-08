@@ -7,7 +7,6 @@ import com.vaadin.testing.unified.spi.Filter;
 import java.util.List;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
-import org.vaadin.addons.dramafinder.element.NotificationElement;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
 import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
 
@@ -18,16 +17,17 @@ import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
  */
 final class PlaywrightElement implements UnifiedElement {
 
-    private static final String NOTIFICATION_CARD = "vaadin-notification-card";
-
     private final PlaywrightSession session;
     private final Locator locator;
     private final VaadinElement dramafinder;
+    private final PlaywrightComponents.Support support;
 
-    PlaywrightElement(PlaywrightSession session, Locator locator, VaadinElement dramafinder) {
+    PlaywrightElement(PlaywrightSession session, Locator locator, VaadinElement dramafinder,
+            PlaywrightComponents.Support support) {
         this.session = session;
         this.locator = locator;
         this.dramafinder = dramafinder;
+        this.support = support;
     }
 
     Locator locator() {
@@ -36,10 +36,6 @@ final class PlaywrightElement implements UnifiedElement {
 
     private Page page() {
         return session.page();
-    }
-
-    private boolean isNotification() {
-        return NOTIFICATION_CARD.equals(getTag());
     }
 
     // ---------------------------------------------------------------- reading
@@ -51,11 +47,12 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public String getText() {
+        Optional<String> special = support.text(locator);
+        if (special.isPresent()) {
+            return special.get().strip();
+        }
         if (dramafinder != null) {
             return dramafinder.getText().strip();
-        }
-        if (isNotification()) {
-            return new NotificationElement(locator).getText().strip();
         }
         return locator.innerText().strip();
     }
@@ -80,8 +77,9 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public Boolean getPropertyBoolean(String name) {
-        if ("opened".equals(name) && isNotification()) {
-            return locator.isVisible();
+        Optional<Boolean> special = support.booleanProperty(locator, name);
+        if (special.isPresent()) {
+            return special.get();
         }
         return Boolean.TRUE.equals(locator.evaluate("(e, n) => !!e[n]", name));
     }
@@ -109,7 +107,7 @@ final class PlaywrightElement implements UnifiedElement {
     @Override
     public List<UnifiedElement> findChildren(String tag) {
         return locator.locator(tag).all().stream()
-                .map(l -> (UnifiedElement) new PlaywrightElement(session, l, null)).toList();
+                .map(l -> (UnifiedElement) new PlaywrightElement(session, l, null, PlaywrightComponents.DEFAULT)).toList();
     }
 
     // ---------------------------------------------------------------- acting

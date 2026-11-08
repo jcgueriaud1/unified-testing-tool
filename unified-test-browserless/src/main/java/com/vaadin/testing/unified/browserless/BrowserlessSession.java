@@ -5,7 +5,6 @@ import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.ComponentQuery;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.router.Location;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
@@ -47,10 +46,8 @@ final class BrowserlessSession implements AdapterSession {
             query = switch (f.kind()) {
                 case LABEL -> f.exact() ? query.withLabel(f.value())
                         : query.withCondition(c -> f.matches(c.getElement().getProperty("label")));
-                // a Notification's text is in a renderer: read it through the tester
-                case TEXT -> Notification.class.isAssignableFrom(type)
-                        ? query.withCondition(c -> f.matches(new BrowserlessElement(this, c).getText()))
-                        : f.exact() ? query.withText(f.value())
+                case TEXT -> BrowserlessComponents.of(type).queryFindsText() && f.exact()
+                        ? query.withText(f.value())
                         : query.withCondition(c -> f.matches(new BrowserlessElement(this, c).getText()));
                 case PLACEHOLDER -> query.withPlaceholder(f.value());
                 case TEST_ID -> query.withTestId(f.value());
