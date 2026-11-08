@@ -55,7 +55,15 @@ final class PlaywrightSession implements AdapterSession {
             throw new IllegalArgumentException(spec.componentType().getName()
                     + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
         }
-        Locator candidates = scope == null ? page.locator(tag) : scope.locator(tag);
+        // exact id and test id filters go into the selector: the page doesn't return every element to filter
+        StringBuilder selector = new StringBuilder(tag);
+        for (Filter f : spec.filters()) {
+            if (f.exact() && (f.kind() == Filter.Kind.TEST_ID || f.kind() == Filter.Kind.ID)) {
+                selector.append('[').append(f.kind() == Filter.Kind.ID ? "id" : "data-testid").append("=\"")
+                        .append(f.value().replace("\\", "\\\\").replace("\"", "\\\"")).append("\"]");
+            }
+        }
+        Locator candidates = scope == null ? page.locator(selector.toString()) : scope.locator(selector.toString());
         List<UnifiedElement> result = new ArrayList<>();
         for (Locator locator : candidates.all()) {
             PlaywrightElement element = new PlaywrightElement(this, locator, null, support);
