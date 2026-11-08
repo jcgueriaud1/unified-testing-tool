@@ -198,6 +198,10 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public <T> Optional<T> tryUnwrap(Class<T> type) {
+        Optional<Object> special = support.unwrap(type, component, session.window());
+        if (special.isPresent()) {
+            return special.map(type::cast);
+        }
         if (type.isInstance(component)) {
             return Optional.of(type.cast(component));
         }

@@ -4,6 +4,8 @@ import com.microsoft.playwright.Locator;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.textfield.TextField;
 import java.util.LinkedHashMap;
@@ -11,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.element.ButtonElement;
 import org.vaadin.addons.dramafinder.element.DialogElement;
+import org.vaadin.addons.dramafinder.element.GridElement;
 import org.vaadin.addons.dramafinder.element.NotificationElement;
 import org.vaadin.addons.dramafinder.element.TextFieldElement;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
@@ -42,6 +45,11 @@ final class PlaywrightComponents {
 
         /** Visibility, when it is not the element's own (e.g. an overlay). */
         default Optional<Boolean> visible(Locator locator) {
+            return Optional.empty();
+        }
+
+        /** A component-specific access object for the core (e.g. GridAccess), reached through unwrap. */
+        default Optional<Object> unwrap(Class<?> type, Locator locator) {
             return Optional.empty();
         }
 
@@ -87,6 +95,20 @@ final class PlaywrightComponents {
             public Optional<Boolean> visible(Locator locator) {
                 // the dialog host has no box; its overlay is what the user sees
                 return Optional.of(new DialogElement(locator).isVisible());
+            }
+        });
+    }
+
+    static {
+        register(Grid.class, new Support() {
+            @Override
+            public Class<? extends VaadinElement> dramafinderElement() {
+                return GridElement.class;
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Locator locator) {
+                return type == GridAccess.class ? Optional.of(new PlaywrightGridAccess(locator)) : Optional.empty();
             }
         });
     }

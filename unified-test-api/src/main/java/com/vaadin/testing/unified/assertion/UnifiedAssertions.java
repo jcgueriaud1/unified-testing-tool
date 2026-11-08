@@ -5,6 +5,9 @@ import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedGrid;
+import com.vaadin.testing.unified.internal.grid.GridSupport;
+import java.util.List;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.internal.LazyElement;
@@ -33,6 +36,9 @@ public final class UnifiedAssertions {
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
+    public static GridAssert assertThat(UnifiedGrid grid) { return new GridAssert(grid); }
+    public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { return new GridRowAssert(row); }
+    public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { return new GridColumnAssert(column); }
     public static GenericAssert assertThat(UnifiedWrapper wrapper) { return new GenericAssert(wrapper); }
 
     // ---------------------------------------------------------------- shared retry
@@ -168,6 +174,50 @@ public final class UnifiedAssertions {
 
         public DialogAssert hasHeaderTitle(String expected) {
             return check("to have header title", expected, dialog::getHeaderTitle, v -> java.util.Objects.equals(v, expected));
+        }
+    }
+
+    public static final class GridAssert extends WrapperAssert<GridAssert> {
+        private final UnifiedGrid grid;
+
+        GridAssert(UnifiedGrid grid) { super(grid); this.grid = grid; }
+
+        public GridAssert hasRowCount(int expected) {
+            return check("to have row count", expected, grid::getRowCount, v -> Objects.equals(v, expected));
+        }
+
+        public GridAssert isEmpty() {
+            return check("to be empty", null, grid::getRowCount, v -> Objects.equals(v, 0));
+        }
+    }
+
+    public static final class GridRowAssert {
+        private final UnifiedGrid.UnifiedGridRow row;
+        private final TestRun run;
+
+        GridRowAssert(UnifiedGrid.UnifiedGridRow row) { this.row = row; this.run = GridSupport.runOf(row.grid()); }
+
+        public GridRowAssert hasCellText(String columnHeader, String expected) {
+            UnifiedAssertions.check(run, row + " cell \"" + columnHeader + "\"", "to have text", expected,
+                    () -> row.getCellText(columnHeader), v -> Objects.equals(v, expected));
+            return this;
+        }
+    }
+
+    public static final class GridColumnAssert {
+        private final UnifiedGrid.UnifiedGridColumn column;
+        private final TestRun run;
+
+        GridColumnAssert(UnifiedGrid.UnifiedGridColumn column) {
+            this.column = column;
+            this.run = GridSupport.runOf(column.grid());
+        }
+
+        public GridColumnAssert hasCellTexts(String... expected) {
+            List<String> list = List.of(expected);
+            UnifiedAssertions.check(run, column.toString(), "to have cell texts", list, column::getCellTexts,
+                    v -> Objects.equals(v, list));
+            return this;
         }
     }
 
