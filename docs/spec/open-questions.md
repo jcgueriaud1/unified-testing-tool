@@ -6,7 +6,7 @@ What the spec does not decide yet. Each item is either an open ticket on the [ma
 
 | Question | Ticket |
 |---|---|
-| Authentication, several users and windows | [How does a test run as a given user, and drive several users or windows?](https://github.com/jcgueriaud1/unified-testing-tool/issues/34) |
+| (none) | |
 
 ## Left to implementation
 
@@ -16,6 +16,7 @@ Deliberately not decided in this spec.
 |---|---|
 | Grid extras | TreeGrid, column reordering, Grid context menu, Grid Pro editing, drag and drop: same pattern as [07-grid.md](07-grid.md) |
 | Quarkus | Same pattern as `@UnifiedSpringBootTest`: `@QuarkusTest` with its test port for browser Testing Tools, `QuarkusBrowserlessTest` for Browserless |
+| Authentication without Spring Security | The application's real login, or the Escape Hatch ([11-users.md](11-users.md)) |
 | Migration from TestBench | Guidance or tooling, built from [appendix-mapping.md](appendix-mapping.md) |
 
 ## To verify during implementation
