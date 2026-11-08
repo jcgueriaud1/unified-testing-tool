@@ -19,6 +19,7 @@ The first six are closed in **Dramafinder 2.0.0** (the Playwright adapter mostly
 | Grid rows: `openDetails` clicks a hard-coded cell, `select(int)` fails silently, no row click | [parttio/dramafinder#221](https://github.com/parttio/dramafinder/issues/221) |
 | Grid: no `sort(direction)`, header components one header row at a time, selection column counted in indexes | [parttio/dramafinder#222](https://github.com/parttio/dramafinder/issues/222) |
 | NumberField and IntegerField: value only as a `String` | [parttio/dramafinder#224](https://github.com/parttio/dramafinder/issues/224) |
+| Selection fields: no item labels list, no selected label for radio groups | [parttio/dramafinder#226](https://github.com/parttio/dramafinder/issues/226) |
 
 ## TestBench
 
@@ -31,6 +32,7 @@ The first six are closed in **Dramafinder 2.0.0** (the Playwright adapter mostly
 | Gap | Issue |
 |---|---|
 | `CheckboxTester` and `SwitchTester` have no `setValue` | [#59](https://github.com/jcgueriaud1/unified-testing-tool/issues/59) |
+| `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61) |
 
 ## Outside the Testing Tools
 
