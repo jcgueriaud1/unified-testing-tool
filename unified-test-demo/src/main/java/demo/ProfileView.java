@@ -1,6 +1,7 @@
 package demo;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -35,6 +36,22 @@ public class ProfileView extends VerticalLayout {
         Button disabled = new Button("Archive");
         disabled.setEnabled(false);
 
-        add(name, email, nickname, new HorizontalLayout(save, delete, disabled));
+        Button changeEmail = new Button("Change email", e -> openChangeEmail(email));
+
+        add(name, email, nickname, new HorizontalLayout(save, delete, disabled, changeEmail));
+    }
+
+    /** A dialog whose field has the same label as the page's: only scoping tells them apart. */
+    private void openChangeEmail(TextField pageEmail) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Change email");
+        TextField newEmail = new TextField("Email");
+        dialog.add(newEmail);
+        dialog.getFooter().add(new Button("Cancel", e -> dialog.close()), new Button("Save", e -> {
+            pageEmail.setValue(newEmail.getValue());
+            Notification.show("Email changed to " + newEmail.getValue());
+            dialog.close();
+        }));
+        dialog.open();
     }
 }

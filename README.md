@@ -29,7 +29,7 @@ class ProfileViewTest {
 
 | Module | Contains |
 |---|---|
-| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedButton`, `UnifiedNotification`, `findComponent`), retrying `UnifiedAssertions`, Capabilities, Escape Hatch, adapter SPI |
+| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `findComponent`), retrying `UnifiedAssertions`, Capabilities, Escape Hatch, adapter SPI |
 | `unified-test-browserless` | Browserless Test adapter |
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
 | `unified-test-spring` | `@UnifiedSpringBootTest` |
@@ -72,7 +72,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | Area | State |
 |---|---|
 | Selenium (TestBench) adapter | not started (needs a TestBench license) |
-| Grid, Dialog and the rest of the Core Set | in the spec and `spec/api-sketch`, not implemented |
-| Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | throw `UnsupportedOperationException` |
+| Grid and the rest of the Core Set | in the spec and `spec/api-sketch`, not implemented (tickets on the tracker) |
+| Browserless: `page.reload()`, `pressKey` (except Escape on a dialog), `dispatchEvent` | throw `UnsupportedOperationException` |
 | `@ToolImplementation` overrides for add-ons | annotation exists, not honoured yet |
 | Failure evidence (screenshot, component tree) | not captured yet |

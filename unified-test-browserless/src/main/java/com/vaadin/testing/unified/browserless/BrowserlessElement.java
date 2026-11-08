@@ -177,7 +177,11 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void pressKey(String key) {
-        throw new UnsupportedOperationException("pressKey is not implemented on Browserless yet (first version)");
+        if (!support.pressKey(component, key, session.window())) {
+            throw new UnsupportedOperationException("pressKey(\"" + key + "\") on "
+                    + component.getClass().getSimpleName() + " is not implemented on Browserless yet");
+        }
+        session.window().roundTrip();
     }
 
     @Override

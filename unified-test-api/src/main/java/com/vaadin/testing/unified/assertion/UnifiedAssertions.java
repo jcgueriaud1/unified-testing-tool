@@ -4,6 +4,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
+import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.internal.LazyElement;
@@ -31,6 +32,7 @@ public final class UnifiedAssertions {
     public static TextFieldAssert assertThat(UnifiedTextField field) { return new TextFieldAssert(field); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
+    public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
     public static GenericAssert assertThat(UnifiedWrapper wrapper) { return new GenericAssert(wrapper); }
 
     // ---------------------------------------------------------------- shared retry
@@ -145,6 +147,27 @@ public final class UnifiedAssertions {
 
         public ButtonAssert hasText(String expected) {
             return check("to have text", expected, button::getText, v -> Objects.equals(v, expected));
+        }
+    }
+
+    public static final class DialogAssert extends WrapperAssert<DialogAssert> {
+        private final UnifiedDialog dialog;
+
+        DialogAssert(UnifiedDialog dialog) { super(dialog); this.dialog = dialog; }
+
+        public DialogAssert isOpen() {
+            return check("to be open", null, dialog::isOpen, Boolean.TRUE::equals);
+        }
+
+        /** Passes when the dialog is closed or no longer on the page (Flow removes closed dialogs). */
+        public DialogAssert isClosed() {
+            return check("to be closed", null,
+                    () -> element.tryConcrete().map(e -> Boolean.TRUE.equals(e.getPropertyBoolean("opened"))).orElse(false),
+                    Boolean.FALSE::equals);
+        }
+
+        public DialogAssert hasHeaderTitle(String expected) {
+            return check("to have header title", expected, dialog::getHeaderTitle, v -> java.util.Objects.equals(v, expected));
         }
     }
 

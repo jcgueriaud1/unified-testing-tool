@@ -20,6 +20,8 @@ class PlaywrightComponentsTest {
     void coreSetComponentsAreRegistered() {
         assertEquals(TextFieldElement.class, PlaywrightComponents.of(TextField.class).dramafinderElement());
         assertEquals(ButtonElement.class, PlaywrightComponents.of(Button.class).dramafinderElement());
+        assertEquals(org.vaadin.addons.dramafinder.element.DialogElement.class,
+                PlaywrightComponents.of(com.vaadin.flow.component.dialog.Dialog.class).dramafinderElement());
         assertEquals("vaadin-notification-card[slot]",
                 PlaywrightComponents.of(Notification.class).selector("vaadin-notification"));
     }

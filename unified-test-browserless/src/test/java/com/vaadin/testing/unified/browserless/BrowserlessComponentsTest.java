@@ -19,6 +19,12 @@ class BrowserlessComponentsTest {
     }
 
     @Test
+    void dialogIsRegistered() {
+        assertNotSame(BrowserlessComponents.of(com.vaadin.flow.component.button.Button.class),
+                BrowserlessComponents.of(com.vaadin.flow.component.dialog.Dialog.class));
+    }
+
+    @Test
     void subclassesUseTheirSupertypesRegistration() {
         assertSame(BrowserlessComponents.of(Notification.class), BrowserlessComponents.of(MyNotification.class));
     }
