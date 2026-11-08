@@ -21,7 +21,7 @@ class AdminViewTest {
 | Testing Tool | How the adapter logs in |
 |---|---|
 | Browserless | `SpringBrowserlessApplicationContext.createSecured(..)`, then `newUser(username, roles…)` |
-| Playwright, Selenium | Opens a **test-only login endpoint** once before the test; it puts the user into the HTTP session |
+| Playwright, Selenium | Opens a **test-only login endpoint** once before the test; it puts the user into the HTTP session. Playwright: Dramafinder's own `__dramafinder/login` endpoint once released (on `master`, next 2.0.1) |
 
 ```mermaid
 sequenceDiagram
