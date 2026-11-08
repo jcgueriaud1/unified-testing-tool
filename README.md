@@ -78,4 +78,3 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
 | Browser: a combo box's `getItems()` | the drop-down's first page only (50 items by default) |
 | Playwright: logging in (`@WithMockUser`, `@WithUserDetails`, `openAsUser`) | fails with a message until [#50](https://github.com/jcgueriaud1/unified-testing-tool/issues/50) (Dramafinder 2.0.1's login endpoint); mark such tests `@RequiresTestingTool(BROWSERLESS)`. `openWindow()` works |
-| `@ToolImplementation` overrides for add-ons | annotation exists, not honoured yet |

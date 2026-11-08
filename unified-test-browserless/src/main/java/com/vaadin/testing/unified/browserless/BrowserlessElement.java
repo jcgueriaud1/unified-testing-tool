@@ -1,9 +1,7 @@
 package com.vaadin.testing.unified.browserless;
 
 import com.vaadin.browserless.ComponentTester;
-import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.Focusable;
 import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.UI;
@@ -133,9 +131,23 @@ final class BrowserlessElement implements UnifiedElement {
     }
 
     @Override
+    /**
+     * Child elements with this tag, components or not: plain {@link Element}s (built with the Element API,
+     * e.g. an add-on's inner {@code <span>}s) are mapped to a {@link PlainElement} component to be read and
+     * clicked like any other.
+     */
     public List<UnifiedElement> findChildren(String tag) {
-        return component.getChildren().filter(c -> tag.equals(c.getElement().getTag()))
-                .map(c -> (UnifiedElement) new BrowserlessElement(session, c)).toList();
+        return element().getChildren().filter(e -> tag.equals(e.getTag()))
+                .map(e -> (UnifiedElement) new BrowserlessElement(session,
+                        e.getComponent().orElseGet(() -> new PlainElement(e))))
+                .toList();
+    }
+
+    /** A component for an element that has none; no tag of its own, it takes the element's. */
+    static final class PlainElement extends Component {
+        PlainElement(Element element) {
+            super(element);
+        }
     }
 
     // ---------------------------------------------------------------- acting
@@ -154,10 +166,11 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void click() {
-        if (hasTesterMethod("click", 0)) {
-            invokeTester("click");
+        if (tester().getClass() != ComponentTester.class && hasTesterMethod("click", 0)) {
+            invokeTester("click"); // a component's own tester (Button, ...): its usability checks
         } else {
-            ComponentUtil.fireEvent(component, new ClickEvent<>(component));
+            // a DOM click: element listeners and @DomEvent("click") component listeners both run
+            com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "click");
         }
         session.window().roundTrip();
     }

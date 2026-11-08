@@ -3,6 +3,8 @@ package com.vaadin.testing.unified.internal;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.testing.unified.Findable;
+import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.ToolImplementation;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.UnifiedWrapper;
@@ -141,8 +143,32 @@ public final class Wrappers {
     // ---------------------------------------------------------------- wrappers
 
     static Object newWrapper(Class<?> wrapperType, LazyElement element) {
-        return Proxy.newProxyInstance(wrapperType.getClassLoader(), new Class<?>[] { wrapperType },
+        Class<?> implemented = implementationFor(wrapperType, element.run().tool());
+        return Proxy.newProxyInstance(implemented.getClassLoader(), new Class<?>[] { implemented },
                 new WrapperHandler(wrapperType, element));
+    }
+
+    /**
+     * The wrapper interface itself, or its {@code @ToolImplementation} override for this Testing Tool: an
+     * interface extending the wrapper that redefines the methods needing the tool's own API.
+     */
+    static Class<?> implementationFor(Class<?> wrapperType, TestingTool tool) {
+        UnifiedComponent annotation = wrapperType.getAnnotation(UnifiedComponent.class);
+        if (annotation == null) {
+            return wrapperType;
+        }
+        for (ToolImplementation override : annotation.overrides()) {
+            if (override.tool() != tool) {
+                continue;
+            }
+            Class<?> type = override.value();
+            if (!type.isInterface() || !wrapperType.isAssignableFrom(type)) {
+                throw new IllegalArgumentException("@ToolImplementation(" + type.getName() + ") on "
+                        + wrapperType.getName() + ": must be an interface extending " + wrapperType.getSimpleName());
+            }
+            return type;
+        }
+        return wrapperType;
     }
 
     private record WrapperHandler(Class<?> wrapperType, LazyElement element) implements InvocationHandler {
