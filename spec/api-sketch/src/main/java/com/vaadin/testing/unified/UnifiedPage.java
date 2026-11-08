@@ -25,6 +25,12 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
 
     void pressKey(String key);
 
+    /** Another window of the same user, same session. Closed at the end of the test. */
+    UnifiedPage openWindow();
+
+    /** Another user with its own session, logged in with the given roles. Closed at the end of the test. */
+    UnifiedPage openAsUser(String username, String... roles);
+
     /** Needs {@link RequiresBrowser}. */
     void screenshot(Path file);
 }
