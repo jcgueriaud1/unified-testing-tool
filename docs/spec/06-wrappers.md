@@ -87,15 +87,28 @@ Browserless acts on the server-side element and component, firing events as from
 
 ### Per-tool overrides
 
-When the Unified Element is not enough (canvas, overlays, renderer content on Browserless):
+When the Unified Element is not enough (canvas, overlays, content written by client-side JavaScript, which Browserless doesn't run):
 
 ```java
-@UnifiedComponent(value = Rating.class,
-        overrides = @ToolImplementation(tool = TestingTool.BROWSERLESS, value = RatingBrowserless.class))
-public interface UnifiedRating extends UnifiedWrapper, Findable<RatingQuery> { ... }
+@UnifiedComponent(value = Badge.class,
+        overrides = @ToolImplementation(tool = TestingTool.BROWSERLESS, value = UnifiedBadgeBrowserless.class))
+public interface UnifiedBadge extends UnifiedWrapper, Findable<BadgeQuery> {
+    default int getCount() { return Integer.parseInt(element().getText().split(" ")[0]); }  // "3 new"
+}
+
+public interface UnifiedBadgeBrowserless extends UnifiedBadge {
+    @Override
+    default int getCount() { return unwrap(Badge.class).getCount(); }   // Escape Hatch: the Java component
+}
 ```
 
-`RatingBrowserless` implements the interface with Browserless's own API via the Escape Hatch.
+| Rule | Detail |
+|---|---|
+| Shape | an **interface extending the wrapper**; it redefines only the methods that need the tool's own API, the rest is inherited |
+| When used | on that Testing Tool, the wrapper returned by `find(..)` implements the override (`instanceof UnifiedBadgeBrowserless`) |
+| Wrong shape | a class, or an interface not extending the wrapper: fails at the first `find(..)` with a message |
+
+Implemented; demo: `demo.addon` (component) and `demo.addon.testing` (wrappers, in the main jar).
 
 ### Custom filters
 

@@ -45,6 +45,12 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- the add-on's wrappers ship in the main jar (ADR 0003): compile-time only, never needed at runtime -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>unified-test-api</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>unified-test-spring</artifactId>

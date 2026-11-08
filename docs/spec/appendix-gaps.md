@@ -36,6 +36,7 @@ The first six are closed in **Dramafinder 2.0.0** (the Playwright adapter mostly
 | `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61) |
 | `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/jcgueriaud1/unified-testing-tool/issues/64) |
 | No public reload, key press on a component, DOM event, focused component, component tree dump or redirect-tolerant navigate | [#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66) |
+| Plain Elements can't be found or clicked; the generic tester's click skips DOM listeners | [#70](https://github.com/jcgueriaud1/unified-testing-tool/issues/70) |
 
 ## Outside the Testing Tools
 
