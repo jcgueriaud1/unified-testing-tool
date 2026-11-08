@@ -3,18 +3,25 @@ package com.vaadin.testing.unified.playwright;
 import com.microsoft.playwright.Locator;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.element.ButtonElement;
+import org.vaadin.addons.dramafinder.element.CheckboxElement;
+import org.vaadin.addons.dramafinder.element.DatePickerElement;
 import org.vaadin.addons.dramafinder.element.DialogElement;
 import org.vaadin.addons.dramafinder.element.GridElement;
 import org.vaadin.addons.dramafinder.element.NotificationElement;
+import org.vaadin.addons.dramafinder.element.NumberFieldElement;
 import org.vaadin.addons.dramafinder.element.TextFieldElement;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
 
@@ -48,6 +55,11 @@ final class PlaywrightComponents {
             return Optional.empty();
         }
 
+        /** Sets the value as a user would, when typing its text is not enough; false = not handled. */
+        default boolean setValue(Locator locator, Object value) {
+            return false;
+        }
+
         /** A component-specific access object for the core (e.g. GridAccess), reached through unwrap. */
         default Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
             return Optional.empty();
@@ -65,6 +77,37 @@ final class PlaywrightComponents {
     static {
         register(TextField.class, dramafinder(TextFieldElement.class));
         register(Button.class, dramafinder(ButtonElement.class));
+        register(NumberField.class, dramafinder(NumberFieldElement.class));
+        register(DatePicker.class, new Support() {
+            @Override
+            public Class<? extends VaadinElement> dramafinderElement() {
+                return DatePickerElement.class;
+            }
+
+            @Override
+            public boolean setValue(Locator locator, Object value) {
+                // typed in the input in the page's locale format, then committed
+                DatePickerElement picker = new DatePickerElement(locator);
+                if (value == null) {
+                    picker.clear();
+                } else {
+                    picker.setValue((LocalDate) value);
+                }
+                return true;
+            }
+        });
+        register(Checkbox.class, new Support() {
+            @Override
+            public Class<? extends VaadinElement> dramafinderElement() {
+                return CheckboxElement.class;
+            }
+
+            @Override
+            public boolean setValue(Locator locator, Object value) {
+                new CheckboxElement(locator).setChecked(Boolean.TRUE.equals(value));
+                return true;
+            }
+        });
         register(Notification.class, new Support() {
             @Override
             public String selector(String componentTag) {

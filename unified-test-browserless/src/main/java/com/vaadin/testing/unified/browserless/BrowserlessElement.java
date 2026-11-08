@@ -164,6 +164,15 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void setValueAsUser(Object value) {
+        if (support.setValue(component, value, session.window())) {
+            session.window().roundTrip();
+            return;
+        }
+        if (value == null && hasTesterMethod("clear", 0)) {
+            invokeTester("clear");
+            session.window().roundTrip();
+            return;
+        }
         Method setValue = testerMethod("setValue", 1)
                 .orElseThrow(() -> new UnsupportedOperationException(
                         component.getClass().getSimpleName() + " has no value to set on Browserless"));

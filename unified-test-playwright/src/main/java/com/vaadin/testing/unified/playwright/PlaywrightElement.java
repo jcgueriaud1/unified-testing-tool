@@ -4,6 +4,7 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.Filter;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
@@ -130,7 +131,13 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public void setValueAsUser(Object value) {
-        String text = value == null ? "" : String.valueOf(value);
+        if (support.setValue(locator, value)) {
+            AutoWait.afterAction(page());
+            return;
+        }
+        String text = value == null ? ""
+                : value instanceof Number n ? new BigDecimal(n.toString()).stripTrailingZeros().toPlainString()
+                : String.valueOf(value);
         if (dramafinder instanceof HasValueElement field) {
             field.setValue(text);
         } else {
