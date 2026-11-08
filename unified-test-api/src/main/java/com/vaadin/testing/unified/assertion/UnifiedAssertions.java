@@ -10,6 +10,9 @@ import com.vaadin.testing.unified.internal.grid.GridSupport;
 import java.util.List;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedCheckbox;
+import com.vaadin.testing.unified.component.UnifiedComboBox;
+import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
+import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
 import com.vaadin.testing.unified.component.UnifiedDatePicker;
 import com.vaadin.testing.unified.component.UnifiedField;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
@@ -41,6 +44,13 @@ public final class UnifiedAssertions {
     public static NumberFieldAssert assertThat(UnifiedNumberField field) { return new NumberFieldAssert(field); }
     public static DatePickerAssert assertThat(UnifiedDatePicker field) { return new DatePickerAssert(field); }
     public static CheckboxAssert assertThat(UnifiedCheckbox checkbox) { return new CheckboxAssert(checkbox); }
+    public static SingleSelectAssert assertThat(UnifiedComboBox field) {
+        return new SingleSelectAssert(field, field::getSelectedItem, field::getItems);
+    }
+    public static SingleSelectAssert assertThat(UnifiedRadioButtonGroup field) {
+        return new SingleSelectAssert(field, field::getSelectedItem, field::getItems);
+    }
+    public static MultiSelectAssert assertThat(UnifiedMultiSelectComboBox field) { return new MultiSelectAssert(field); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
@@ -191,6 +201,56 @@ public final class UnifiedAssertions {
 
         public DatePickerAssert isEmpty() {
             return check("to be empty", null, datePicker::getValue, Objects::isNull);
+        }
+    }
+
+    /** A ComboBox or RadioButtonGroup. */
+    public static final class SingleSelectAssert extends FieldAssert<SingleSelectAssert> {
+        private final Supplier<String> selected;
+        private final Supplier<List<String>> items;
+
+        SingleSelectAssert(UnifiedField field, Supplier<String> selected, Supplier<List<String>> items) {
+            super(field);
+            this.selected = selected;
+            this.items = items;
+        }
+
+        public SingleSelectAssert hasSelectedItem(String expected) {
+            return check("to have selected item", expected, selected, v -> Objects.equals(v, expected));
+        }
+
+        public SingleSelectAssert hasNoSelectedItem() {
+            return check("to have no selected item", null, selected, Objects::isNull);
+        }
+
+        /** Exactly these items, in this order. */
+        public SingleSelectAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, items, list::equals);
+        }
+    }
+
+    public static final class MultiSelectAssert extends FieldAssert<MultiSelectAssert> {
+        private final UnifiedMultiSelectComboBox multi;
+
+        MultiSelectAssert(UnifiedMultiSelectComboBox field) { super(field); this.multi = field; }
+
+        /** Exactly these items are selected, in any order. */
+        @SuppressWarnings("unchecked")
+        public MultiSelectAssert hasSelectedItems(String... expected) {
+            java.util.Set<String> set = java.util.Set.of(expected);
+            return check("to have selected items", set, multi::getSelectedItems,
+                    v -> v != null && ((List<String>) v).size() == set.size() && set.containsAll((List<String>) v));
+        }
+
+        public MultiSelectAssert hasNoSelectedItems() {
+            return check("to have no selected items", List.of(), multi::getSelectedItems, v -> ((List<?>) v).isEmpty());
+        }
+
+        /** Exactly these items, in this order. */
+        public MultiSelectAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, multi::getItems, list::equals);
         }
     }
 

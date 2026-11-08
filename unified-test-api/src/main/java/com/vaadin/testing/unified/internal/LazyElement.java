@@ -62,7 +62,8 @@ public final class LazyElement implements UnifiedElement {
         return index < found.size() ? Optional.of(found.get(index)) : Optional.empty();
     }
 
-    private void act(String action, Consumer<UnifiedElement> body) {
+    /** Runs a user action once the element is visible and enabled (Auto-Wait). */
+    public void act(String action, Consumer<UnifiedElement> body) {
         UnifiedElement element = run.poll(() -> {
             UnifiedElement e = concrete();
             return e.isVisible() && e.isEnabled() ? e : null;

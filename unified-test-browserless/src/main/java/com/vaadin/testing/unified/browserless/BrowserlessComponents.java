@@ -4,7 +4,11 @@ import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.ComponentTester;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
+import com.vaadin.testing.unified.spi.SelectionAccess;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.flow.component.notification.Notification;
@@ -125,6 +129,20 @@ final class BrowserlessComponents {
                 return true;
             }
         });
+    }
+
+    static {
+        Support selection = new Support() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return type == SelectionAccess.class
+                        ? Optional.of(new BrowserlessSelectionAccess(session, component))
+                        : Optional.empty();
+            }
+        };
+        register(ComboBox.class, selection);
+        register(MultiSelectComboBox.class, selection);
+        register(RadioButtonGroup.class, selection);
     }
 
     static {

@@ -11,15 +11,15 @@ One component per interaction pattern. Every other component follows the same pa
 | Text value | `UnifiedTextField` (TextArea, PasswordField, EmailField follow) | in the sketch |
 | Typed value | `UnifiedNumberField`, `UnifiedDatePicker` | implemented |
 | Boolean value | `UnifiedCheckbox` | implemented |
-| Single selection | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | pattern only |
-| Multi selection | `UnifiedMultiSelectComboBox` | pattern only |
+| Single selection | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | implemented |
+| Multi selection | `UnifiedMultiSelectComboBox` | implemented |
 | Action | `UnifiedButton` | in the sketch |
 | Overlays | `UnifiedDialog`, `UnifiedNotification` | implemented |
 | Data | `UnifiedGrid` | in the sketch: [07-grid.md](07-grid.md) |
 | Navigation | `UnifiedTabSheet` | pattern only |
 | (layouts, for scoping) | `UnifiedContainer` | in the sketch |
 
-Input fields share `UnifiedField` (label, helper text, validation getters). Typed values are Java types: `Double` for a NumberField, `LocalDate` for a DatePicker, `null` when empty.
+Input fields share `UnifiedField` (label, helper text, validation getters). Typed values are Java types: `Double` for a NumberField, `LocalDate` for a DatePicker, `null` when empty. Selection fields identify items by the label the user sees (the item label generator's result): `selectItem("Germany")`, `getSelectedItem()`, `getItems()`. A select fails when the item doesn't exist (listing the items) or isn't selected afterwards. In a browser, a combo box's `getItems()` returns the items its drop-down loads at once (first page, 50 by default).
 
 Rules: a Core Set component is supported by all three Testing Tools; no commercial components (Grid Pro, Charts, Spreadsheet, Board, Crud); no layouts.
 

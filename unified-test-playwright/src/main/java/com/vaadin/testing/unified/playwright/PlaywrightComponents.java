@@ -4,7 +4,11 @@ import com.microsoft.playwright.Locator;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
+import com.vaadin.testing.unified.spi.SelectionAccess;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.testing.unified.spi.GridAccess;
@@ -17,6 +21,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.element.ButtonElement;
 import org.vaadin.addons.dramafinder.element.CheckboxElement;
+import org.vaadin.addons.dramafinder.element.ComboBoxElement;
+import org.vaadin.addons.dramafinder.element.MultiSelectComboBoxElement;
+import org.vaadin.addons.dramafinder.element.RadioButtonGroupElement;
 import org.vaadin.addons.dramafinder.element.DatePickerElement;
 import org.vaadin.addons.dramafinder.element.DialogElement;
 import org.vaadin.addons.dramafinder.element.GridElement;
@@ -140,6 +147,30 @@ final class PlaywrightComponents {
                 return Optional.of(new DialogElement(locator).isVisible());
             }
         });
+    }
+
+    static {
+        register(ComboBox.class, selection(ComboBoxElement.class, PlaywrightSelectionAccess.Kind.COMBO_BOX));
+        register(MultiSelectComboBox.class, selection(MultiSelectComboBoxElement.class,
+                PlaywrightSelectionAccess.Kind.MULTI_SELECT_COMBO_BOX));
+        register(RadioButtonGroup.class, selection(RadioButtonGroupElement.class,
+                PlaywrightSelectionAccess.Kind.RADIO_BUTTON_GROUP));
+    }
+
+    private static Support selection(Class<? extends VaadinElement> element, PlaywrightSelectionAccess.Kind kind) {
+        return new Support() {
+            @Override
+            public Class<? extends VaadinElement> dramafinderElement() {
+                return element;
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
+                return type == SelectionAccess.class
+                        ? Optional.of(new PlaywrightSelectionAccess(session, locator, kind))
+                        : Optional.empty();
+            }
+        };
     }
 
     static {
