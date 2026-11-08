@@ -4,6 +4,8 @@ Where a Testing Tool lacks something the Unified API needs, its adapter fills th
 
 ## Dramafinder
 
+All six closed in **Dramafinder 2.0.0** (the Playwright adapter mostly delegates).
+
 | Gap | Issue |
 |---|---|
 | No typed query builder `find(X.class).withLabel(..).single()` | [parttio/dramafinder#200](https://github.com/parttio/dramafinder/issues/200) |

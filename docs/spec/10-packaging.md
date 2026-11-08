@@ -62,7 +62,7 @@ Add the adapters a build uses as test dependencies. No Maven profiles: the run's
 | Core Set overrides | Live inside each adapter, registered by the adapter. `unified-test-api` never depends on adapter classes. |
 | Add-on overrides | `@ToolImplementation` in the add-on's own jar ([06-wrappers.md](06-wrappers.md)). |
 | Versioning | Follows Vaadin: one release line per Vaadin minor (`25.3.x`). The BOM pins matching Dramafinder, Browserless Test and TestBench versions. |
-| Baseline | Java 21, Vaadin 25, JUnit 6, Spring Boot 4. |
+| Baseline | Java 21, Vaadin 25, JUnit 6, Spring Boot 4; Dramafinder 2.0+ for the Playwright adapter. |
 
 ## Community bundle
 
