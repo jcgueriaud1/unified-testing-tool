@@ -24,10 +24,14 @@ Deliberately not decided in this spec.
 |---|---|
 | Unused TestBench on the classpath | Confirm a Browserless or Playwright run with `unified-test-selenium` present never triggers TestBench's license check ([10-packaging.md](10-packaging.md)) |
 
-## Wording chosen while writing the spec (to confirm)
+## Confirmed after writing
 
-| Item | Chosen | Note |
-|---|---|---|
-| Base URL setting | `vaadin.testing.base-url` | Name not decided in a ticket |
-| Timeout setting | `vaadin.testing.timeout` | Name not decided in a ticket |
-| Core Set wrappers beyond Button, TextField, Dialog, Notification, Grid, Container | "pattern only" | Their methods follow the same pattern; not sketched |
+| Item | Decision |
+|---|---|
+| Base URL setting | `vaadin.testing.base-url` |
+| Timeout setting | `vaadin.testing.timeout` |
+| `…Containing` filters | Case-insensitive substring match, as in Dramafinder 2.0 (found while implementing) |
+
+## Pattern only
+
+Core Set wrappers beyond Button, TextField, Dialog, Notification, Grid and Container follow the same pattern; they are not sketched.
