@@ -23,7 +23,7 @@ page.find(UnifiedButton.class).withText("Save");    // OK
 
 ## Filters
 
-Exact match by default; every text filter has a `…Containing` variant.
+Exact match by default (whitespace normalised); every text filter has a `…Containing` variant, which matches a case-insensitive substring.
 
 | Filter | Matches | On | Recommended |
 |---|---|---|---|

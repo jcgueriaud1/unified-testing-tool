@@ -70,7 +70,7 @@ The portable layer every wrapper is written on:
 
 | Group | Operations |
 |---|---|
-| Read | `getTag`, `getText`, `getProperty…`, `getAttribute` |
+| Read | `getTag`, `getText`, `getProperty…`, `getAttribute`, `isVisible`, `isEnabled`, `getCssValue` (browser only) |
 | Write | `setProperty` |
 | User actions (Auto-Wait) | `click`, `setValueAsUser`, `focus`, `blur`, `pressKey`, `dispatchEvent` |
 | Structure | `findChildren(tag)` |

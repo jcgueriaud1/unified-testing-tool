@@ -2,6 +2,8 @@
 
 **Status:** draft, built from the decisions on the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2). Not yet handed off (hand-off is tag `spec-v1`).
 
+**Implementation:** a first version is in this repository (see the [repository README](../../README.md)): API, Browserless and Playwright (Dramafinder 2.0) adapters, `@UnifiedSpringBootTest`, Button, TextField and Notification. The demo tests pass unchanged on both Testing Tools.
+
 ## Summary
 
 Write a Vaadin Flow UI test **once**, run it on **any** of three Testing Tools, chosen per run:

@@ -1,0 +1,97 @@
+package com.vaadin.testing.unified.internal;
+
+import com.vaadin.testing.unified.UnifiedElement;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
+
+/**
+ * The Unified Element behind every wrapper. Finds its component again on every call (lazy), waiting until
+ * exactly one matches ({@code index < 0}) or the indexed one exists. Actions also wait until the component
+ * is visible and enabled; the adapter waits for the server round-trip after the action.
+ */
+public final class LazyElement implements UnifiedElement {
+
+    private final ElementSource source;
+    private final int index;
+    private final TestRun run;
+
+    public LazyElement(ElementSource source, int index, TestRun run) {
+        this.source = source;
+        this.index = index;
+        this.run = run;
+    }
+
+    public LazyElement withRun(TestRun newRun) {
+        return new LazyElement(source, index, newRun);
+    }
+
+    public TestRun run() {
+        return run;
+    }
+
+    public String describe() {
+        return source.describe() + (index < 0 ? ".single()" : ".all().get(" + index + ")");
+    }
+
+    /** The adapter's element, waiting until it can be singled out. */
+    public UnifiedElement concrete() {
+        int[] lastCount = {0};
+        return run.poll(() -> {
+            List<UnifiedElement> found = source.resolve();
+            lastCount[0] = found.size();
+            if (index < 0) {
+                return found.size() == 1 ? found.get(0) : null;
+            }
+            return index < found.size() ? found.get(index) : null;
+        }, () -> index < 0
+                ? (lastCount[0] == 0 ? "No component matches " : lastCount[0] + " components match ") + describe()
+                        + (lastCount[0] == 0 ? "" : ", expected exactly one")
+                : "No component at index " + index + " for " + describe() + " (found " + lastCount[0] + ")");
+    }
+
+    private void act(String action, Consumer<UnifiedElement> body) {
+        UnifiedElement element = run.poll(() -> {
+            UnifiedElement e = concrete();
+            return e.isVisible() && e.isEnabled() ? e : null;
+        }, () -> "Can't " + action + ": " + describe() + " is not visible and enabled");
+        body.accept(element);
+    }
+
+    @Override public String getTag() { return concrete().getTag(); }
+    @Override public String getText() { return concrete().getText(); }
+    @Override public String getProperty(String name) { return concrete().getProperty(name); }
+    @Override public Integer getPropertyInteger(String name) { return concrete().getPropertyInteger(name); }
+    @Override public Boolean getPropertyBoolean(String name) { return concrete().getPropertyBoolean(name); }
+    @Override public String getAttribute(String name) { return concrete().getAttribute(name); }
+    @Override public String getCssValue(String property) { return concrete().getCssValue(property); }
+    @Override public boolean isVisible() { return concrete().isVisible(); }
+    @Override public boolean isEnabled() { return concrete().isEnabled(); }
+    @Override public List<UnifiedElement> findChildren(String tag) { return concrete().findChildren(tag); }
+
+    @Override public void setProperty(String name, Object value) { concrete().setProperty(name, value); }
+    @Override public void click() { act("click", UnifiedElement::click); }
+    @Override public void setValueAsUser(Object value) { act("set the value of", e -> e.setValueAsUser(value)); }
+    @Override public void focus() { act("focus", UnifiedElement::focus); }
+    @Override public void blur() { concrete().blur(); }
+    @Override public void pressKey(String key) { act("press " + key + " on", e -> e.pressKey(key)); }
+    @Override public void dispatchEvent(String eventName) { concrete().dispatchEvent(eventName); }
+
+    @Override
+    public <T> T unwrap(Class<T> type) {
+        return tryUnwrap(type).orElseThrow(() -> new UnsupportedOperationException(
+                run.tool() + " can't provide " + type.getName() + " for " + describe()
+                        + ". If the test needs another Testing Tool, annotate it with "
+                        + "@RequiresTestingTool so it is skipped on " + run.tool() + "."));
+    }
+
+    @Override
+    public <T> Optional<T> tryUnwrap(Class<T> type) {
+        return concrete().tryUnwrap(type);
+    }
+
+    @Override
+    public String toString() {
+        return describe();
+    }
+}
