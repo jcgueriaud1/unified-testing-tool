@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.browserless;
 import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.ComponentTester;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.notification.Notification;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,6 +31,11 @@ final class BrowserlessComponents {
         /** Visibility, when it is not the component tree's visibility. */
         default Optional<Boolean> visible(Component component) {
             return Optional.empty();
+        }
+
+        /** Handles a key press on the component; false if this component has no key handling. */
+        default boolean pressKey(Component component, String key, BrowserlessUIContext window) {
+            return false;
         }
 
         /** Whether Browserless's own text query sees this component's text. */
@@ -69,6 +75,39 @@ final class BrowserlessComponents {
                 return false;
             }
         });
+    }
+
+    static {
+        register(Dialog.class, new Support() {
+            @Override
+            public Optional<Boolean> booleanProperty(Component component, String name) {
+                return "opened".equals(name) ? Optional.of(((Dialog) component).isOpened()) : Optional.empty();
+            }
+
+            @Override
+            public Optional<Boolean> visible(Component component) {
+                return Optional.of(((Dialog) component).isOpened());
+            }
+
+            @Override
+            public boolean pressKey(Component component, String key, BrowserlessUIContext window) {
+                if (!"Escape".equals(key)) {
+                    return false;
+                }
+                invoke(window.test(component), "pressEscape");
+                return true;
+            }
+        });
+    }
+
+    private static Object invoke(Object target, String method) {
+        try {
+            return target.getClass().getMethod(method).invoke(target);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            throw e.getCause() instanceof RuntimeException r ? r : new IllegalStateException(e.getCause());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(target.getClass().getSimpleName() + "." + method + "() not available", e);
+        }
     }
 
     static void register(Class<? extends Component> type, Support support) {

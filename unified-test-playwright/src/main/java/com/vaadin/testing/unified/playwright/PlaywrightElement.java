@@ -96,7 +96,7 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public boolean isVisible() {
-        return locator.isVisible();
+        return support.visible(locator).orElseGet(locator::isVisible);
     }
 
     @Override

@@ -50,6 +50,15 @@ public final class LazyElement implements UnifiedElement {
                 : "No component at index " + index + " for " + describe() + " (found " + lastCount[0] + ")");
     }
 
+    /** The adapter's element if it can be singled out right now; no waiting. */
+    public Optional<UnifiedElement> tryConcrete() {
+        List<UnifiedElement> found = source.resolve();
+        if (index < 0) {
+            return found.size() == 1 ? Optional.of(found.get(0)) : Optional.empty();
+        }
+        return index < found.size() ? Optional.of(found.get(index)) : Optional.empty();
+    }
+
     private void act(String action, Consumer<UnifiedElement> body) {
         UnifiedElement element = run.poll(() -> {
             UnifiedElement e = concrete();
