@@ -35,7 +35,7 @@ The first six are closed in **Dramafinder 2.0.0** (the Playwright adapter mostly
 | `CheckboxTester` and `SwitchTester` have no `setValue` | [#59](https://github.com/jcgueriaud1/unified-testing-tool/issues/59) |
 | `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61) |
 | `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/jcgueriaud1/unified-testing-tool/issues/64) |
-| No public reload, key press on a component, DOM event or focused component | [#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66) |
+| No public reload, key press on a component, DOM event, focused component or component tree dump | [#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66) |
 
 ## Outside the Testing Tools
 

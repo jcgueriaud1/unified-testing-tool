@@ -219,6 +219,15 @@ final class PlaywrightSession implements AdapterSession {
         // nothing to flush: the browser runs on its own
     }
 
+    /** A full-page screenshot. */
+    @Override
+    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
+        java.nio.file.Files.createDirectories(directory);
+        Path file = directory.resolve(name + ".png");
+        page.screenshot(new Page.ScreenshotOptions().setPath(file).setFullPage(true));
+        return List.of(file);
+    }
+
     @Override
     public void pressKey(String key) {
         page.keyboard().press(key);

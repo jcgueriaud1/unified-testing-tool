@@ -62,6 +62,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.tool` | `browserless` (or `playwright`) |
 | `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | `10s` |
+| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 | `vaadin.testing.browserless.view-packages` | the test class's package |
 | `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
 | `vaadin.testing.playwright.headless` | `true` |
@@ -77,4 +78,3 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
 | Browser: a combo box's `getItems()` | the drop-down's first page only (50 items by default) |
 | `@ToolImplementation` overrides for add-ons | annotation exists, not honoured yet |
-| Failure evidence (screenshot, component tree) | not captured yet |
