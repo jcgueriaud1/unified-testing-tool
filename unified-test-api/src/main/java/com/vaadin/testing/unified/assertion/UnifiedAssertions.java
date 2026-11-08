@@ -9,7 +9,12 @@ import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
 import java.util.List;
 import com.vaadin.testing.unified.component.UnifiedNotification;
+import com.vaadin.testing.unified.component.UnifiedCheckbox;
+import com.vaadin.testing.unified.component.UnifiedDatePicker;
+import com.vaadin.testing.unified.component.UnifiedField;
+import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedTextField;
+import java.time.LocalDate;
 import com.vaadin.testing.unified.internal.LazyElement;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
@@ -33,6 +38,9 @@ public final class UnifiedAssertions {
     }
 
     public static TextFieldAssert assertThat(UnifiedTextField field) { return new TextFieldAssert(field); }
+    public static NumberFieldAssert assertThat(UnifiedNumberField field) { return new NumberFieldAssert(field); }
+    public static DatePickerAssert assertThat(UnifiedDatePicker field) { return new DatePickerAssert(field); }
+    public static CheckboxAssert assertThat(UnifiedCheckbox checkbox) { return new CheckboxAssert(checkbox); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
@@ -123,27 +131,84 @@ public final class UnifiedAssertions {
         GenericAssert(UnifiedWrapper wrapper) { super(wrapper); }
     }
 
-    public static final class TextFieldAssert extends WrapperAssert<TextFieldAssert> {
-        private final UnifiedTextField field;
+    /** Label and validation checks shared by input fields. */
+    public abstract static class FieldAssert<SELF extends FieldAssert<SELF>> extends WrapperAssert<SELF> {
+        final UnifiedField field;
 
-        TextFieldAssert(UnifiedTextField field) { super(field); this.field = field; }
+        FieldAssert(UnifiedField field) { super(field); this.field = field; }
 
-        public TextFieldAssert hasValue(String expected) {
-            return check("to have value", expected, field::getValue, v -> Objects.equals(v, expected));
-        }
+        public SELF isValid() { return check("to be valid", null, field::isInvalid, Boolean.FALSE::equals); }
+        public SELF isInvalid() { return check("to be invalid", null, field::isInvalid, Boolean.TRUE::equals); }
 
-        public TextFieldAssert isEmpty() {
-            return check("to be empty", null, field::getValue, v -> v == null || v.toString().isEmpty());
-        }
-
-        public TextFieldAssert isValid() { return check("to be valid", null, field::isInvalid, Boolean.FALSE::equals); }
-        public TextFieldAssert isInvalid() { return check("to be invalid", null, field::isInvalid, Boolean.TRUE::equals); }
-
-        public TextFieldAssert hasErrorMessage(String expected) {
+        public SELF hasErrorMessage(String expected) {
             return check("to have error message", expected, field::getErrorMessage, v -> Objects.equals(v, expected));
         }
 
-        public TextFieldAssert isRequired() { return check("to be required", null, field::isRequired, Boolean.TRUE::equals); }
+        public SELF isRequired() { return check("to be required", null, field::isRequired, Boolean.TRUE::equals); }
+
+        public SELF hasLabel(String expected) {
+            return check("to have label", expected, field::getLabel, v -> Objects.equals(v, expected));
+        }
+    }
+
+    public static final class TextFieldAssert extends FieldAssert<TextFieldAssert> {
+        private final UnifiedTextField textField;
+
+        TextFieldAssert(UnifiedTextField field) { super(field); this.textField = field; }
+
+        public TextFieldAssert hasValue(String expected) {
+            return check("to have value", expected, textField::getValue, v -> Objects.equals(v, expected));
+        }
+
+        public TextFieldAssert isEmpty() {
+            return check("to be empty", null, textField::getValue, v -> v == null || v.toString().isEmpty());
+        }
+    }
+
+    public static final class NumberFieldAssert extends FieldAssert<NumberFieldAssert> {
+        private final UnifiedNumberField numberField;
+
+        NumberFieldAssert(UnifiedNumberField field) { super(field); this.numberField = field; }
+
+        public NumberFieldAssert hasValue(double expected) {
+            return check("to have value", expected, numberField::getValue,
+                    v -> v != null && Double.compare((Double) v, expected) == 0);
+        }
+
+        public NumberFieldAssert isEmpty() {
+            return check("to be empty", null, numberField::getValue, Objects::isNull);
+        }
+    }
+
+    public static final class DatePickerAssert extends FieldAssert<DatePickerAssert> {
+        private final UnifiedDatePicker datePicker;
+
+        DatePickerAssert(UnifiedDatePicker field) { super(field); this.datePicker = field; }
+
+        public DatePickerAssert hasValue(LocalDate expected) {
+            return check("to have value", expected, datePicker::getValue, v -> Objects.equals(v, expected));
+        }
+
+        public DatePickerAssert isEmpty() {
+            return check("to be empty", null, datePicker::getValue, Objects::isNull);
+        }
+    }
+
+    public static final class CheckboxAssert extends WrapperAssert<CheckboxAssert> {
+        private final UnifiedCheckbox checkbox;
+
+        CheckboxAssert(UnifiedCheckbox checkbox) { super(checkbox); this.checkbox = checkbox; }
+
+        public CheckboxAssert isChecked() { return check("to be checked", null, checkbox::isChecked, Boolean.TRUE::equals); }
+        public CheckboxAssert isNotChecked() { return check("not to be checked", null, checkbox::isChecked, Boolean.FALSE::equals); }
+
+        public CheckboxAssert isIndeterminate() {
+            return check("to be indeterminate", null, checkbox::isIndeterminate, Boolean.TRUE::equals);
+        }
+
+        public CheckboxAssert hasLabel(String expected) {
+            return check("to have label", expected, checkbox::getLabel, v -> Objects.equals(v, expected));
+        }
     }
 
     public static final class ButtonAssert extends WrapperAssert<ButtonAssert> {

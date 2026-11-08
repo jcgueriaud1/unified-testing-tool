@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.browserless;
 import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.ComponentTester;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.testing.unified.spi.GridAccess;
@@ -33,6 +34,11 @@ final class BrowserlessComponents {
         /** Visibility, when it is not the component tree's visibility. */
         default Optional<Boolean> visible(Component component) {
             return Optional.empty();
+        }
+
+        /** Sets the value as a user would, when the tester has no {@code setValue}; false = not handled. */
+        default boolean setValue(Component component, Object value, BrowserlessUIContext window) {
+            return false;
         }
 
         /** Handles a key press on the component; false if this component has no key handling. */
@@ -102,6 +108,20 @@ final class BrowserlessComponents {
                     return false;
                 }
                 invoke(window.test(component), "pressEscape");
+                return true;
+            }
+        });
+    }
+
+    static {
+        register(Checkbox.class, new Support() {
+            @Override
+            public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
+                // CheckboxTester has check() and uncheck() instead of setValue
+                boolean checked = Boolean.TRUE.equals(value);
+                if (((Checkbox) component).getValue() != checked) {
+                    invoke(window.test(component), checked ? "check" : "uncheck");
+                }
                 return true;
             }
         });
