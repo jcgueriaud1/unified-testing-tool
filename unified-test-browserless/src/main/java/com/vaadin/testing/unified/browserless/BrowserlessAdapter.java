@@ -1,7 +1,6 @@
 package com.vaadin.testing.unified.browserless;
 
 import com.vaadin.browserless.BrowserlessApplicationContext;
-import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
@@ -31,13 +30,13 @@ public final class BrowserlessAdapter implements TestingToolAdapter {
                 .map(v -> Arrays.stream(v.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new))
                 .orElse(new String[] { testClass.getPackageName() });
 
-        BrowserlessApplicationContext app = SpringSupport.isAvailable()
-                ? SpringSupport.applicationContext(context.extensionContext(), viewPackages)
-                : null;
-        if (app == null) {
-            app = BrowserlessApplicationContext.create(viewPackages);
+        if (SpringSupport.isAvailable()) {
+            BrowserlessSession spring = SpringSupport.open(context.extensionContext(), viewPackages);
+            if (spring != null) {
+                return spring;
+            }
         }
-        BrowserlessUIContext window = app.newUser().newWindow();
-        return new BrowserlessSession(app, window);
+        BrowserlessApplicationContext app = BrowserlessApplicationContext.create(viewPackages);
+        return new BrowserlessSession(app, app.newUser());
     }
 }

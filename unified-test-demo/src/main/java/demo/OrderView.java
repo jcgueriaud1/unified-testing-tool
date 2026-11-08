@@ -7,10 +7,12 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.auth.AnonymousAllowed;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /** Selection fields; items are objects shown through an item label generator. */
+@AnonymousAllowed
 @Route("order")
 public class OrderView extends VerticalLayout {
 

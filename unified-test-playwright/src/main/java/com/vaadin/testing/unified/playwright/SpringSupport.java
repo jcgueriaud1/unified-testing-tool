@@ -21,7 +21,11 @@ final class SpringSupport {
     }
 
     static Optional<String> baseUrl(ExtensionContext context) {
-        if (!AnnotatedElementUtils.hasAnnotation(context.getRequiredTestClass(), BootstrapWith.class)) {
+        boolean springTest = false;
+        for (Class<?> c = context.getRequiredTestClass(); c != null; c = c.getEnclosingClass()) {
+            springTest |= AnnotatedElementUtils.hasAnnotation(c, BootstrapWith.class); // @Nested: enclosing class
+        }
+        if (!springTest) {
             return Optional.empty();
         }
         Environment env = SpringExtension.getApplicationContext(context).getEnvironment();

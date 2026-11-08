@@ -11,9 +11,11 @@ import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.auth.AnonymousAllowed;
 import java.util.List;
 import java.util.stream.IntStream;
 
+@AnonymousAllowed
 @Route("users")
 public class UsersView extends VerticalLayout {
 

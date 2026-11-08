@@ -40,6 +40,12 @@
             <artifactId>spring-context</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- secured apps (createSecured, @WithMockUser); optional like Spring itself -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

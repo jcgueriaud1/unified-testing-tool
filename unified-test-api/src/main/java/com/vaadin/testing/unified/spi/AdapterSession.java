@@ -41,6 +41,12 @@ public interface AdapterSession extends AutoCloseable {
      */
     List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException;
 
+    /** Another window of the same user and session. This session closes it when it closes. */
+    AdapterSession openWindow();
+
+    /** A window of another user, in a session of its own. This session closes it when it closes. */
+    AdapterSession openAsUser(String username, String... roles);
+
     /** The Testing Tool's own page-level object of the given type, if it has one. */
     <T> Optional<T> unwrap(Class<T> type);
 

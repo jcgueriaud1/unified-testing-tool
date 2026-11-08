@@ -7,9 +7,11 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.auth.AnonymousAllowed;
 import java.time.LocalDate;
 
 /** A form with typed values: a number, a date and booleans. */
+@AnonymousAllowed
 @Route("preferences")
 public class PreferencesView extends VerticalLayout {
 
