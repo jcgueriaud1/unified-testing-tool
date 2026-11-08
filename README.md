@@ -29,7 +29,7 @@ class ProfileViewTest {
 
 | Module | Contains |
 |---|---|
-| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `findComponent`), retrying `UnifiedAssertions`, Capabilities, Escape Hatch, adapter SPI |
+| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedContainer`, `findComponent`), retrying `UnifiedAssertions`, Capabilities, Escape Hatch, adapter SPI |
 | `unified-test-browserless` | Browserless Test adapter |
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
 | `unified-test-spring` | `@UnifiedSpringBootTest` |
@@ -72,7 +72,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | Area | State |
 |---|---|
 | Selenium (TestBench) adapter | not started (needs a TestBench license) |
-| Rest of the Core Set (TabSheet, `UnifiedContainer`) | in the spec, not implemented (tickets on the tracker) |
+| Rest of the Core Set (TabSheet) | in the spec, not implemented (tickets on the tracker) |
 | Browserless: searching inside Grid row details (`row.details()`) | throws; toggling and checking details works |
 | Browserless: `page.reload()`, `pressKey` (except Escape on a dialog), `dispatchEvent` | throw `UnsupportedOperationException` |
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
