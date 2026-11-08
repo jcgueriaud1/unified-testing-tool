@@ -8,6 +8,8 @@ import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
+import com.vaadin.flow.component.tabs.TabSheet;
+import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.SelectionAccess;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -24,6 +26,7 @@ import org.vaadin.addons.dramafinder.element.CheckboxElement;
 import org.vaadin.addons.dramafinder.element.ComboBoxElement;
 import org.vaadin.addons.dramafinder.element.MultiSelectComboBoxElement;
 import org.vaadin.addons.dramafinder.element.RadioButtonGroupElement;
+import org.vaadin.addons.dramafinder.element.TabSheetElement;
 import org.vaadin.addons.dramafinder.element.DatePickerElement;
 import org.vaadin.addons.dramafinder.element.DialogElement;
 import org.vaadin.addons.dramafinder.element.GridElement;
@@ -171,6 +174,22 @@ final class PlaywrightComponents {
                         : Optional.empty();
             }
         };
+    }
+
+    static {
+        register(TabSheet.class, new Support() {
+            @Override
+            public Class<? extends VaadinElement> dramafinderElement() {
+                return TabSheetElement.class;
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
+                return type == TabSheetAccess.class
+                        ? Optional.of(new PlaywrightTabSheetAccess(session, locator))
+                        : Optional.empty();
+            }
+        });
     }
 
     static {

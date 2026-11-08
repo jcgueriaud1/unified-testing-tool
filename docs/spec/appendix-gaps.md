@@ -20,6 +20,7 @@ The first six are closed in **Dramafinder 2.0.0** (the Playwright adapter mostly
 | Grid: no `sort(direction)`, header components one header row at a time, selection column counted in indexes | [parttio/dramafinder#222](https://github.com/parttio/dramafinder/issues/222) |
 | NumberField and IntegerField: value only as a `String` | [parttio/dramafinder#224](https://github.com/parttio/dramafinder/issues/224) |
 | Selection fields: no item labels list, no selected label for radio groups | [parttio/dramafinder#226](https://github.com/parttio/dramafinder/issues/226) |
+| Tabs: no enabled state (selecting a disabled tab times out), no tab labels list | [parttio/dramafinder#228](https://github.com/parttio/dramafinder/issues/228) |
 
 ## TestBench
 
@@ -33,6 +34,7 @@ The first six are closed in **Dramafinder 2.0.0** (the Playwright adapter mostly
 |---|---|
 | `CheckboxTester` and `SwitchTester` have no `setValue` | [#59](https://github.com/jcgueriaud1/unified-testing-tool/issues/59) |
 | `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61) |
+| `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/jcgueriaud1/unified-testing-tool/issues/64) |
 
 ## Outside the Testing Tools
 

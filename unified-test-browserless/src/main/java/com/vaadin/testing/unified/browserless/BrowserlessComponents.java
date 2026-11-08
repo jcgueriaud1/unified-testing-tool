@@ -8,6 +8,8 @@ import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
+import com.vaadin.flow.component.tabs.TabSheet;
+import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.SelectionAccess;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.testing.unified.spi.GridAccess;
@@ -143,6 +145,17 @@ final class BrowserlessComponents {
         register(ComboBox.class, selection);
         register(MultiSelectComboBox.class, selection);
         register(RadioButtonGroup.class, selection);
+    }
+
+    static {
+        register(TabSheet.class, new Support() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return type == TabSheetAccess.class
+                        ? Optional.of(new BrowserlessTabSheetAccess(session, (TabSheet) component))
+                        : Optional.empty();
+            }
+        });
     }
 
     static {
