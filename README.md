@@ -73,7 +73,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 |---|---|
 | Selenium (TestBench) adapter | not started (needs a TestBench license) |
 | Browserless: searching inside Grid row details (`row.details()`) | throws; toggling and checking details works |
-| Browserless: `page.reload()`, `pressKey` (except Escape on a dialog), `dispatchEvent` | throw `UnsupportedOperationException` |
+| Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66)) |
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
 | Browser: a combo box's `getItems()` | the drop-down's first page only (50 items by default) |
 | `@ToolImplementation` overrides for add-ons | annotation exists, not honoured yet |

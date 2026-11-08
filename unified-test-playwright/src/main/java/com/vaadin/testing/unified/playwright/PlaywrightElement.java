@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
+import org.vaadin.addons.dramafinder.element.shared.FocusableElement;
 import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
 
 /**
@@ -149,7 +150,7 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public void focus() {
-        locator.focus();
+        focusTarget().focus();
         AutoWait.afterAction(page());
     }
 
@@ -161,7 +162,7 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public void pressKey(String key) {
-        locator.press(key);
+        focusTarget().press(key);
         AutoWait.afterAction(page());
     }
 
@@ -169,6 +170,14 @@ final class PlaywrightElement implements UnifiedElement {
     public void dispatchEvent(String eventName) {
         locator.dispatchEvent(eventName);
         AutoWait.afterAction(page());
+    }
+
+    /**
+     * The part that takes keyboard focus: a field's input, not its host element, which can't be focused
+     * (keys pressed on it would go to the page body).
+     */
+    private Locator focusTarget() {
+        return dramafinder instanceof FocusableElement focusable ? focusable.getFocusLocator() : locator;
     }
 
     // ---------------------------------------------------------------- Escape Hatch

@@ -198,16 +198,21 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void pressKey(String key) {
-        if (!support.pressKey(component, key, session.window())) {
-            throw new UnsupportedOperationException("pressKey(\"" + key + "\") on "
-                    + component.getClass().getSimpleName() + " is not implemented on Browserless yet");
+        pressKey(session, component, key);
+    }
+
+    /** The component's own key handling (e.g. Escape closes a dialog), else a bubbling keydown. */
+    static void pressKey(BrowserlessSession session, Component target, String key) {
+        if (!BrowserlessComponents.of(target.getClass()).pressKey(target, key, session.window())) {
+            BrowserlessKeys.press(target, key);
         }
         session.window().roundTrip();
     }
 
     @Override
     public void dispatchEvent(String eventName) {
-        throw new UnsupportedOperationException("dispatchEvent is not implemented on Browserless yet (first version)");
+        BrowserlessKeys.dispatch(component, eventName);
+        session.window().roundTrip();
     }
 
     // ---------------------------------------------------------------- Escape Hatch

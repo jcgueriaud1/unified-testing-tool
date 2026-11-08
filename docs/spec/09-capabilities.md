@@ -36,7 +36,17 @@ Network interception, tracing and browser contexts: Escape Hatch only.
 
 ## Keyboard
 
-`pressKey` works on every Testing Tool. On Browserless keyboard and focus are simulated. Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
+`pressKey` works on every Testing Tool, with Playwright's key names (`"Enter"`, `"Escape"`, `"Control+s"`). On Browserless keyboard and focus are simulated:
+
+| | Browserless |
+|---|---|
+| `element.pressKey(k)` | the component's own handling (Escape closes a dialog), else a `keydown` on the component and each ancestor up to the UI, as bubbling would: key listeners and shortcuts (`addClickShortcut(..).listenOn(..)`) react |
+| `page.pressKey(k)` | the same, from the focused component; with a dialog open, from the dialog |
+| `dispatchEvent(name)` | the DOM event on the component and each ancestor |
+| `page.reload()` | new view and layout instances at the same location; kept with `@PreserveOnRefresh` |
+| Not simulated | client-side behaviour: typing text, Tab moving focus, browser defaults |
+
+Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 
 ## Limitations
 
