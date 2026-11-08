@@ -29,8 +29,10 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
     // columns
     /** By header text. */
     UnifiedGridColumn column(String header);
-    /** For columns without header text (Flow {@code Column.setKey}). */
-    UnifiedGridColumn columnWithKey(String key);
+    /** By id, for columns without header text (Flow {@code Column.setId}); the id reaches the browser. */
+    UnifiedGridColumn columnWithId(String id);
+    /** By position among the visible columns; last resort. */
+    UnifiedGridColumn column(int index);
     List<String> getColumnHeaders();
 
     // selection

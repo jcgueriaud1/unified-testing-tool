@@ -4,6 +4,8 @@ import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.ComponentTester;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.flow.component.notification.Notification;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -36,6 +38,11 @@ final class BrowserlessComponents {
         /** Handles a key press on the component; false if this component has no key handling. */
         default boolean pressKey(Component component, String key, BrowserlessUIContext window) {
             return false;
+        }
+
+        /** A component-specific access object for the core (e.g. GridAccess), reached through unwrap. */
+        default Optional<Object> unwrap(Class<?> type, Component component, BrowserlessUIContext window) {
+            return Optional.empty();
         }
 
         /** Whether Browserless's own text query sees this component's text. */
@@ -96,6 +103,17 @@ final class BrowserlessComponents {
                 }
                 invoke(window.test(component), "pressEscape");
                 return true;
+            }
+        });
+    }
+
+    static {
+        register(Grid.class, new Support() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessUIContext window) {
+                return type == GridAccess.class
+                        ? Optional.of(new BrowserlessGridAccess(window, (Grid<?>) component))
+                        : Optional.empty();
             }
         });
     }

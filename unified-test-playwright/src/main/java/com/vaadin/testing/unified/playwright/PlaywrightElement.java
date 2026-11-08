@@ -173,6 +173,10 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public <T> Optional<T> tryUnwrap(Class<T> type) {
+        Optional<Object> special = support.unwrap(type, locator);
+        if (special.isPresent()) {
+            return special.map(type::cast);
+        }
         if (type.isInstance(locator)) {
             return Optional.of(type.cast(locator));
         }
