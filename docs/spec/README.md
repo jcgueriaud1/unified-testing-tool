@@ -63,7 +63,7 @@ The Vaadin TestBench team (to build it) and Vaadin Flow developers (to judge the
 
 ## Baseline
 
-Java 21, JUnit 6 (Jupiter), Vaadin 25, Spring Boot 4 for the Spring integration.
+Java 21, JUnit 6 (Jupiter), Vaadin 25, Spring Boot 4 for the Spring integration, Dramafinder 2.0+ for Playwright.
 
 ## Reading order
 
