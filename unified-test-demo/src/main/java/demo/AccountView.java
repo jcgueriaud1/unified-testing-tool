@@ -7,8 +7,10 @@ import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.auth.AnonymousAllowed;
 
 /** A TabSheet; two tabs have a field with the same label. */
+@AnonymousAllowed
 @Route("account")
 public class AccountView extends VerticalLayout {
 

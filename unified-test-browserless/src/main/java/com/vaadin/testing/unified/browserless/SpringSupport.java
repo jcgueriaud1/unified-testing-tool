@@ -20,20 +20,33 @@ final class SpringSupport {
         }
     }
 
-    /** The Browserless app built from the test's Spring context, or null if the test has none. */
-    static BrowserlessApplicationContext applicationContext(ExtensionContext context, String[] viewPackages) {
+    /**
+     * The test's page on the Browserless app built from its Spring context, or null if the test has none.
+     * With Spring Security in the context the app is secured and the page belongs to the test's user
+     * ({@code @WithMockUser}, {@code @WithUserDetails}), or to an anonymous user.
+     */
+    static BrowserlessSession open(ExtensionContext context, String[] viewPackages) {
         if (!hasSpringExtension(context)) {
             return null;
         }
         ApplicationContext spring = SpringExtension.getApplicationContext(context);
-        return SpringBrowserlessApplicationContext.create(spring, viewPackages);
+        if (SecuritySupport.isSecured(spring)) {
+            return SecuritySupport.open(spring, viewPackages);
+        }
+        BrowserlessApplicationContext app = SpringBrowserlessApplicationContext.create(spring, viewPackages);
+        return new BrowserlessSession(app, app.newUser());
     }
 
+    /** The test class or, for a {@code @Nested} class, an enclosing one is a Spring test. */
     private static boolean hasSpringExtension(ExtensionContext context) {
-        Class<?> testClass = context.getRequiredTestClass();
-        return org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(testClass,
-                org.springframework.test.context.BootstrapWith.class)
-                || org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(testClass,
-                        org.springframework.test.context.ContextConfiguration.class);
+        for (Class<?> c = context.getRequiredTestClass(); c != null; c = c.getEnclosingClass()) {
+            if (org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(c,
+                    org.springframework.test.context.BootstrapWith.class)
+                    || org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(c,
+                            org.springframework.test.context.ContextConfiguration.class)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

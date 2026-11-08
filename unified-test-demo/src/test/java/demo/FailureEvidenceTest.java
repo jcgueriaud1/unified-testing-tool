@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.launcher.Launcher;
@@ -24,8 +25,9 @@ import org.junit.platform.launcher.listeners.TestExecutionSummary;
 /** Runs a failing Unified UI Test and checks it left evidence: a screenshot or the component tree. */
 class FailureEvidenceTest {
 
-    /** Fails on purpose. A nested class: Surefire doesn't run it on its own. */
+    /** Fails on purpose; tagged so Surefire doesn't run it on its own. */
     @UnifiedSpringBootTest
+    @Tag("launched-only")
     static class Failing {
         @Test
         void fails(UnifiedPage page) {

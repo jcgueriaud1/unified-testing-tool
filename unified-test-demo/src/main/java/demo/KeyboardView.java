@@ -10,8 +10,10 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.auth.AnonymousAllowed;
 
 /** Key listeners, shortcuts and a custom DOM event. */
+@AnonymousAllowed
 @Route("keyboard")
 public class KeyboardView extends VerticalLayout {
 

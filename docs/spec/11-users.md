@@ -57,6 +57,15 @@ UnifiedPage bob = page.openAsUser("bob", "USER");   // another user, own session
 
 All windows and users close at the end of the test.
 
+## Implementation status
+
+| | Browserless | Playwright |
+|---|---|---|
+| `@WithMockUser`, `@WithUserDetails` (method, class, `@Nested`) | done: Spring's test listener sets the user, the adapter passes it to `createSecured(..).newUser(auth)` | fails with a message naming #50 (login endpoint, Dramafinder 2.0.1) |
+| `openWindow()` | done | done |
+| `openAsUser(..)` | done | fails with a message naming #50 |
+| Redirects (anonymous → login view, missing role → access denied) | asserted like any navigation | same |
+
 ## Not specified
 
 Authentication without Spring Security: left to implementation (the application's real login, or the Escape Hatch). See [open-questions.md](open-questions.md).

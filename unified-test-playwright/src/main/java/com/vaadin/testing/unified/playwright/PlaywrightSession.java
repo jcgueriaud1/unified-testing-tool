@@ -31,10 +31,30 @@ final class PlaywrightSession implements AdapterSession {
     private final Page page;
     private final String baseUrl;
 
+    private final boolean ownsContext;
+
     PlaywrightSession(BrowserContext context, Page page, String baseUrl) {
+        this(context, page, baseUrl, true);
+    }
+
+    private PlaywrightSession(BrowserContext context, Page page, String baseUrl, boolean ownsContext) {
         this.context = context;
         this.page = page;
         this.baseUrl = baseUrl;
+        this.ownsContext = ownsContext;
+    }
+
+    /** A new page in the same browser context: same cookies, so the same HTTP and Vaadin session. */
+    @Override
+    public AdapterSession openWindow() {
+        Page second = context.newPage();
+        return new PlaywrightSession(context, second, baseUrl, false);
+    }
+
+    @Override
+    public AdapterSession openAsUser(String username, String... roles) {
+        throw new UnsupportedOperationException("openAsUser on Playwright needs the login endpoint, not implemented"
+                + " yet (unified-testing-tool#50). Add @RequiresTestingTool(TestingTool.BROWSERLESS) for now.");
     }
 
     Page page() {
@@ -255,7 +275,11 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public void close() {
-        context.close();
+        if (ownsContext) {
+            context.close(); // closes the windows opened from this one too
+        } else {
+            page.close();
+        }
     }
 
     static Pattern exactText(String text) {

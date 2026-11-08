@@ -27,4 +27,14 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
 
     /** Needs {@link RequiresBrowser}. */
     void screenshot(Path file);
+
+    // windows and users: all close at the end of the test
+    /** Another window of the same user, in the same session. */
+    UnifiedPage openWindow();
+
+    /**
+     * A window of another user, in a session of its own, logged in with these roles (Spring Security,
+     * {@code ROLE_} prefix added). Starts on no view: navigate first.
+     */
+    UnifiedPage openAsUser(String username, String... roles);
 }

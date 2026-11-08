@@ -72,6 +72,16 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
+    public UnifiedPage openWindow() {
+        return new UnifiedPageImpl(new TestRun(run.tool(), run.session().openWindow(), run.timeout()));
+    }
+
+    @Override
+    public UnifiedPage openAsUser(String username, String... roles) {
+        return new UnifiedPageImpl(new TestRun(run.tool(), run.session().openAsUser(username, roles), run.timeout()));
+    }
+
+    @Override
     public void screenshot(Path file) {
         run.requireBrowser("screenshot");
         run.session().screenshot(file);
