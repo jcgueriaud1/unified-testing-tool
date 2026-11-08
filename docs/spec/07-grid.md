@@ -38,7 +38,7 @@ flowchart TD
 
 | Object | Members |
 |---|---|
-| `UnifiedGrid` | `rows()`, `row(i)`, `getRowCount()`, `column(header)`, `columnWithKey(key)`, `getColumnHeaders()`, `selectAll()`, `deselectAll()` |
+| `UnifiedGrid` | `rows()`, `row(i)`, `getRowCount()`, `column(header)`, `columnWithId(id)`, `column(index)`, `getColumnHeaders()`, `selectAll()`, `deselectAll()` |
 | `RowQuery` | `withCellText(column, text)`, `withCellTextContaining(..)`, `selected()`, `single()`, `all()`, `exists()` |
 | `UnifiedGridRow` | `getIndex()`, `getCellText(column)`, `cell(column)` (Scope), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `details()` (Scope) |
 | `UnifiedGridColumn` | `header()` (Scope), `sort(direction)`, `getSortDirection()`, `getCellTexts()` |
@@ -53,7 +53,7 @@ flowchart TD
 
 | Rule | Detail |
 |---|---|
-| Columns | By header text; `columnWithKey(key)` for columns without header text (`Column.setKey`). |
+| Columns | By header text (recommended); `columnWithId(id)` for columns without header text (`Column.setId`, sent to the browser as the column element's id); `column(index)` among visible columns in display order as a last resort. **No lookup by key:** `Column.setKey` stays on the server, so no browser Testing Tool can see it. |
 | Values | Rendered text only. The item behind a row: Escape Hatch (Browserless). |
 | Lazy loading | Row access scrolls the row into view and waits for its data (Auto-Wait). `getRowCount()` is the total, not the rendered rows. |
 | Cell components | Through `row.cell(column)` on every Testing Tool (Browserless queries can't see renderer components). |

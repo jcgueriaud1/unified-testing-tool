@@ -32,10 +32,10 @@ final class BrowserlessGridAccess implements GridAccess {
     }
 
     @Override
-    public int columnIndexOfKey(String key) {
+    public int columnIndexOfId(String id) {
         List<? extends Grid.Column<?>> columns = columns();
         for (int i = 0; i < columns.size(); i++) {
-            if (key.equals(columns.get(i).getKey())) {
+            if (columns.get(i).getId().filter(id::equals).isPresent()) {
                 return i;
             }
         }

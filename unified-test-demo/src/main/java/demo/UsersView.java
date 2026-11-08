@@ -26,11 +26,11 @@ public class UsersView extends VerticalLayout {
                         .mapToObj(UsersView::user),
                 query -> USER_COUNT));
 
-        // small, with keys; the last column has no header text
+        // small; the last column has no header text, only an id
         Grid<User> roles = new Grid<>();
         roles.setTestId("roles");
         roles.addColumn(User::role).setHeader("Role").setKey("role");
-        roles.addColumn(User::name).setKey("owner");
+        roles.addColumn(User::name).setId("owner");
         roles.setItems(List.of(new User("Ada", "", "Admin"), new User("Bob", "", "Editor"), new User("Cy", "", "Viewer")));
         roles.setAllRowsVisible(true);
 

@@ -24,8 +24,16 @@ public final class GridSupport {
         return new Row(grid, () -> index, "row(" + index + ")");
     }
 
-    public static UnifiedGridColumn column(UnifiedGrid grid, String headerOrKey, boolean byKey) {
-        return new Column(grid, headerOrKey, byKey);
+    public static UnifiedGridColumn columnByHeader(UnifiedGrid grid, String header) {
+        return new Column(grid, Column.By.HEADER, header, -1);
+    }
+
+    public static UnifiedGridColumn columnById(UnifiedGrid grid, String id) {
+        return new Column(grid, Column.By.ID, id, -1);
+    }
+
+    public static UnifiedGridColumn columnByIndex(UnifiedGrid grid, int index) {
+        return new Column(grid, Column.By.INDEX, null, index);
     }
 
     public static TestRun runOf(UnifiedGrid grid) {
@@ -136,18 +144,30 @@ public final class GridSupport {
         @Override public String toString() { return description; }
     }
 
-    public record Column(UnifiedGrid grid, String headerOrKey, boolean byKey) implements UnifiedGridColumn {
+    public record Column(UnifiedGrid grid, By by, String name, int index) implements UnifiedGridColumn {
+
+        public enum By { HEADER, ID, INDEX }
+
         @Override
         public int getIndex() {
             GridAccess access = access(grid);
-            if (!byKey) {
-                return columnIndex(access, headerOrKey);
-            }
-            int index = access.columnIndexOfKey(headerOrKey);
-            if (index < 0) {
-                throw new IllegalArgumentException("No visible column with key \"" + headerOrKey + "\"");
-            }
-            return index;
+            return switch (by) {
+                case HEADER -> columnIndex(access, name);
+                case ID -> {
+                    int found = access.columnIndexOfId(name);
+                    if (found < 0) {
+                        throw new IllegalArgumentException("No visible column with id \"" + name + "\"");
+                    }
+                    yield found;
+                }
+                case INDEX -> {
+                    int columns = access.columnHeaders().size();
+                    if (index < 0 || index >= columns) {
+                        throw new IllegalArgumentException("No visible column at index " + index + " (" + columns + " columns)");
+                    }
+                    yield index;
+                }
+            };
         }
 
         @Override
@@ -158,7 +178,11 @@ public final class GridSupport {
 
         @Override
         public String toString() {
-            return byKey ? "columnWithKey(\"" + headerOrKey + "\")" : "column(\"" + headerOrKey + "\")";
+            return switch (by) {
+                case HEADER -> "column(\"" + name + "\")";
+                case ID -> "columnWithId(\"" + name + "\")";
+                case INDEX -> "column(" + index + ")";
+            };
         }
     }
 }

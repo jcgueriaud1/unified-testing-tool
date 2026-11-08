@@ -16,8 +16,8 @@ public interface GridAccess {
 
     List<String> columnHeaders();
 
-    /** Index of the visible column with this key ({@code Column.setKey}), or -1. */
-    int columnIndexOfKey(String key);
+    /** Index of the visible column with this id ({@code Column.setId}), or -1. */
+    int columnIndexOfId(String id);
 
     String cellText(int row, int column);
 

@@ -32,11 +32,12 @@ final class PlaywrightGridAccess implements GridAccess {
     }
 
     @Override
-    public int columnIndexOfKey(String key) {
-        // Flow sends a column's key as the web component's "path"
+    public int columnIndexOfId(String id) {
+        // the <vaadin-grid-column> element's id; visible columns in display order, as TestBench's getVisibleColumns()
         Object index = locator.evaluate(
-                "(g, k) => g._getColumns().filter(c => !c.hidden).findIndex(c => c.path === k || c.getAttribute('data-key') === k)",
-                key);
+                "(g, id) => g._getColumns().filter(c => !c.hidden).sort((a, b) => a._order - b._order)"
+                        + ".findIndex(c => c.id === id)",
+                id);
         return ((Number) Objects.requireNonNull(index)).intValue();
     }
 

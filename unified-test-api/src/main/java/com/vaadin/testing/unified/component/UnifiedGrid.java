@@ -26,10 +26,12 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
     default int getRowCount() { return element().unwrap(GridAccess.class).rowCount(); }
 
     // columns
-    /** By header text. */
-    default UnifiedGridColumn column(String header) { return GridSupport.column(this, header, false); }
-    /** For columns without header text (Flow {@code Column.setKey}). */
-    default UnifiedGridColumn columnWithKey(String key) { return GridSupport.column(this, key, true); }
+    /** By header text (recommended). */
+    default UnifiedGridColumn column(String header) { return GridSupport.columnByHeader(this, header); }
+    /** By id, for columns without header text (Flow {@code Column.setId}); the id reaches the browser. */
+    default UnifiedGridColumn columnWithId(String id) { return GridSupport.columnById(this, id); }
+    /** By position among the visible columns; last resort, breaks when columns are reordered. */
+    default UnifiedGridColumn column(int index) { return GridSupport.columnByIndex(this, index); }
     default List<String> getColumnHeaders() { return element().unwrap(GridAccess.class).columnHeaders(); }
 
     interface RowQuery {

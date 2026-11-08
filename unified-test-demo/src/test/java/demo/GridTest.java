@@ -51,11 +51,12 @@ class GridTest {
     }
 
     @Test
-    void readsColumnsByHeaderAndByKey(UnifiedPage page) {
+    void readsColumnsByHeaderIdAndIndex(UnifiedPage page) {
         UnifiedGrid roles = grid(page, "roles");
 
         assertThat(roles.column("Role")).hasCellTexts("Admin", "Editor", "Viewer");
-        assertThat(roles.columnWithKey("owner")).hasCellTexts("Ada", "Bob", "Cy");
+        assertThat(roles.columnWithId("owner")).hasCellTexts("Ada", "Bob", "Cy");
+        assertThat(roles.column(1)).hasCellTexts("Ada", "Bob", "Cy");
     }
 
     @Test
