@@ -12,11 +12,11 @@ import java.util.function.Consumer;
  */
 public final class LazyElement implements UnifiedElement {
 
-    private final ElementSource source;
+    private final ElementResolver source;
     private final int index;
     private final TestRun run;
 
-    public LazyElement(ElementSource source, int index, TestRun run) {
+    public LazyElement(ElementResolver source, int index, TestRun run) {
         this.source = source;
         this.index = index;
         this.run = run;
@@ -31,6 +31,9 @@ public final class LazyElement implements UnifiedElement {
     }
 
     public String describe() {
+        if (!(source instanceof ElementSource)) {
+            return source.describe();
+        }
         return source.describe() + (index < 0 ? ".single()" : ".all().get(" + index + ")");
     }
 

@@ -1,6 +1,8 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.data.provider.SortDirection;
+import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
@@ -34,9 +36,14 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
     default UnifiedGridColumn column(int index) { return GridSupport.columnByIndex(this, index); }
     default List<String> getColumnHeaders() { return element().unwrap(GridAccess.class).columnHeaders(); }
 
+    // selection
+    default void selectAll() { element().unwrap(GridAccess.class).selectAll(); }
+    default void deselectAll() { element().unwrap(GridAccess.class).deselectAll(); }
+
     interface RowQuery {
         RowQuery withCellText(String columnHeader, String text);
         RowQuery withCellTextContaining(String columnHeader, String part);
+        RowQuery selected();
         UnifiedGridRow single();
         List<UnifiedGridRow> all();
         boolean exists();
@@ -46,6 +53,17 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
         UnifiedGrid grid();
         int getIndex();
         String getCellText(String columnHeader);
+        /** Components inside the cell, e.g. an Edit button. */
+        Scope cell(String columnHeader);
+        void select();
+        void deselect();
+        boolean isSelected();
+        void click();
+        void doubleClick();
+        void toggleDetails();
+        boolean isDetailsOpen();
+        /** Components inside the row's details. */
+        Scope details();
     }
 
     interface UnifiedGridColumn {
@@ -54,5 +72,10 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
         int getIndex();
         /** All rows of this column, loading lazily. */
         List<String> getCellTexts();
+        /** Components in the column's header cells, e.g. a filter field. */
+        Scope header();
+        void sort(SortDirection direction);
+        /** Null when not sorted. */
+        SortDirection getSortDirection();
     }
 }

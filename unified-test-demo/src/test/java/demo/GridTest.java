@@ -23,7 +23,7 @@ class GridTest {
         UnifiedGrid users = grid(page, "users");
 
         assertThat(users).hasRowCount(120);
-        assertEquals(List.of("Name", "Email", "Role"), users.getColumnHeaders());
+        assertEquals(List.of("Name", "Email", "Role", "Actions"), users.getColumnHeaders());
         assertThat(users.row(0)).hasCellText("Name", "User 1").hasCellText("Email", "user1@example.com");
     }
 
