@@ -72,7 +72,8 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | Area | State |
 |---|---|
 | Selenium (TestBench) adapter | not started (needs a TestBench license) |
-| Grid and the rest of the Core Set | in the spec and `spec/api-sketch`, not implemented (tickets on the tracker) |
+| Rest of the Core Set (fields, selection fields, TabSheet) | in the spec, not implemented (tickets on the tracker) |
+| Browserless: searching inside Grid row details (`row.details()`) | throws; toggling and checking details works |
 | Browserless: `page.reload()`, `pressKey` (except Escape on a dialog), `dispatchEvent` | throw `UnsupportedOperationException` |
 | `@ToolImplementation` overrides for add-ons | annotation exists, not honoured yet |
 | Failure evidence (screenshot, component tree) | not captured yet |

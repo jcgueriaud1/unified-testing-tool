@@ -49,7 +49,7 @@ final class PlaywrightComponents {
         }
 
         /** A component-specific access object for the core (e.g. GridAccess), reached through unwrap. */
-        default Optional<Object> unwrap(Class<?> type, Locator locator) {
+        default Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
             return Optional.empty();
         }
 
@@ -107,8 +107,10 @@ final class PlaywrightComponents {
             }
 
             @Override
-            public Optional<Object> unwrap(Class<?> type, Locator locator) {
-                return type == GridAccess.class ? Optional.of(new PlaywrightGridAccess(locator)) : Optional.empty();
+            public Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
+                return type == GridAccess.class
+                        ? Optional.of(new PlaywrightGridAccess(session, locator))
+                        : Optional.empty();
             }
         });
     }

@@ -41,7 +41,7 @@ final class BrowserlessComponents {
         }
 
         /** A component-specific access object for the core (e.g. GridAccess), reached through unwrap. */
-        default Optional<Object> unwrap(Class<?> type, Component component, BrowserlessUIContext window) {
+        default Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
             return Optional.empty();
         }
 
@@ -110,9 +110,9 @@ final class BrowserlessComponents {
     static {
         register(Grid.class, new Support() {
             @Override
-            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessUIContext window) {
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
                 return type == GridAccess.class
-                        ? Optional.of(new BrowserlessGridAccess(window, (Grid<?>) component))
+                        ? Optional.of(new BrowserlessGridAccess(session, (Grid<?>) component))
                         : Optional.empty();
             }
         });

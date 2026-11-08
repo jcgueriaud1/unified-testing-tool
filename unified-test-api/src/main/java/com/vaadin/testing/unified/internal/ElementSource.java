@@ -14,7 +14,7 @@ import java.util.function.Predicate;
  */
 public record ElementSource(TestRun run, String wrapperName, Class<? extends Component> componentType, String tag,
         List<Filter> filters, List<Predicate<UnifiedElement>> coreFilters, List<String> coreFilterNames,
-        LazyElement parent) {
+        LazyElement parent) implements ElementResolver {
 
     public ElementSource with(Filter filter) {
         List<Filter> copy = new ArrayList<>(filters);

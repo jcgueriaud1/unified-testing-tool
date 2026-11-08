@@ -197,6 +197,16 @@ public final class UnifiedAssertions {
 
         GridRowAssert(UnifiedGrid.UnifiedGridRow row) { this.row = row; this.run = GridSupport.runOf(row.grid()); }
 
+        private GridRowAssert check(String expectation, Supplier<?> actual, Predicate<Object> ok) {
+            UnifiedAssertions.check(run, row.toString(), expectation, null, actual, ok);
+            return this;
+        }
+
+        public GridRowAssert isSelected() { return check("to be selected", row::isSelected, Boolean.TRUE::equals); }
+        public GridRowAssert isNotSelected() { return check("not to be selected", row::isSelected, Boolean.FALSE::equals); }
+        public GridRowAssert hasDetailsOpen() { return check("to have details open", row::isDetailsOpen, Boolean.TRUE::equals); }
+        public GridRowAssert hasDetailsClosed() { return check("to have details closed", row::isDetailsOpen, Boolean.FALSE::equals); }
+
         public GridRowAssert hasCellText(String columnHeader, String expected) {
             UnifiedAssertions.check(run, row + " cell \"" + columnHeader + "\"", "to have text", expected,
                     () -> row.getCellText(columnHeader), v -> Objects.equals(v, expected));
@@ -211,6 +221,18 @@ public final class UnifiedAssertions {
         GridColumnAssert(UnifiedGrid.UnifiedGridColumn column) {
             this.column = column;
             this.run = GridSupport.runOf(column.grid());
+        }
+
+        public GridColumnAssert isSortedAscending() {
+            UnifiedAssertions.check(run, column.toString(), "to be sorted", "ASCENDING", column::getSortDirection,
+                    v -> v == com.vaadin.flow.data.provider.SortDirection.ASCENDING);
+            return this;
+        }
+
+        public GridColumnAssert isSortedDescending() {
+            UnifiedAssertions.check(run, column.toString(), "to be sorted", "DESCENDING", column::getSortDirection,
+                    v -> v == com.vaadin.flow.data.provider.SortDirection.DESCENDING);
+            return this;
         }
 
         public GridColumnAssert hasCellTexts(String... expected) {

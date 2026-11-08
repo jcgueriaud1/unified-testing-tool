@@ -39,9 +39,24 @@ final class BrowserlessSession implements AdapterSession {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public List<UnifiedElement> find(QuerySpec spec) {
         Class<Component> type = (Class<Component>) spec.componentType();
-        ComponentQuery<Component> query = spec.parent() == null
-                ? window.find(type)
-                : window.find(type, ((BrowserlessElement) spec.parent()).component());
+        if (spec.parent() == null) {
+            return (List) applyFilters(window.find(type), type, spec).all().stream()
+                    .map(c -> new BrowserlessElement(this, c)).toList();
+        }
+        // scoped: every root and its descendants (a root can itself be the match, e.g. a button in a grid cell)
+        java.util.Set<Component> found = new java.util.LinkedHashSet<>();
+        for (Component root : ((BrowserlessElement) spec.parent()).scopeRoots()) {
+            if (type.isInstance(root) && root.getParent().isPresent()) {
+                found.addAll(applyFilters(window.find(type, root.getParent().get()), type, spec)
+                        .withCondition(c -> c == root).all());
+            }
+            found.addAll(applyFilters(window.find(type, root), type, spec).all());
+        }
+        return found.stream().map(c -> (UnifiedElement) new BrowserlessElement(this, c)).toList();
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private ComponentQuery<Component> applyFilters(ComponentQuery<Component> query, Class<Component> type, QuerySpec spec) {
         for (Filter f : spec.filters()) {
             query = switch (f.kind()) {
                 case LABEL -> f.exact() ? query.withLabel(f.value())
@@ -58,7 +73,7 @@ final class BrowserlessSession implements AdapterSession {
                 case ACCESSIBLE_NAME -> query.withCondition(c -> f.matches(BrowserlessElement.accessibleName(c)));
             };
         }
-        return (List) query.all().stream().map(c -> new BrowserlessElement(this, c)).toList();
+        return query;
     }
 
     // ---------------------------------------------------------------- navigation

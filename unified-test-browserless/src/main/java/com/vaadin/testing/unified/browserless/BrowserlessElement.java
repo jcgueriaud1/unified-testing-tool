@@ -23,11 +23,23 @@ final class BrowserlessElement implements UnifiedElement {
     private final BrowserlessSession session;
     private final Component component;
     private final BrowserlessComponents.Support support;
+    private final List<Component> scopeRoots;
 
     BrowserlessElement(BrowserlessSession session, Component component) {
+        this(session, component, List.of(component));
+    }
+
+    /** An element whose scope is several components (e.g. a grid column's header cells). */
+    BrowserlessElement(BrowserlessSession session, Component component, List<Component> scopeRoots) {
         this.session = session;
         this.component = component;
         this.support = BrowserlessComponents.of(component.getClass());
+        this.scopeRoots = scopeRoots;
+    }
+
+    /** Where queries scoped to this element search: these components and their descendants. */
+    List<Component> scopeRoots() {
+        return scopeRoots;
     }
 
     Component component() {
@@ -198,7 +210,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public <T> Optional<T> tryUnwrap(Class<T> type) {
-        Optional<Object> special = support.unwrap(type, component, session.window());
+        Optional<Object> special = support.unwrap(type, component, session);
         if (special.isPresent()) {
             return special.map(type::cast);
         }

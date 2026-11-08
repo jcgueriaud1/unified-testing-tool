@@ -4,6 +4,12 @@ import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedGrid.RowQuery;
 import com.vaadin.testing.unified.component.UnifiedGrid.UnifiedGridColumn;
 import com.vaadin.testing.unified.component.UnifiedGrid.UnifiedGridRow;
+import com.vaadin.flow.data.provider.SortDirection;
+import com.vaadin.testing.unified.Scope;
+import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.ElementResolver;
+import com.vaadin.testing.unified.internal.LazyElement;
+import com.vaadin.testing.unified.internal.LazyScope;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.spi.Filter;
@@ -40,6 +46,22 @@ public final class GridSupport {
         return Wrappers.lazyElementOf(grid).run();
     }
 
+    /** A Scope over a part of the grid (cell, header, details), resolved again on every use. */
+    static Scope scope(UnifiedGrid grid, String description, java.util.function.Function<GridAccess, UnifiedElement> part) {
+        ElementResolver resolver = new ElementResolver() {
+            @Override
+            public List<UnifiedElement> resolve() {
+                return List.of(part.apply(access(grid)));
+            }
+
+            @Override
+            public String describe() {
+                return description;
+            }
+        };
+        return new LazyScope(new LazyElement(resolver, -1, runOf(grid)));
+    }
+
     static GridAccess access(UnifiedGrid grid) {
         return grid.element().unwrap(GridAccess.class);
     }
@@ -63,12 +85,21 @@ public final class GridSupport {
         }
     }
 
-    private record Rows(UnifiedGrid grid, List<CellFilter> filters) implements RowQuery {
+    private record Rows(UnifiedGrid grid, List<CellFilter> filters, boolean selectedOnly) implements RowQuery {
+
+        Rows(UnifiedGrid grid, List<CellFilter> filters) {
+            this(grid, filters, false);
+        }
+
+        @Override
+        public RowQuery selected() {
+            return new Rows(grid, filters, true);
+        }
 
         private RowQuery with(String column, String text, boolean exact) {
             List<CellFilter> copy = new ArrayList<>(filters);
             copy.add(new CellFilter(column, new Filter(Filter.Kind.TEXT, null, text, exact)));
-            return new Rows(grid, List.copyOf(copy));
+            return new Rows(grid, List.copyOf(copy), selectedOnly);
         }
 
         @Override public RowQuery withCellText(String column, String text) { return with(column, text, true); }
@@ -86,6 +117,14 @@ public final class GridSupport {
                     rows.retainAll(matching);
                 }
             }
+            if (selectedOnly) {
+                List<Integer> selected = access.selectedRows();
+                if (rows == null) {
+                    rows = new ArrayList<>(selected);
+                } else {
+                    rows.retainAll(selected);
+                }
+            }
             if (rows == null) {
                 rows = new ArrayList<>();
                 for (int i = 0; i < access.rowCount(); i++) {
@@ -98,6 +137,9 @@ public final class GridSupport {
         String describe() {
             StringBuilder sb = new StringBuilder("rows()");
             filters.forEach(f -> sb.append('.').append(f));
+            if (selectedOnly) {
+                sb.append(".selected()");
+            }
             return sb.toString();
         }
 
@@ -141,6 +183,25 @@ public final class GridSupport {
             return access.cellText(row, columnIndex(access, columnHeader));
         }
 
+        @Override
+        public Scope cell(String columnHeader) {
+            return scope(grid, description + ".cell(\"" + columnHeader + "\")",
+                    access -> access.cell(index.get(), columnIndex(access, columnHeader)));
+        }
+
+        @Override public void select() { access(grid).select(index.get()); }
+        @Override public void deselect() { access(grid).deselect(index.get()); }
+        @Override public boolean isSelected() { return access(grid).isSelected(index.get()); }
+        @Override public void click() { access(grid).clickRow(index.get()); }
+        @Override public void doubleClick() { access(grid).doubleClickRow(index.get()); }
+        @Override public void toggleDetails() { access(grid).toggleDetails(index.get()); }
+        @Override public boolean isDetailsOpen() { return access(grid).isDetailsOpen(index.get()); }
+
+        @Override
+        public Scope details() {
+            return scope(grid, description + ".details()", access -> access.details(index.get()));
+        }
+
         @Override public String toString() { return description; }
     }
 
@@ -174,6 +235,21 @@ public final class GridSupport {
         public List<String> getCellTexts() {
             int column = getIndex();
             return access(grid).columnTexts(column);
+        }
+
+        @Override
+        public Scope header() {
+            return scope(grid, this + ".header()", access -> access.header(getIndex()));
+        }
+
+        @Override
+        public void sort(SortDirection direction) {
+            access(grid).sort(getIndex(), direction);
+        }
+
+        @Override
+        public SortDirection getSortDirection() {
+            return access(grid).sortDirection(getIndex());
         }
 
         @Override

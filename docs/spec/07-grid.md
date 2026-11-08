@@ -40,13 +40,13 @@ flowchart TD
 |---|---|
 | `UnifiedGrid` | `rows()`, `row(i)`, `getRowCount()`, `column(header)`, `columnWithId(id)`, `column(index)`, `getColumnHeaders()`, `selectAll()`, `deselectAll()` |
 | `RowQuery` | `withCellText(column, text)`, `withCellTextContaining(..)`, `selected()`, `single()`, `all()`, `exists()` |
-| `UnifiedGridRow` | `getIndex()`, `getCellText(column)`, `cell(column)` (Scope), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `details()` (Scope) |
+| `UnifiedGridRow` | `getIndex()`, `getCellText(column)`, `cell(column)` (Scope), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `isDetailsOpen()`, `details()` (Scope) |
 | `UnifiedGridColumn` | `header()` (Scope), `sort(direction)`, `getSortDirection()`, `getCellTexts()` |
 
 | Retrying assertion | On |
 |---|---|
 | `hasRowCount(n)`, `isEmpty()` | grid |
-| `isSelected()`, `isNotSelected()`, `hasCellText(column, text)`, `hasDetailsOpen()` | row |
+| `isSelected()`, `isNotSelected()`, `hasCellText(column, text)`, `hasDetailsOpen()`, `hasDetailsClosed()` | row |
 | `hasCellTexts(…)`, `isSortedAscending()`, `isSortedDescending()` | column |
 
 ## Rules
@@ -57,7 +57,8 @@ flowchart TD
 | Values | Rendered text only. The item behind a row: Escape Hatch (Browserless). |
 | Lazy loading | Row access scrolls the row into view and waits for its data (Auto-Wait). `getRowCount()` is the total, not the rendered rows. |
 | Cell components | Through `row.cell(column)` on every Testing Tool (Browserless queries can't see renderer components). |
-| Selection | Single and multi; `selectAll` / `deselectAll`. |
+| Selection | Single and multi; `selectAll` / `deselectAll`. The multi-select checkbox column is not a column: indexes count only the application's columns (as Flow's `Grid.getColumns()`). |
+| Row details | `toggleDetails()` is what a user does: click the row (details open on click, Flow's default). Searching inside details (`details()`) is not available on Browserless yet (gap ticket). |
 
 ## Not in this version
 
