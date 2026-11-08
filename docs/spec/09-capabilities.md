@@ -67,8 +67,10 @@ Differences in meaning are documented, not banned. Tests that depend on the brow
 
 | Testing Tool | Captured automatically on failure |
 |---|---|
-| Playwright, Selenium | screenshot |
-| Browserless | component tree dump (`TreeOnFailureExtension`) |
+| Playwright, Selenium | full-page screenshot: `<test class>.<method>.png` |
+| Browserless | location and component tree as text: `<test class>.<method>.tree.txt` |
+
+Written to `vaadin.testing.evidence-dir` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes. The failure names the files (a suppressed exception), so they show in the test report.
 
 ## Requirements on Testing Tool adapters
 

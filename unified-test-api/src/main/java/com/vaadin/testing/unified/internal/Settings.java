@@ -14,6 +14,12 @@ public final class Settings {
     public static final String TOOL = "vaadin.testing.tool";
     public static final String BASE_URL = "vaadin.testing.base-url";
     public static final String TIMEOUT = "vaadin.testing.timeout";
+    public static final String EVIDENCE_DIR = "vaadin.testing.evidence-dir";
+
+    /** Where failure evidence goes: next to the Surefire reports, so CI uploads it with them. */
+    public static java.nio.file.Path evidenceDir(ExtensionContext context) {
+        return java.nio.file.Path.of(get(context, EVIDENCE_DIR).orElse("target/surefire-reports/unified-evidence"));
+    }
 
     private static final Pattern DURATION = Pattern.compile("(\\d+)\\s*(ms|s|m)?");
 

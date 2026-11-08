@@ -4,7 +4,9 @@ import com.vaadin.browserless.BrowserlessApplicationContext;
 import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.ComponentQuery;
 import com.vaadin.flow.component.Component;
+import com.vaadin.browserless.internal.PrettyPrintTreeKt;
 import com.vaadin.flow.component.UI;
+import java.nio.file.Files;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.router.Location;
 import com.vaadin.flow.router.NavigationTrigger;
@@ -158,6 +160,18 @@ final class BrowserlessSession implements AdapterSession {
     public void pressKey(String key) {
         List<Dialog> open = window.find(Dialog.class).all().stream().filter(Dialog::isOpened).toList();
         BrowserlessElement.pressKey(this, BrowserlessKeys.pageTarget(window.getUI(), open), key);
+    }
+
+    /** The UI's component tree as text, with the location: what Browserless's TreeOnFailureExtension prints. */
+    @Override
+    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
+        Files.createDirectories(directory);
+        Path file = directory.resolve(name + ".tree.txt");
+        Location location = activeLocation();
+        String tree = PrettyPrintTreeKt.toPrettyTree(window.getUI());
+        Files.writeString(file, "Location: /" + (location == null ? "" : location.getPathWithQueryParameters())
+                + "\n\n" + tree);
+        return List.of(file);
     }
 
     @Override

@@ -8,7 +8,10 @@ import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
 import java.lang.reflect.AnnotatedElement;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -81,8 +84,38 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
     @Override
     public void afterEach(ExtensionContext context) {
         AdapterSession session = context.getStore(NAMESPACE).remove(SESSION, AdapterSession.class);
-        if (session != null) {
+        if (session == null) {
+            return;
+        }
+        try {
+            context.getExecutionException().ifPresent(failure -> writeEvidence(context, session, failure));
+        } finally {
             session.close();
+        }
+    }
+
+    /**
+     * Writes the failure evidence and names the files on the failure itself (a suppressed exception), so
+     * they show in the test report. Problems while writing never hide the test's own failure.
+     */
+    private static void writeEvidence(ExtensionContext context, AdapterSession session, Throwable failure) {
+        String name = context.getRequiredTestClass().getName() + "." + context.getRequiredTestMethod().getName();
+        try {
+            List<Path> files = session.writeFailureEvidence(Settings.evidenceDir(context), name);
+            if (!files.isEmpty()) {
+                String list = files.stream().map(p -> p.toAbsolutePath().toString()).collect(Collectors.joining(", "));
+                failure.addSuppressed(new FailureEvidence("Failure evidence: " + list));
+                context.publishReportEntry("unified.failure-evidence", list);
+            }
+        } catch (Exception | LinkageError e) {
+            failure.addSuppressed(new FailureEvidence("Failure evidence could not be written: " + e));
+        }
+    }
+
+    /** Carries the evidence file names on a failed test; no stack trace of its own. */
+    static final class FailureEvidence extends RuntimeException {
+        FailureEvidence(String message) {
+            super(message, null, false, false);
         }
     }
 

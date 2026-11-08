@@ -33,6 +33,14 @@ public interface AdapterSession extends AutoCloseable {
     void pressKey(String key);
     void screenshot(Path file);
 
+    /**
+     * Writes what a developer needs to see why a test failed (browsers: a screenshot; Browserless: the
+     * component tree) into {@code directory}, with file names starting with {@code name}.
+     *
+     * @return the files written
+     */
+    List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException;
+
     /** The Testing Tool's own page-level object of the given type, if it has one. */
     <T> Optional<T> unwrap(Class<T> type);
 
