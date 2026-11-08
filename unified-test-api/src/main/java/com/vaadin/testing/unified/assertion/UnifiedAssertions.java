@@ -13,6 +13,7 @@ import com.vaadin.testing.unified.component.UnifiedCheckbox;
 import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
+import com.vaadin.testing.unified.component.UnifiedTabSheet;
 import com.vaadin.testing.unified.component.UnifiedDatePicker;
 import com.vaadin.testing.unified.component.UnifiedField;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
@@ -51,6 +52,7 @@ public final class UnifiedAssertions {
         return new SingleSelectAssert(field, field::getSelectedItem, field::getItems);
     }
     public static MultiSelectAssert assertThat(UnifiedMultiSelectComboBox field) { return new MultiSelectAssert(field); }
+    public static TabSheetAssert assertThat(UnifiedTabSheet tabSheet) { return new TabSheetAssert(tabSheet); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
@@ -251,6 +253,22 @@ public final class UnifiedAssertions {
         public MultiSelectAssert hasItems(String... expected) {
             List<String> list = List.of(expected);
             return check("to have items", list, multi::getItems, list::equals);
+        }
+    }
+
+    public static final class TabSheetAssert extends WrapperAssert<TabSheetAssert> {
+        private final UnifiedTabSheet tabSheet;
+
+        TabSheetAssert(UnifiedTabSheet tabSheet) { super(tabSheet); this.tabSheet = tabSheet; }
+
+        public TabSheetAssert hasSelectedTab(String expected) {
+            return check("to have selected tab", expected, tabSheet::getSelectedTab, v -> Objects.equals(v, expected));
+        }
+
+        /** Exactly these tabs, in this order. */
+        public TabSheetAssert hasTabs(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have tabs", list, tabSheet::getTabs, list::equals);
         }
     }
 

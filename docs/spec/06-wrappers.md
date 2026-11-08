@@ -16,7 +16,7 @@ One component per interaction pattern. Every other component follows the same pa
 | Action | `UnifiedButton` | in the sketch |
 | Overlays | `UnifiedDialog`, `UnifiedNotification` | implemented |
 | Data | `UnifiedGrid` | in the sketch: [07-grid.md](07-grid.md) |
-| Navigation | `UnifiedTabSheet` | pattern only |
+| Navigation | `UnifiedTabSheet` | implemented: `selectTab(label)`, `getSelectedTab()`, `content()` Scope that follows the selected tab |
 | (layouts, for scoping) | `UnifiedContainer` | implemented: any component, found by test id or id |
 
 Input fields share `UnifiedField` (label, helper text, validation getters). Typed values are Java types: `Double` for a NumberField, `LocalDate` for a DatePicker, `null` when empty. Selection fields identify items by the label the user sees (the item label generator's result): `selectItem("Germany")`, `getSelectedItem()`, `getItems()`. A select fails when the item doesn't exist (listing the items) or isn't selected afterwards. In a browser, a combo box's `getItems()` returns the items its drop-down loads at once (first page, 50 by default).
