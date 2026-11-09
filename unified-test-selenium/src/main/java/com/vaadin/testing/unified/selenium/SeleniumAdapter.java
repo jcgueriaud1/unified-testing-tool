@@ -41,12 +41,18 @@ public final class SeleniumAdapter implements TestingToolAdapter {
 
     @Override
     public AdapterSession open(AdapterContext context) {
-        failIfTestUserSet();
         String baseUrl = baseUrl(context);
-        TestBenchDriverProxy driver = TestBench.createDriver(newBrowser(context));
-        driver.manage().timeouts().scriptTimeout(context.timeout());
-        driver.manage().window().setSize(new org.openqa.selenium.Dimension(1280, 1024));
-        return new SeleniumSession(driver, baseUrl, context.timeout());
+        java.util.function.Supplier<TestBenchDriverProxy> browsers = () -> {
+            TestBenchDriverProxy driver = TestBench.createDriver(newBrowser(context));
+            driver.manage().timeouts().scriptTimeout(context.timeout());
+            return driver;
+        };
+        SeleniumSession session = new SeleniumSession(browsers, baseUrl, context.timeout());
+        // @WithMockUser / @WithUserDetails: log the browser in before the test body
+        if (LoginSupport.isAvailable()) {
+            LoginSupport.testUserUrl(baseUrl).ifPresent(session::logIn);
+        }
+        return session;
     }
 
     private static WebDriver newBrowser(AdapterContext context) {
@@ -67,30 +73,6 @@ public final class SeleniumAdapter implements TestingToolAdapter {
         options.addArguments("--no-sandbox", "--disable-dev-shm-usage", "--window-size=1280,1024");
         executable.ifPresent(options::setBinary);
         return new ChromeDriver(options);
-    }
-
-    /** Logging in on browser tools needs the login endpoint (#50): fail rather than run anonymous. */
-    private static void failIfTestUserSet() {
-        String user = testUser();
-        if (user != null) {
-            throw new UnsupportedOperationException("The test runs as \"" + user + "\" (@WithMockUser or "
-                    + "@WithUserDetails): logging in on Selenium is not implemented yet (unified-testing-tool#50)."
-                    + " Add @RequiresTestingTool(TestingTool.BROWSERLESS) for now.");
-        }
-    }
-
-    private static String testUser() {
-        try {
-            Class<?> holder = Class.forName("org.springframework.security.core.context.SecurityContextHolder");
-            Object securityContext = holder.getMethod("getContext").invoke(null);
-            Object auth = securityContext.getClass().getMethod("getAuthentication").invoke(securityContext);
-            if (auth == null || auth.getClass().getSimpleName().equals("AnonymousAuthenticationToken")) {
-                return null;
-            }
-            return String.valueOf(auth.getClass().getMethod("getName").invoke(auth));
-        } catch (ReflectiveOperationException | LinkageError e) {
-            return null;
-        }
     }
 
     private static String baseUrl(AdapterContext context) {

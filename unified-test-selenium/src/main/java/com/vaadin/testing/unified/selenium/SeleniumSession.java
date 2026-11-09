@@ -44,17 +44,27 @@ final class SeleniumSession implements AdapterSession {
     }
 
     private final Browser browser;
+    private final java.util.function.Supplier<TestBenchDriverProxy> browsers;
+    private final List<SeleniumSession> children = new ArrayList<>();
     private final TestBenchDriverProxy driver;
     private final String baseUrl;
     private final Duration timeout;
     private final String handle;
     private final boolean ownsDriver;
 
-    SeleniumSession(TestBenchDriverProxy driver, String baseUrl, Duration timeout) {
-        this(new Browser(driver), baseUrl, timeout, driver.getWindowHandle(), true);
+    /** A page in a new browser from {@code browsers}; {@code openAsUser} starts its own browser the same way. */
+    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, String baseUrl, Duration timeout) {
+        this(browsers, new Browser(browsers.get()), baseUrl, timeout, true);
     }
 
-    private SeleniumSession(Browser browser, String baseUrl, Duration timeout, String handle, boolean ownsDriver) {
+    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
+            String baseUrl, Duration timeout, boolean ownsDriver) {
+        this(browsers, browser, baseUrl, timeout, browser.current, ownsDriver);
+    }
+
+    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
+            String baseUrl, Duration timeout, String handle, boolean ownsDriver) {
+        this.browsers = browsers;
         this.browser = browser;
         this.driver = browser.driver;
         this.baseUrl = baseUrl;
@@ -204,13 +214,26 @@ final class SeleniumSession implements AdapterSession {
     public AdapterSession openWindow() {
         driver().switchTo().newWindow(WindowType.TAB);
         browser.current = driver.getWindowHandle();
-        return new SeleniumSession(browser, baseUrl, timeout, browser.current, false);
+        return new SeleniumSession(browsers, browser, baseUrl, timeout, browser.current, false);
     }
 
+    /** A browser of its own (own cookies, own session), logged in through the test-only endpoint. */
     @Override
     public AdapterSession openAsUser(String username, String... roles) {
-        throw new UnsupportedOperationException("openAsUser on Selenium needs the login endpoint, not implemented"
-                + " yet (unified-testing-tool#50). Add @RequiresTestingTool(TestingTool.BROWSERLESS) for now.");
+        String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
+        SeleniumSession session = new SeleniumSession(browsers, new Browser(browsers.get()), baseUrl, timeout, true);
+        children.add(session);
+        session.logIn(loginUrl);
+        return session;
+    }
+
+    /** Opens the test-only login URL: the browser's session belongs to that user afterwards. */
+    void logIn(String loginUrl) {
+        driver().get(loginUrl);
+        String body = driver().findElement(By.tagName("body")).getText();
+        if (!body.startsWith("Logged in as ")) {
+            throw new IllegalStateException("Test login failed: " + body);
+        }
     }
 
     // ---------------------------------------------------------------- the rest
@@ -256,6 +279,9 @@ final class SeleniumSession implements AdapterSession {
 
     @Override
     public void close() {
+        for (SeleniumSession child : children) {
+            child.close();
+        }
         if (ownsDriver) {
             driver.quit(); // closes the windows opened from this one too
         } else {

@@ -75,6 +75,17 @@
             <artifactId>spring-test</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- logging in as the test's user (test-only login endpoint); only with @UnifiedSpringBootTest -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>unified-test-spring</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>

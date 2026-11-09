@@ -21,14 +21,14 @@ class AdminViewTest {
 | Testing Tool | How the adapter logs in |
 |---|---|
 | Browserless | `SpringBrowserlessApplicationContext.createSecured(..)`, then `newUser(username, roles…)` |
-| Playwright, Selenium | Opens a **test-only login endpoint** once before the test; it puts the user into the HTTP session. Playwright: Dramafinder's own `__dramafinder/login` endpoint once released (on `master`, next 2.0.1) |
+| Playwright, Selenium | Opens a **test-only login endpoint** once before the test; it puts the user into the HTTP session. The endpoint is the Unified API's own (`unified-test-spring`, `TestLogin`): Dramafinder 2.0.1's login is only usable by extending `SpringPlaywrightIT` ([parttio/dramafinder#236](https://github.com/parttio/dramafinder/issues/236)) and Selenium needs it too |
 
 ```mermaid
 sequenceDiagram
     participant T as Test (@WithMockUser alice/ADMIN)
     participant A as Browser adapter
     participant S as App (same JVM, random port)
-    A->>S: GET /__unified-test/login (alice, ADMIN)
+    A->>S: GET /__unified-test/login?token=… (alice, ADMIN registered in the test JVM)
     S->>S: SecurityContext into the HTTP session
     S-->>A: session cookie
     T->>A: page.navigate(AdminView.class)
@@ -61,9 +61,9 @@ All windows and users close at the end of the test.
 
 | | Browserless | Playwright | Selenium |
 |---|---|---|---|
-| `@WithMockUser`, `@WithUserDetails` (method, class, `@Nested`) | done: Spring's test listener sets the user, the adapter passes it to `createSecured(..).newUser(auth)` | fails with a message naming #50 (login endpoint, Dramafinder 2.0.1) | fails with a message naming #50 |
+| `@WithMockUser`, `@WithUserDetails` (method, class, `@Nested`) | done: Spring's test listener sets the user, the adapter passes it to `createSecured(..).newUser(auth)` | done: login endpoint before the test body | done: login endpoint before the test body |
 | `openWindow()` | done | done (page in the same context) | done (tab in the same browser) |
-| `openAsUser(..)` | done | fails with a message naming #50 | fails with a message naming #50 |
+| `openAsUser(..)` | done | done (new browser context, logged in) | done (new browser, logged in) |
 | Redirects (anonymous → login view, missing role → access denied) | asserted like any navigation | same | same |
 
 ## Not specified
