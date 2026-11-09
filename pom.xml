@@ -23,6 +23,7 @@
         <module>unified-test-api</module>
         <module>unified-test-browserless</module>
         <module>unified-test-playwright</module>
+        <module>unified-test-selenium</module>
         <module>unified-test-spring</module>
         <module>unified-test-demo</module>
     </modules>

@@ -78,7 +78,7 @@ class UsersTest {
         assertThat(page).isAt(AdminView.class);
     }
 
-    /** Run through the launcher only: on Playwright a test user must fail loudly, not run anonymous. */
+    /** Run through the launcher only: on browser tools a test user must fail loudly, not run anonymous. */
     @UnifiedSpringBootTest
     @Tag("launched-only")
     static class LoggedInWithoutSkip {
@@ -90,11 +90,11 @@ class UsersTest {
     }
 
     @Test
-    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
-    void playwrightRefusesATestUserUntilLoginIsImplemented() {
+    @RequiresTestingTool({ TestingTool.PLAYWRIGHT, TestingTool.SELENIUM })
+    void browsersRefuseATestUserUntilLoginIsImplemented() {
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
                 .selectors(DiscoverySelectors.selectClass(LoggedInWithoutSkip.class))
-                .configurationParameter("vaadin.testing.tool", "playwright").build();
+                .configurationParameter("vaadin.testing.tool", System.getProperty("vaadin.testing.tool")).build();
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
 

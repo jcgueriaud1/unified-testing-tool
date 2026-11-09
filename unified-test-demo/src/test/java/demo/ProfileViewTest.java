@@ -15,7 +15,9 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.WebDriver;
 
 /** Written once; runs on Browserless (default) and on Playwright (-Dvaadin.testing.tool=playwright). */
 @UnifiedSpringBootTest
@@ -90,6 +92,20 @@ class ProfileViewTest {
         UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class,
                 () -> name.unwrap(java.io.File.class));
         assertTrue(e.getMessage().contains("@RequiresTestingTool"), e.getMessage());
+    }
+
+    @Test
+    @RequiresTestingTool(TestingTool.SELENIUM)
+    void escapeHatchToTestBench(UnifiedPage page) {
+        page.navigate(ProfileView.class);
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+
+        TextFieldElement testBench = name.unwrap(TextFieldElement.class);
+        testBench.setValue("Carol");
+
+        assertEquals("Name", testBench.getLabel());
+        assertThat(name).hasValue("Carol");
+        assertTrue(page.unwrap(WebDriver.class).getCurrentUrl().endsWith("/profile"));
     }
 
     @Test
