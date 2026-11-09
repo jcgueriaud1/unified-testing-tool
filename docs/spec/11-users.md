@@ -59,12 +59,12 @@ All windows and users close at the end of the test.
 
 ## Implementation status
 
-| | Browserless | Playwright |
-|---|---|---|
-| `@WithMockUser`, `@WithUserDetails` (method, class, `@Nested`) | done: Spring's test listener sets the user, the adapter passes it to `createSecured(..).newUser(auth)` | fails with a message naming #50 (login endpoint, Dramafinder 2.0.1) |
-| `openWindow()` | done | done |
-| `openAsUser(..)` | done | fails with a message naming #50 |
-| Redirects (anonymous → login view, missing role → access denied) | asserted like any navigation | same |
+| | Browserless | Playwright | Selenium |
+|---|---|---|---|
+| `@WithMockUser`, `@WithUserDetails` (method, class, `@Nested`) | done: Spring's test listener sets the user, the adapter passes it to `createSecured(..).newUser(auth)` | fails with a message naming #50 (login endpoint, Dramafinder 2.0.1) | fails with a message naming #50 |
+| `openWindow()` | done | done (page in the same context) | done (tab in the same browser) |
+| `openAsUser(..)` | done | fails with a message naming #50 | fails with a message naming #50 |
+| Redirects (anonymous → login view, missing role → access denied) | asserted like any navigation | same | same |
 
 ## Not specified
 

@@ -127,6 +127,6 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
         }
         throw new IllegalStateException("No adapter for vaadin.testing.tool=" + tool.name().toLowerCase()
                 + ". Add the test dependency com.vaadin:unified-test-" + tool.name().toLowerCase()
-                + (tool == TestingTool.SELENIUM ? " (not available yet)" : "") + ".");
+                + ".");
     }
 }

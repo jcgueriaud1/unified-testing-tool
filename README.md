@@ -1,7 +1,8 @@
 # Unified API for Vaadin UI tests
 
-Write a Vaadin Flow UI test **once**, run it on **Browserless** (in the JVM, no browser) or on
-**Playwright** through [Dramafinder](https://github.com/parttio/dramafinder) 2.0, chosen per run.
+Write a Vaadin Flow UI test **once**, run it on **Browserless** (in the JVM, no browser), on
+**Playwright** through [Dramafinder](https://github.com/parttio/dramafinder) 2.0, or on **Selenium**
+through TestBench, chosen per run.
 
 ```java
 @UnifiedSpringBootTest
@@ -32,6 +33,7 @@ class ProfileViewTest {
 | `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`), retrying `UnifiedAssertions`, Capabilities, Escape Hatch, adapter SPI |
 | `unified-test-browserless` | Browserless Test adapter |
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
+| `unified-test-selenium` | Selenium adapter on TestBench 25.3 (needs a TestBench license) |
 | `unified-test-spring` | `@UnifiedSpringBootTest` |
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
@@ -43,7 +45,10 @@ Java 21, Maven.
 ```
 mvn install                                              # everything; demo tests on Browserless
 mvn test -pl unified-test-demo -Dvaadin.testing.tool=playwright
+VAADIN_OFFLINE_KEY=... mvn test -pl unified-test-demo -Dvaadin.testing.tool=selenium   # installed Chrome
 ```
+
+TestBench checks its license when it loads: on CI, the `selenium` job reads the `VAADIN_OFFLINE_KEY` secret. Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath.
 
 The Playwright run uses Playwright's own browser download. To use an installed Chromium instead:
 
@@ -59,7 +64,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 
 | Setting | Default |
 |---|---|
-| `vaadin.testing.tool` | `browserless` (or `playwright`) |
+| `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
 | `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | `10s` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
@@ -67,14 +72,16 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
 | `vaadin.testing.playwright.headless` | `true` |
 | `vaadin.testing.playwright.executable` | Playwright's own browser |
+| `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
+| `vaadin.testing.selenium.headless` | `true` |
+| `vaadin.testing.selenium.executable` | the installed browser |
 
 ## Not in this first version
 
 | Area | State |
 |---|---|
-| Selenium (TestBench) adapter | not started (needs a TestBench license) |
 | Browserless: searching inside Grid row details (`row.details()`) | throws; toggling and checking details works |
 | Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66)) |
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
 | Browser: a combo box's `getItems()` | the drop-down's first page only (50 items by default) |
-| Playwright: logging in (`@WithMockUser`, `@WithUserDetails`, `openAsUser`) | fails with a message until [#50](https://github.com/jcgueriaud1/unified-testing-tool/issues/50) (Dramafinder 2.0.1's login endpoint); mark such tests `@RequiresTestingTool(BROWSERLESS)`. `openWindow()` works |
+| Playwright and Selenium: logging in (`@WithMockUser`, `@WithUserDetails`, `openAsUser`) | fails with a message until [#50](https://github.com/jcgueriaud1/unified-testing-tool/issues/50) (Dramafinder 2.0.1's login endpoint); mark such tests `@RequiresTestingTool(BROWSERLESS)`. `openWindow()` works |
