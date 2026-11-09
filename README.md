@@ -22,6 +22,7 @@ class ProfileViewTest {
 }
 ```
 
+- **Documentation site:** https://jcgueriaud1.github.io/unified-testing-tool/
 - **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
 - **Status:** first version. Spec draft, not yet `spec-v1`.
 
@@ -51,6 +52,15 @@ The Playwright run uses Playwright's own browser download. To use an installed C
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 mvn test -pl unified-test-demo \
     -Dvaadin.testing.tool=playwright \
     -Dvaadin.testing.playwright.executable=/path/to/chrome
+```
+
+## Documentation site
+
+The `Docs` workflow publishes `docs/`, `README.md` and `GLOSSARY.md` to GitHub Pages on every push to `main`. To preview it locally:
+
+```
+pip install 'mkdocs-material==9.*'
+scripts/build-docs.sh        # builds target/site
 ```
 
 ## Settings
