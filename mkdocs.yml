@@ -1,0 +1,67 @@
+site_name: Unified API for Vaadin UI tests
+site_url: https://jcgueriaud1.github.io/unified-testing-tool/
+repo_url: https://github.com/jcgueriaud1/unified-testing-tool
+repo_name: jcgueriaud1/unified-testing-tool
+edit_uri: ""
+
+# Staged by scripts/build-docs.sh from README.md, GLOSSARY.md and docs/
+docs_dir: target/docs-src
+site_dir: target/site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Specification:
+      - Overview: spec/README.md
+      - 1. Concepts: spec/01-concepts.md
+      - 2. Test setup: spec/02-test-setup.md
+      - 3. Navigation: spec/03-navigation.md
+      - 4. Locating: spec/04-locating.md
+      - 5. Waiting: spec/05-waiting.md
+      - 6. Wrappers: spec/06-wrappers.md
+      - 7. Grid: spec/07-grid.md
+      - 8. Escape Hatch: spec/08-escape-hatch.md
+      - 9. Capabilities: spec/09-capabilities.md
+      - 10. Packaging: spec/10-packaging.md
+      - 11. Users: spec/11-users.md
+      - Open questions: spec/open-questions.md
+      - "Appendix: gaps": spec/appendix-gaps.md
+      - "Appendix: mapping": spec/appendix-mapping.md
+  - Decisions (ADRs):
+      - adr/index.md
+      - adr/0001-locator-filters-follow-component-type.md
+      - adr/0002-unified-wrapper-names-and-class-literal-lookups.md
+      - adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md
+  - Glossary: GLOSSARY.md
