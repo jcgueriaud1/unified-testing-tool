@@ -34,6 +34,8 @@ Packages: `com.vaadin.testing.unified…`.
 
 Add the adapters a build uses as test dependencies. No Maven profiles: the run's `vaadin.testing.tool` picks one.
 
+> **Pre-releases.** Until the Unified API ships with Vaadin, alphas are published to Maven Central as `org.vaadin.addons`, versioned `0.x` (first: `0.1.0-alpha1`), with the same artifact ids. The coordinates below are the target ones.
+
 ```xml
 <dependencyManagement>
   <dependency>

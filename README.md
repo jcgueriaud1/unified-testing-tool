@@ -39,6 +39,44 @@ class ProfileViewTest {
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
 
+## Try it
+
+Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha1`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies:
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.vaadin.addons</groupId>
+            <artifactId>unified-test-bom</artifactId>
+            <version>0.1.0-alpha1</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>org.vaadin.addons</groupId>
+        <artifactId>unified-test-spring</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.vaadin.addons</groupId>
+        <artifactId>unified-test-browserless</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.vaadin.addons</groupId>
+        <artifactId>unified-test-playwright</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+`unified-test-demo` shows a complete setup.
+
 ## Build and run
 
 Java 21, Maven.
@@ -94,3 +132,13 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66)) |
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
 | Browser: a combo box's `getItems()` | the drop-down's first page only (50 items by default) |
+
+## Cutting a release
+
+Make sure the build passes locally and in the Tests workflow on `main`. Then, from an up-to-date `main` with push rights:
+
+```
+mvn release:prepare release:clean -DreleaseVersion=0.1.0-alpha1 -DdevelopmentVersion=0.1.0-SNAPSHOT
+```
+
+This runs the tests, sets the version in every module, commits, tags `unified-test-0.1.0-alpha1`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.

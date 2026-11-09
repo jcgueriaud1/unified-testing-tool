@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.vaadin</groupId>
+        <groupId>org.vaadin.addons</groupId>
         <artifactId>unified-test-parent</artifactId>
-        <version>25.3.0-SNAPSHOT</version>
+        <version>0.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>unified-test-demo</artifactId>
     <name>Unified API: demo application and tests</name>
@@ -19,6 +19,9 @@
     <properties>
         <!-- not published -->
         <maven.deploy.skip>true</maven.deploy.skip>
+        <maven.source.skip>true</maven.source.skip>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <gpg.skip>true</gpg.skip>
         <!-- Playwright adapter setting; empty = Playwright's own browser download -->
         <vaadin.testing.playwright.executable></vaadin.testing.playwright.executable>
     </properties>
@@ -47,17 +50,17 @@
 
         <!-- the add-on's wrappers ship in the main jar (ADR 0003): compile-time only, never needed at runtime -->
         <dependency>
-            <groupId>com.vaadin</groupId>
+            <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-api</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>com.vaadin</groupId>
+            <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-spring</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.vaadin</groupId>
+            <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-browserless</artifactId>
             <scope>test</scope>
         </dependency>
@@ -67,12 +70,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.vaadin</groupId>
+            <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-playwright</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.vaadin</groupId>
+            <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-selenium</artifactId>
             <scope>test</scope>
         </dependency>
