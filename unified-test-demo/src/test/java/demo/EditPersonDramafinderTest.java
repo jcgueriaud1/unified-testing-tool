@@ -20,13 +20,14 @@ class EditPersonDramafinderTest extends SpringPlaywrightIT {
         navigate(PeopleView.class);
         GridElement people = GridElement.get(page);
 
-        int row = people.findRowIndexesWithColumnText(0, "Alan Turing").get(0);
-        people.findCell(row, 0).orElseThrow().click();
+        GridElement.RowElement alan = people.findRow(people.findRowIndexesWithColumnText(0, "Alan Turing").get(0))
+                .orElseThrow();
+        alan.getCell("Name").click();
         TextFieldElement.getByLabel(page, "Name").setValue("Alan M. Turing");
         ButtonElement.getByText(page, "Save").click();
 
         NotificationElement.getByText(page, "Saved Alan M. Turing").assertOpen();
-        people.assertCellContent(row, 0, "Alan M. Turing");
+        alan.getCell("Name").assertText("Alan M. Turing");
     }
 }
 // --8<-- [end:test]

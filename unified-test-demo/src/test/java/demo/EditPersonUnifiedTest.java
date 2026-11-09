@@ -25,7 +25,8 @@ class EditPersonUnifiedTest {
         page.find(UnifiedButton.class).withText("Save").single().click();
 
         assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alan M. Turing");
-        assertThat(people.row(1)).hasCellText("Name", "Alan M. Turing");
+        assertThat(people.rows().withCellText("Name", "Alan M. Turing").single())
+                .hasCellText("Email", "alan@example.com");
     }
 }
 // --8<-- [end:test]

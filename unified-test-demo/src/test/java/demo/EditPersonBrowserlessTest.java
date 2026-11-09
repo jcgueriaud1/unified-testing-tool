@@ -21,16 +21,16 @@ class EditPersonBrowserlessTest extends SpringBrowserlessTest {
     @SuppressWarnings("unchecked")
     void editsAPersonFromTheGrid() {
         navigate(PeopleView.class);
-        GridTester<Grid<PeopleView.Person>, PeopleView.Person> people = test($(Grid.class).single());
+        GridTester<Grid<PeopleView.Person>, PeopleView.Person> people = test(find(Grid.class).single());
 
         int row = IntStream.range(0, people.size())
                 .filter(i -> people.getCellText(i, 0).equals("Alan Turing"))
                 .findFirst().orElseThrow();
         people.clickRow(row);
-        test($(TextField.class).withLabel("Name").single()).setValue("Alan M. Turing");
-        test($(Button.class).withText("Save").single()).click();
+        test(find(TextField.class).withLabel("Name").single()).setValue("Alan M. Turing");
+        test(find(Button.class).withText("Save").single()).click();
 
-        assertEquals("Saved Alan M. Turing", test($(Notification.class).single()).getText());
+        assertEquals("Saved Alan M. Turing", test(find(Notification.class).single()).getText());
         assertEquals("Alan M. Turing", people.getCellText(row, 0));
     }
 }

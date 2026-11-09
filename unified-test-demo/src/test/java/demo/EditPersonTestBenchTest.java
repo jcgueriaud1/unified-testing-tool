@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.flow.component.button.testbench.ButtonElement;
 import com.vaadin.flow.component.grid.testbench.GridElement;
+import com.vaadin.flow.component.grid.testbench.GridTHTDElement;
 import com.vaadin.flow.component.notification.testbench.NotificationElement;
 import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
 import com.vaadin.testbench.TestBench;
 import com.vaadin.testbench.TestBenchTestCase;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,10 +42,9 @@ class EditPersonTestBenchTest extends TestBenchTestCase {
         getDriver().get("http://localhost:" + port + "/people");
         GridElement people = $(GridElement.class).waitForFirst();
 
-        int row = IntStream.range(0, people.getRowCount())
-                .filter(i -> people.getCell(i, 0).getText().equals("Alan Turing"))
-                .findFirst().orElseThrow();
-        people.getCell(row, 0).click();
+        GridTHTDElement alan = people.getCell("Alan Turing");
+        int row = alan.getRow();
+        alan.click();
         $(TextFieldElement.class).withLabel("Name").single().setValue("Alan M. Turing");
         $(ButtonElement.class).withText("Save").single().click();
 

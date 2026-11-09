@@ -52,22 +52,22 @@ All four tests are real tests in `unified-test-demo` and run in CI. The code on 
 |---|---|---|---|---|
 | Setup | `@UnifiedSpringBootTest`, `UnifiedPage` parameter | `@SpringBootTest`, `extends SpringBrowserlessTest` | `@SpringBootTest(RANDOM_PORT)`, `extends SpringPlaywrightIT` | `@SpringBootTest(RANDOM_PORT)`, `extends TestBenchTestCase`, create and quit the driver |
 | Open the view | `page.navigate(PeopleView.class)` | `navigate(PeopleView.class)` | `navigate(PeopleView.class)` | `getDriver().get("http://localhost:" + port + "/people")` |
-| Find the grid | `page.find(UnifiedGrid.class).single()` | `test($(Grid.class).single())` | `GridElement.get(page)` | `$(GridElement.class).waitForFirst()` |
-| Find the row | `rows().withCellText("Name", "Alan Turing").single()` | loop over `getCellText(i, 0)` | `findRowIndexesWithColumnText(0, "Alan Turing")` | loop over `getCell(i, 0).getText()` |
-| Click the row | `row.click()` | `clickRow(row)` | `findCell(row, 0).orElseThrow().click()` | `getCell(row, 0).click()` |
-| Fill a field | `find(UnifiedTextField.class).withLabel("Name").single().setValue(…)` | `test($(TextField.class).withLabel("Name").single()).setValue(…)` | `TextFieldElement.getByLabel(page, "Name").setValue(…)` | `$(TextFieldElement.class).withLabel("Name").single().setValue(…)` |
-| Click a button | `find(UnifiedButton.class).withText("Save").single().click()` | `test($(Button.class).withText("Save").single()).click()` | `ButtonElement.getByText(page, "Save").click()` | `$(ButtonElement.class).withText("Save").single().click()` |
+| Find the grid | `page.find(UnifiedGrid.class).single()` | `test(find(Grid.class).single())` | `GridElement.get(page)` | `$(GridElement.class).waitForFirst()` |
+| Find the row | `rows().withCellText("Name", "Alan Turing").single()` | loop over `getCellText(i, 0)` | `findRow(findRowIndexesWithColumnText(0, "Alan Turing").get(0))` | `getCell("Alan Turing")`, any column |
+| Click the row | `row.click()` | `clickRow(row)` | `alan.getCell("Name").click()` | `alan.click()` |
+| Fill a field | `find(UnifiedTextField.class).withLabel("Name").single().setValue(…)` | `test(find(TextField.class).withLabel("Name").single()).setValue(…)` | `TextFieldElement.getByLabel(page, "Name").setValue(…)` | `$(TextFieldElement.class).withLabel("Name").single().setValue(…)` |
+| Click a button | `find(UnifiedButton.class).withText("Save").single().click()` | `test(find(Button.class).withText("Save").single()).click()` | `ButtonElement.getByText(page, "Save").click()` | `$(ButtonElement.class).withText("Save").single().click()` |
 | Check the notification | `assertThat(notification).hasText(…)` (retries) | `assertEquals(…, test(notification).getText())` | `NotificationElement.getByText(page, …).assertOpen()` (retries) | `assertEquals(…, $(NotificationElement.class).waitForFirst().getText())` |
-| Check the grid | `assertThat(people.row(1)).hasCellText("Name", …)` (retries) | `assertEquals(…, getCellText(row, 0))` | `assertCellContent(row, 0, …)` (retries) | `assertEquals(…, getCell(row, 0).getText())` |
+| Check the grid | `assertThat(rows().withCellText("Name", "Alan M. Turing").single()).hasCellText("Email", …)` (retries) | `assertEquals(…, getCellText(row, 0))` | `alan.getCell("Name").assertText(…)` (retries) | `assertEquals(…, getCell(row, 0).getText())` |
 
 ## What differs
 
-**Which one looks like the Unified API?** For finding components, TestBench and Browserless are the closest. All three chain filters on a query and finish with `single()`:
+**Which one looks like the Unified API?** For finding components, TestBench and Browserless are the closest. All three chain filters on a query and finish with `single()`. Browserless calls it `find(…)` like the Unified API (`$(…)` is an alias). TestBench only has `$(…)`:
 
 ```java
 page.find(UnifiedTextField.class).withLabel("Name").single()      // Unified API
 $(TextFieldElement.class).withLabel("Name").single()              // TestBench
-test($(TextField.class).withLabel("Name").single())               // Browserless
+test(find(TextField.class).withLabel("Name").single())            // Browserless
 TextFieldElement.getByLabel(page, "Name")                         // Dramafinder
 ```
 
@@ -75,7 +75,11 @@ The Unified API uses the same query style as TestBench and Browserless (`find`, 
 
 **Components.** Browserless finds the Flow component (`TextField`) and wraps it in a tester (`test(…)`) to act like a user. TestBench and Dramafinder find a browser element class (`TextFieldElement`), and each tool has its own class. The Unified API has one wrapper, `UnifiedTextField`, that works on every tool.
 
-**Grid rows.** Only the Unified API finds a row by column header and cell text. Browserless and TestBench work with row and column indexes, so the test has to loop to find the row. Dramafinder can search a column, but still by column index.
+**Grid rows.** Only the Unified API finds a row by column header and cell text, and checks the result the same way: the Unified test finds the renamed row by its new name and checks it is still Alan's (by email), without knowing the row's index. The native tests find a row index once and reuse it:
+
+- Browserless has no search by text, so the test loops over the rows with `getCellText(row, column)`.
+- Dramafinder searches one column, by index (`findRowIndexesWithColumnText(0, …)`). It then gives a `RowElement` whose cells you can reach by header text (`getCell("Name")`).
+- TestBench finds a cell by its text with `getCell("Alan Turing")`, but in any column: a person called *Email* would match too. The cell gives its row index (`getRow()`); later cells are reached by row and column index.
 
 **Waiting.** Browserless runs synchronously, so nothing needs to wait. Dramafinder waits on every action and retries its `assert…` methods. TestBench waits for Vaadin after each action, but the test has to wait for elements that appear later (`waitForFirst()`). The Unified API waits on every tool, and its `assertThat` retries.
 
