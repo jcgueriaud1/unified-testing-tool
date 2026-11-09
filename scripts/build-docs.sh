@@ -11,6 +11,7 @@ src=target/docs-src
 rm -rf "$src"
 mkdir -p "$src"
 cp -r docs/spec docs/adr "$src"/
+cp docs/comparison.md "$src"/comparison.md
 cp GLOSSARY.md "$src"/GLOSSARY.md
 cp README.md "$src"/index.md
 
