@@ -4,7 +4,8 @@ repo_url: https://github.com/jcgueriaud1/unified-testing-tool
 repo_name: jcgueriaud1/unified-testing-tool
 edit_uri: ""
 
-# Staged by scripts/build-docs.sh from README.md, GLOSSARY.md and docs/
+# Staged by scripts/build-docs.sh from README.md, GLOSSARY.md and docs/.
+# Code snippets (--8<--) are included from the repository root.
 docs_dir: target/docs-src
 site_dir: target/site
 
@@ -35,6 +36,12 @@ markdown_extensions:
       permalink: true
   - pymdownx.highlight
   - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: .
+      check_paths: true
+      dedent_subsections: true
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -43,6 +50,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - One test, four ways: comparison.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md

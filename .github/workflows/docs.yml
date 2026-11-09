@@ -10,6 +10,8 @@ on:
       - 'mkdocs.yml'
       - 'scripts/build-docs.sh'
       - '.github/workflows/docs.yml'
+      - 'unified-test-demo/src/main/java/demo/PeopleView.java'
+      - 'unified-test-demo/src/test/java/demo/EditPerson*.java'
   pull_request:
     branches: [main]
     paths:
@@ -19,6 +21,8 @@ on:
       - 'mkdocs.yml'
       - 'scripts/build-docs.sh'
       - '.github/workflows/docs.yml'
+      - 'unified-test-demo/src/main/java/demo/PeopleView.java'
+      - 'unified-test-demo/src/test/java/demo/EditPerson*.java'
   workflow_dispatch:
 
 permissions:
