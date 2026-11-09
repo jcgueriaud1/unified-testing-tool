@@ -43,7 +43,6 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
     @Override
     public AdapterSession open(AdapterContext context) {
         ExtensionContext extension = context.extensionContext();
-        failIfTestUserSet();
         Browser browser = extension.getRoot().getStore(ExtensionContext.Namespace.GLOBAL)
                 .computeIfAbsent(SharedBrowser.class, key -> SharedBrowser.launch(context), SharedBrowser.class)
                 .browser();
@@ -51,35 +50,12 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
         BrowserContext browserContext = browser.newContext();
         browserContext.setDefaultTimeout(context.timeout().toMillis()); // also for windows opened later
         Page page = browserContext.newPage();
-        return new PlaywrightSession(browserContext, page, baseUrl);
-    }
-
-    /**
-     * {@code @WithMockUser} / {@code @WithUserDetails} need the login endpoint (#50, Dramafinder 2.0.1):
-     * fail rather than run the test anonymous.
-     */
-    private static void failIfTestUserSet() {
-        String user = testUser();
-        if (user != null) {
-            throw new UnsupportedOperationException("The test runs as \"" + user + "\" (@WithMockUser or "
-                    + "@WithUserDetails): logging in on Playwright is not implemented yet (unified-testing-tool#50)."
-                    + " Add @RequiresTestingTool(TestingTool.BROWSERLESS) for now.");
+        PlaywrightSession session = new PlaywrightSession(browserContext, page, baseUrl, context.timeout().toMillis());
+        // @WithMockUser / @WithUserDetails: log the browser in before the test body
+        if (LoginSupport.isAvailable()) {
+            LoginSupport.testUserUrl(baseUrl).ifPresent(session::logIn);
         }
-    }
-
-    /** The user Spring's test listener put into the security context, or null. */
-    private static String testUser() {
-        try {
-            Class<?> holder = Class.forName("org.springframework.security.core.context.SecurityContextHolder");
-            Object securityContext = holder.getMethod("getContext").invoke(null);
-            Object auth = securityContext.getClass().getMethod("getAuthentication").invoke(securityContext);
-            if (auth == null || auth.getClass().getSimpleName().equals("AnonymousAuthenticationToken")) {
-                return null;
-            }
-            return String.valueOf(auth.getClass().getMethod("getName").invoke(auth));
-        } catch (ReflectiveOperationException | LinkageError e) {
-            return null;
-        }
+        return session;
     }
 
     private static String baseUrl(AdapterContext context) {

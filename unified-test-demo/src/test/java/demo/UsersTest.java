@@ -2,22 +2,13 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.testing.unified.RequiresTestingTool;
-import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.engine.discovery.DiscoverySelectors;
-import org.junit.platform.launcher.LauncherDiscoveryRequest;
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
-import org.junit.platform.launcher.core.LauncherFactory;
-import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.context.support.WithUserDetails;
 
@@ -46,11 +37,10 @@ class UsersTest {
         assertThat(second.findComponent(Span.class).withText("Anonymous").single()).isVisible();
     }
 
-    // ---------------------------------------------------------------- logged in: Browserless until #50
+    // ---------------------------------------------------------------- logged in (browsers: test-only login endpoint)
 
     @Test
     @WithMockUser(username = "alice", roles = "ADMIN")
-    @RequiresTestingTool(TestingTool.BROWSERLESS) // Playwright: unified-testing-tool#50
     void adminSeesTheAdminArea(UnifiedPage page) {
         page.navigate(AdminView.class);
 
@@ -60,7 +50,6 @@ class UsersTest {
 
     @Test
     @WithMockUser(username = "bob", roles = "USER")
-    @RequiresTestingTool(TestingTool.BROWSERLESS)
     void userWithoutTheRoleIsKeptOut(UnifiedPage page) {
         page.navigate(AdminView.class);
 
@@ -71,42 +60,15 @@ class UsersTest {
 
     @Test
     @WithUserDetails("alice") // from the app's UserDetailsService
-    @RequiresTestingTool(TestingTool.BROWSERLESS)
     void userFromUserDetailsService(UnifiedPage page) {
         page.navigate(AdminView.class);
 
         assertThat(page).isAt(AdminView.class);
     }
 
-    /** Run through the launcher only: on browser tools a test user must fail loudly, not run anonymous. */
-    @UnifiedSpringBootTest
-    @Tag("launched-only")
-    static class LoggedInWithoutSkip {
-        @Test
-        @WithMockUser(username = "alice", roles = "ADMIN")
-        void needsLogin(UnifiedPage page) {
-            page.navigate(AdminView.class);
-        }
-    }
-
-    @Test
-    @RequiresTestingTool({ TestingTool.PLAYWRIGHT, TestingTool.SELENIUM })
-    void browsersRefuseATestUserUntilLoginIsImplemented() {
-        LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-                .selectors(DiscoverySelectors.selectClass(LoggedInWithoutSkip.class))
-                .configurationParameter("vaadin.testing.tool", System.getProperty("vaadin.testing.tool")).build();
-        SummaryGeneratingListener listener = new SummaryGeneratingListener();
-        LauncherFactory.create().execute(request, listener);
-
-        Throwable failure = listener.getSummary().getFailures().get(0).getException();
-        assertTrue(failure.getMessage().contains("\"alice\"") && failure.getMessage().contains("#50"),
-                failure.getMessage());
-    }
-
     /** {@code @WithMockUser} on the class applies to every test in it. */
     @Nested
     @WithMockUser(username = "alice", roles = "ADMIN")
-    @RequiresTestingTool(TestingTool.BROWSERLESS)
     class AsAlice {
 
         @Test

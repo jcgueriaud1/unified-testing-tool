@@ -32,15 +32,20 @@ final class PlaywrightSession implements AdapterSession {
     private final String baseUrl;
 
     private final boolean ownsContext;
+    private final java.util.List<PlaywrightSession> children = new ArrayList<>();
 
-    PlaywrightSession(BrowserContext context, Page page, String baseUrl) {
-        this(context, page, baseUrl, true);
+    private final double timeoutMillis;
+
+    PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis) {
+        this(context, page, baseUrl, timeoutMillis, true);
     }
 
-    private PlaywrightSession(BrowserContext context, Page page, String baseUrl, boolean ownsContext) {
+    private PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis,
+            boolean ownsContext) {
         this.context = context;
         this.page = page;
         this.baseUrl = baseUrl;
+        this.timeoutMillis = timeoutMillis;
         this.ownsContext = ownsContext;
     }
 
@@ -48,13 +53,28 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public AdapterSession openWindow() {
         Page second = context.newPage();
-        return new PlaywrightSession(context, second, baseUrl, false);
+        return new PlaywrightSession(context, second, baseUrl, timeoutMillis, false);
     }
 
+    /** A new browser context (own cookies, own session), logged in through the test-only endpoint. */
     @Override
     public AdapterSession openAsUser(String username, String... roles) {
-        throw new UnsupportedOperationException("openAsUser on Playwright needs the login endpoint, not implemented"
-                + " yet (unified-testing-tool#50). Add @RequiresTestingTool(TestingTool.BROWSERLESS) for now.");
+        String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
+        BrowserContext other = context.browser().newContext();
+        other.setDefaultTimeout(timeoutMillis);
+        PlaywrightSession session = new PlaywrightSession(other, other.newPage(), baseUrl, timeoutMillis, true);
+        children.add(session);
+        session.logIn(loginUrl);
+        return session;
+    }
+
+    /** Opens the test-only login URL: the browser context's session belongs to that user afterwards. */
+    void logIn(String loginUrl) {
+        com.microsoft.playwright.Response response = page.navigate(loginUrl);
+        if (response == null || !response.ok()) {
+            throw new IllegalStateException("Test login failed: " + (response == null ? "no response" : response.status()
+                    + " " + response.text()));
+        }
     }
 
     Page page() {
@@ -275,6 +295,9 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public void close() {
+        for (PlaywrightSession child : children) {
+            child.close();
+        }
         if (ownsContext) {
             context.close(); // closes the windows opened from this one too
         } else {
