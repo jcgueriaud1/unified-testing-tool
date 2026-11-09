@@ -40,7 +40,7 @@ All four tests are real tests in `unified-test-demo` and run in CI. The code on 
 
 === "TestBench (Selenium)"
 
-    Real browser, Spring Boot server on a random port. Needs a TestBench license. This uses `TestBenchTestCase` with a driver the test creates itself. TestBench's JUnit 5 module (`@BrowserTest`, `BrowserTestBase`) can handle the driver for you.
+    Real browser, Spring Boot server on a random port. Needs a TestBench license. Uses TestBench's JUnit 6 module (`vaadin-testbench-core-junit6`): `@BrowserTest` and `BrowserTestBase` create and close the driver. Settings such as headless mode are TestBench parameters (`-Dcom.vaadin.testbench.Parameters.headless=true`).
 
     ```java
     --8<-- "unified-test-demo/src/test/java/demo/EditPersonTestBenchTest.java:test"
@@ -50,7 +50,7 @@ All four tests are real tests in `unified-test-demo` and run in CI. The code on 
 
 | Step | Unified API | Browserless | Dramafinder | TestBench |
 |---|---|---|---|---|
-| Setup | `@UnifiedSpringBootTest`, `UnifiedPage` parameter | `@SpringBootTest`, a `BrowserlessApplicationContext` bean, a user and a window per test | `@SpringBootTest(RANDOM_PORT)`, `extends SpringPlaywrightIT` | `@SpringBootTest(RANDOM_PORT)`, `extends TestBenchTestCase`, create and quit the driver |
+| Setup | `@UnifiedSpringBootTest`, `UnifiedPage` parameter | `@SpringBootTest`, a `BrowserlessApplicationContext` bean, a user and a window per test | `@SpringBootTest(RANDOM_PORT)`, `extends SpringPlaywrightIT` | `@SpringBootTest(RANDOM_PORT)`, `extends BrowserTestBase`, `@BrowserTest` instead of `@Test` |
 | Open the view | `page.navigate(PeopleView.class)` | `window.navigate(PeopleView.class)` | `navigate(PeopleView.class)` | `getDriver().get("http://localhost:" + port + "/people")` |
 | Find the grid | `page.find(UnifiedGrid.class).single()` | `window.findGrid(Person.class)` | `GridElement.get(page)` | `$(GridElement.class).waitForFirst()` |
 | Find the row | `rows().withCellText("Name", "Alan Turing").single()` | loop over `getCellText(i, 0)` | `findRow(findRowIndexesWithColumnText(0, "Alan Turing").get(0))` | `getCell("Alan Turing")`, any column |
@@ -83,7 +83,7 @@ The Unified API is closest to Browserless's application context API: a page is l
 
 **Waiting.** Browserless runs synchronously, so nothing needs to wait. Dramafinder waits on every action and retries its `assert…` methods. TestBench waits for Vaadin after each action, but the test has to wait for elements that appear later (`waitForFirst()`). The Unified API waits on every tool, and its `assertThat` retries.
 
-**Server and browser.** Browserless runs the UI in the test JVM: no HTTP server, no browser, no port. The test opens a user and a window itself and closes the user afterwards. Dramafinder and TestBench need a running server (`RANDOM_PORT`) and a browser. With TestBench the test creates and closes the browser itself, and navigates by URL rather than by view class.
+**Server and browser.** Browserless runs the UI in the test JVM: no HTTP server, no browser, no port. The test opens a user and a window itself and closes the user afterwards. Dramafinder and TestBench need a running server (`RANDOM_PORT`) and a browser. TestBench navigates by URL rather than by view class.
 
 **Changing tools.** Each native test is tied to its tool. To move a test from Browserless to Playwright, you rewrite it. The Unified test stays as it is: you only change `-Dvaadin.testing.tool`.
 

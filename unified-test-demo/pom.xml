@@ -76,6 +76,12 @@
             <artifactId>unified-test-selenium</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- TestBench's JUnit 6 support (@BrowserTest), for the native TestBench test in docs/comparison.md -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-testbench-core-junit6</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -93,6 +99,8 @@
                     <excludedGroups>launched-only</excludedGroups>
                     <systemPropertyVariables>
                         <vaadin.testing.playwright.executable>${vaadin.testing.playwright.executable}</vaadin.testing.playwright.executable>
+                        <!-- TestBench's own setting, for the native TestBench test (@BrowserTest) -->
+                        <com.vaadin.testbench.Parameters.headless>true</com.vaadin.testbench.Parameters.headless>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
