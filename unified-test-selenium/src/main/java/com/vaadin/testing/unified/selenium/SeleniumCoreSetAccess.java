@@ -102,7 +102,15 @@ final class SeleniumCoreSetAccess {
         private void open(List<String> path) {
             for (int i = 0; i < path.size(); i++) {
                 long before = openCount();
-                click(item(path, i));
+                WebElement item = item(path, i);
+                if (i == 0) {
+                    click(item);
+                } else {
+                    // a nested item opens its sub-menu on hover; a DOM click doesn't open it
+                    session.js("arguments[0].dispatchEvent(new MouseEvent('mouseover', {bubbles: true, composed: true}));",
+                            item);
+                    session.waitForVaadin();
+                }
                 new WebDriverWait(session.driver(), Duration.ofSeconds(5)).until(d -> openCount() > before);
             }
         }
