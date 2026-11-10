@@ -186,10 +186,18 @@ final class BrowserlessElement implements UnifiedElement {
             session.window().roundTrip();
             return;
         }
-        Method setValue = testerMethod("setValue", 1)
-                .orElseThrow(() -> new UnsupportedOperationException(
-                        component.getClass().getSimpleName() + " has no value to set on Browserless"));
-        call(setValue, value);
+        Optional<Method> setValue = testerMethod("setValue", 1);
+        if (setValue.isPresent()) {
+            call(setValue.get(), value);
+        } else if (List.of("input", "textarea").contains(getTag())) {
+            // a native input with no tester (a bare Element): what the browser does when a user types
+            element().setProperty("value", value == null ? "" : String.valueOf(value));
+            com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "input");
+            com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "change");
+        } else {
+            throw new UnsupportedOperationException(component.getClass().getSimpleName()
+                    + " has no value to set on Browserless");
+        }
         session.window().roundTrip();
     }
 

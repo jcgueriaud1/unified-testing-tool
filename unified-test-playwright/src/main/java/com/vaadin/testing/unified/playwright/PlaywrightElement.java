@@ -142,8 +142,11 @@ final class PlaywrightElement implements UnifiedElement {
         if (dramafinder instanceof HasValueElement field) {
             field.setValue(text);
         } else {
-            locator.locator("input, textarea").first().fill(text);
-            locator.dispatchEvent("change");
+            // the element itself when it is the native input, else the input inside it
+            boolean isInput = Boolean.TRUE.equals(locator.evaluate("e => e.matches('input, textarea')"));
+            Locator input = isInput ? locator : locator.locator("input, textarea").first();
+            input.fill(text); // fires input
+            input.dispatchEvent("change");
         }
         AutoWait.afterAction(page());
     }
