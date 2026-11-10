@@ -8,18 +8,21 @@ One component per interaction pattern. Every other component follows the same pa
 
 | Pattern | Wrapper | Status |
 |---|---|---|
-| Text value | `UnifiedTextField` (TextArea, PasswordField, EmailField follow) | in the sketch |
-| Typed value | `UnifiedNumberField`, `UnifiedDatePicker` | implemented |
+| Text value | `UnifiedTextField`, `UnifiedTextArea` (PasswordField, EmailField follow) | implemented |
+| Typed value | `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker` | implemented; `UnifiedDatePicker.typeText(..)` types unparsed text |
 | Boolean value | `UnifiedCheckbox` | implemented |
 | Single selection | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | implemented |
 | Multi selection | `UnifiedMultiSelectComboBox` | implemented |
-| Action | `UnifiedButton` | in the sketch |
+| Action | `UnifiedButton`, `UnifiedMenuBar` | implemented: `clickItem("File", "Export", "PDF")` opens the menus as a user does |
 | Overlays | `UnifiedDialog`, `UnifiedNotification` | implemented |
+| Disclosure | `UnifiedDetails` | implemented: `open()`, `close()`, `content()` Scope |
+| Files | `UnifiedUpload` | implemented: `upload(name, type, bytes)` waits until the server has the file |
 | Data | `UnifiedGrid` | in the sketch: [07-grid.md](07-grid.md) |
-| Navigation | `UnifiedTabSheet` | implemented: `selectTab(label)`, `getSelectedTab()`, `content()` Scope that follows the selected tab |
+| Navigation | `UnifiedTabSheet`, `UnifiedTabs` | implemented: `selectTab(label)`, `getSelectedTab()`; a TabSheet's `content()` Scope follows the selected tab |
 | (layouts, for scoping) | `UnifiedContainer` | implemented: any component, found by test id or id |
+| (plain HTML, for scoping and text) | `UnifiedDiv`, `UnifiedSpan`, `UnifiedParagraph`, `UnifiedSection`, `UnifiedNav`, `UnifiedHeader`, `UnifiedFooter`, `UnifiedMain`, `UnifiedArticle`, `UnifiedAside` | implemented: bound to their tag, so one browser query; Scopes |
 
-Input fields share `UnifiedField` (label, helper text, validation getters). Typed values are Java types: `Double` for a NumberField, `LocalDate` for a DatePicker, `null` when empty. Selection fields identify items by the label the user sees (the item label generator's result): `selectItem("Germany")`, `getSelectedItem()`, `getItems()`. A select fails when the item doesn't exist (listing the items) or isn't selected afterwards. In a browser, a combo box's `getItems()` returns the items its drop-down loads at once (first page, 50 by default).
+Input fields share `UnifiedField` (label, helper text, validation getters). Typed values are Java types: `Double` for a NumberField, `Integer`, `BigDecimal` (compare with `compareTo`: the scale is what the user typed), `LocalDate` for a DatePicker, `LocalDateTime` for a DateTimePicker, `null` when empty. Selection fields identify items by the label the user sees (the item label generator's result): `selectItem("Germany")`, `getSelectedItem()`, `getItems()`. A select fails when the item doesn't exist (listing the items) or isn't selected afterwards. In a browser, a combo box's `getItems()` returns the items its drop-down loads at once (first page, 50 by default).
 
 Rules: a Core Set component is supported by all three Testing Tools; no commercial components (Grid Pro, Charts, Spreadsheet, Board, Crud); no layouts.
 
@@ -64,7 +67,7 @@ public interface UnifiedTextField extends UnifiedWrapper, Findable<UnifiedTextFi
 | Getters | Immediate, no retry |
 | Assertions | Static `assertThat(wrapper)` in `UnifiedAssertions`, retrying |
 | Every wrapper | `element()`, `unwrap`, `tryUnwrap`, `withTimeout`, `isVisible`, `isEnabled` |
-| Scopes | `UnifiedDialog`, `UnifiedContainer` also have `find` |
+| Scopes | `UnifiedDialog`, `UnifiedDetails`, `UnifiedContainer`, the plain HTML wrappers and any `findComponent(..)` result also have `find` |
 
 ## Unified Element
 
@@ -72,10 +75,19 @@ The portable layer every wrapper is written on:
 
 | Group | Operations |
 |---|---|
-| Read | `getTag`, `getText`, `getProperty…`, `getAttribute`, `isVisible`, `isEnabled`, `getCssValue` (browser only) |
+| Read | `getTag`, `getText`, `getProperty…`, `getAttribute`, `getInlineStyle`, `isVisible`, `isEnabled`, `getVisibleText` and `getCssValue` (browser only) |
 | Write | `setProperty` |
 | User actions (Auto-Wait) | `click`, `setValueAsUser`, `focus`, `blur`, `pressKey`, `dispatchEvent` |
-| Structure | `findChildren(tag)` |
+| Structure | `findChildren(tag)`, `children()`, `findDescendants(tag)` |
+
+| Operation | Meaning on every Testing Tool |
+|---|---|
+| `getText()` | the DOM text (`textContent`), whitespace collapsed and trimmed. CSS doesn't change it: `text-transform`, hidden descendants and line breaks between flex items don't count. Browserless reads the same text from the server-side elements. |
+| `getVisibleText()` | the text as rendered (`innerText`); browser only |
+| `getInlineStyle(name)` | the value the inline style declares, as written (`var(--gap)`), or null |
+| `findChildren(tag)` | direct light-DOM children with this tag (`*`: any), in order; text nodes don't count; never a web component's shadow DOM. `children()` is `findChildren("*")`. |
+| `findDescendants(tag)` | every light-DOM element below, in document order. Web components add light DOM of their own in a browser (a text field's input and label), which Browserless doesn't have. |
+| `setValueAsUser` on a native `<input>` | sets the value and fires `input` and `change`, for Flow's `Input` and a bare `Element("input")` |
 
 Browserless acts on the server-side element and component, firing events as from the browser. Browser Testing Tools act on the DOM. **Limitation:** on Browserless a property is the server-side value; it equals the browser value only for properties Flow synchronises.
 
@@ -84,6 +96,15 @@ Browserless acts on the server-side element and component, firing events as from
 ### Identifying the component
 
 `@UnifiedComponent(Rating.class)`: the Flow class for Browserless; the tag for browsers is read from its `@Tag`. Add `tag = "…"` only for `Composite`-based components.
+
+A component built from a common one (`MetricCard extends VerticalLayout`) has that one's tag: a browser can't tell it apart by class. `selector` adds what tells it apart, applied by every Testing Tool:
+
+```java
+@UnifiedComponent(value = MetricCard.class, selector = ".metric-card")
+public interface UnifiedMetricCard extends UnifiedWrapper, Findable<MetricCardQuery> { … }
+```
+
+`selector` is a compound CSS selector of `.class`, `#id`, `[attribute="value"]` and `[theme~="value"]`, without spaces. Wrapper interfaces must be public, and so must the classes they are nested in.
 
 ### Per-tool overrides
 

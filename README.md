@@ -41,7 +41,7 @@ class ProfileViewTest {
 
 ## Try it
 
-Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha1`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies:
+Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha2`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies:
 
 ```xml
 <dependencyManagement>
@@ -49,7 +49,7 @@ Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha
         <dependency>
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-bom</artifactId>
-            <version>0.1.0-alpha1</version>
+            <version>0.1.0-alpha2</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -116,13 +116,15 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | `10s` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
-| `vaadin.testing.browserless.view-packages` | the test class's package |
+| `vaadin.testing.browserless.view-packages` | in a Spring test, the `@SpringBootApplication`'s packages and the test's package; otherwise the test's package |
+| `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends an exception thrown by a listener to the session's `ErrorHandler`, as in a browser |
 | `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
 | `vaadin.testing.playwright.headless` | `true` |
 | `vaadin.testing.playwright.executable` | Playwright's own browser |
 | `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
 | `vaadin.testing.selenium.headless` | `true` |
 | `vaadin.testing.selenium.executable` | the installed browser |
+| `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
 ## Not in this first version
 
@@ -138,7 +140,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 Make sure the build passes locally and in the Tests workflow on `main`. Then, from an up-to-date `main` with push rights:
 
 ```
-mvn release:prepare release:clean -DreleaseVersion=0.1.0-alpha1 -DdevelopmentVersion=0.1.0-SNAPSHOT
+mvn release:prepare release:clean -DreleaseVersion=0.1.0-alpha2 -DdevelopmentVersion=0.1.0-SNAPSHOT
 ```
 
-This runs the tests, sets the version in every module, commits, tags `unified-test-0.1.0-alpha1`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
+This runs the tests, sets the version in every module, commits, tags `unified-test-0.1.0-alpha2`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.

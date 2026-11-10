@@ -39,7 +39,7 @@ flowchart LR
     N[mvn verify -Dvaadin.testing.tool=playwright] -->|Failsafe, nightly| P[Playwright run]
 ```
 
-All other settings stay with each tool: browser type, headless mode, Selenium Grid, TestBench license key, Browserless `@ViewPackages`.
+All other settings stay with each tool: browser type, headless mode, Selenium Grid, TestBench license key, Browserless view packages.
 
 ## Reaching the application
 
@@ -47,7 +47,7 @@ The Unified API never starts a server itself.
 
 | App | Browserless | Browser Testing Tools |
 |---|---|---|
-| Spring Boot, `@UnifiedSpringBootTest` | App built in the test JVM from the Spring context (`SpringBrowserlessApplicationContext`) | Same Spring context, random port; base URL `http://localhost:<port>` |
+| Spring Boot, `@UnifiedSpringBootTest` | App built in the test JVM from the Spring context (`SpringBrowserlessApplicationContext`); routes from the packages of the `@SpringBootApplication` and the test's own package. Needs `com.vaadin:browserless-test-spring` (a Spring test without it fails at once). | Same Spring context, random port; base URL `http://localhost:<port>` |
 | Plain servlet / other | Views found with Browserless's `@ViewPackages` | Server started by the build (e.g. Failsafe + `jetty:start`); base URL from `vaadin.testing.base-url` |
 
 `@UnifiedSpringBootTest` always uses a random port, also on Browserless runs. Cost: one embedded-server start per cached Spring context, not per test. Benefit: same app setup on every Testing Tool.
@@ -86,6 +86,6 @@ copy taken once after the context started (with Testcontainers, a fresh schema p
 ## Requirements on Testing Tool adapters
 
 - Read the Testing Tool and timeout only from the JUnit configuration parameters above.
-- Browser adapters: own the browser lifecycle; one fresh page per test.
+- Browser adapters: own the browser lifecycle; one fresh page per test, signed out with fresh storage. Selenium reuses one browser per run (a fresh tab with no cookies or storage per test) unless `vaadin.testing.selenium.reuse-browser=false`.
 - Browserless adapter: build the app per test, from the Spring context if there is one.
 - Close everything after each test.

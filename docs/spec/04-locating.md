@@ -29,22 +29,38 @@ Exact match by default (whitespace normalised); every text filter has a `…Cont
 |---|---|---|---|
 | `withLabel` | `label` property, a `<label for>`, or the FormLayout item label | types with a label | yes |
 | `withAccessibleName` | what a screen reader announces (see below) | every type | yes |
-| `withText` | visible text content | types with text | yes |
+| `withText` | text content: `getText()`, the DOM text, the same on every Testing Tool | types with text | yes |
 | `withPlaceholder` | `placeholder` | fields | yes |
 | `withTestId` | `data-testid` (`Component.setTestId`) | every type | fallback |
 | `withId` | `id` | every type | fallback |
 | `withClassName`, `withTheme`, `withAttribute` | CSS class, theme, attribute | every type | no (implementation details) |
+| `visible()` | visible components only (`isVisible()`) | every type | where visibility matters |
 | `withProperty`, `where(Predicate<UnifiedElement>)` | building blocks for custom filters | every type | for wrapper authors |
 | type-specific, e.g. `withHeaderTitle` | declared by the wrapper's query | that type | yes |
 
-**Accessible name** order on Browserless and Selenium (Playwright uses the browser's own computation):
+**Accessible name** order on every Testing Tool (Dramafinder's own filters use the browser's computation):
 
 1. `aria-label`
-2. text of the `aria-labelledby` target
-3. `label`
-4. text content (buttons)
+2. the `accessibleName` property (what `setAriaLabel` sets on a field; the field forwards it to its input)
+3. text of the `aria-labelledby` target
+4. `label`
+5. text content (buttons)
 
 Rare edge cases can differ from the browser.
+
+## What a query sees
+
+The same on every Testing Tool:
+
+| Rule | Detail |
+|---|---|
+| Hidden components | **included**: a component hidden after it was shown stays in a browser's page, so Browserless includes it too. Add `.visible()` for "the action is gone". A component that was never visible is in no browser's page (Flow doesn't send it), but Browserless finds it: `.visible()` gives the same answer everywhere. |
+| Dialogs, notifications | open ones only; a closed dialog (the app's or the dev tools') is not part of the page |
+| Shadow DOM | not searched, except the shadow DOM of the app's own templates in Playwright; Vaadin's components and the dev tools are left out |
+| Grid cell components | found page-wide for the rows the grid rendered, as a browser has them |
+| No tag | a query for a component without a tag (`findComponent(Component.class)`, a `Composite`) fails at once on every Testing Tool: a browser can't find it |
+
+Browser adapters put the filters CSS can express (id, test id, class, theme, attribute) into the selector and check the others in the page, for every candidate in one call.
 
 **Guidance:** locate by what the user sees (type + label, accessible name or text). Use test id or id only when a component has no user-visible name.
 
