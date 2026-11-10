@@ -54,5 +54,21 @@ public interface UnifiedElement extends HasEscapeHatch {
     void pressKey(String key);
     void dispatchEvent(String eventName);
 
+    /**
+     * The element's direct children with this tag ({@code *}: any), in order. Light DOM only: what the app put
+     * there, never a web component's shadow DOM. Text nodes don't count. The same on every Testing Tool.
+     */
     List<UnifiedElement> findChildren(String tag);
+
+    /** The element's direct children, in order: {@code findChildren("*")}. */
+    default List<UnifiedElement> children() {
+        return findChildren("*");
+    }
+
+    /**
+     * Every element below this one with this tag ({@code *}: any), in document order. Light DOM only, as
+     * {@link #findChildren}. Note that web components add light DOM of their own in a browser (a text field's
+     * input and label), which Browserless doesn't have.
+     */
+    List<UnifiedElement> findDescendants(String tag);
 }

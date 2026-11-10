@@ -152,10 +152,22 @@ final class BrowserlessElement implements UnifiedElement {
      * clicked like any other.
      */
     public List<UnifiedElement> findChildren(String tag) {
-        return element().getChildren().filter(e -> tag.equals(e.getTag()))
-                .map(e -> (UnifiedElement) new BrowserlessElement(session,
-                        e.getComponent().orElseGet(() -> new PlainElement(e))))
-                .toList();
+        return element().getChildren().filter(e -> hasTag(e, tag)).map(this::toUnified).toList();
+    }
+
+    @Override
+    public List<UnifiedElement> findDescendants(String tag) {
+        return element().getChildren().flatMap(BrowserlessElement::descendants).filter(e -> hasTag(e, tag))
+                .map(this::toUnified).toList();
+    }
+
+    /** An element, not a text node, with this tag ({@code *}: any). */
+    private static boolean hasTag(Element e, String tag) {
+        return !e.isTextNode() && ("*".equals(tag) || tag.equalsIgnoreCase(e.getTag()));
+    }
+
+    private UnifiedElement toUnified(Element e) {
+        return new BrowserlessElement(session, e.getComponent().orElseGet(() -> new PlainElement(e)));
     }
 
     /** A component for an element that has none; no tag of its own, it takes the element's. */

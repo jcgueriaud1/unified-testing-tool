@@ -117,7 +117,16 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public List<UnifiedElement> findChildren(String tag) {
-        return locator.locator(tag).all().stream()
+        return lightDom(BrowserQueries.lightDomXPath(tag, false));
+    }
+
+    @Override
+    public List<UnifiedElement> findDescendants(String tag) {
+        return lightDom(BrowserQueries.lightDomXPath(tag, true));
+    }
+
+    private List<UnifiedElement> lightDom(String xpath) {
+        return locator.locator("xpath=" + xpath).all().stream()
                 .map(l -> (UnifiedElement) new PlaywrightElement(session, l, null, PlaywrightComponents.DEFAULT)).toList();
     }
 

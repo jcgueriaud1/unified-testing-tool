@@ -62,6 +62,21 @@ public final class BrowserQueries {
         return rest;
     }
 
+    /**
+     * XPath for light-DOM children ({@code descendants}: every level) with this tag, {@code *} for any. XPath,
+     * unlike CSS in Playwright, never enters shadow roots.
+     */
+    public static String lightDomXPath(String tag, boolean descendants) {
+        String axis = descendants ? ".//*" : "./*";
+        if ("*".equals(tag)) {
+            return axis;
+        }
+        if (!tag.matches("[A-Za-z][-A-Za-z0-9_.]*")) {
+            throw new IllegalArgumentException("Not a tag name: " + tag);
+        }
+        return axis + "[local-name()='" + tag.toLowerCase(java.util.Locale.ROOT) + "']";
+    }
+
     /** Dash-separated CSS property name ({@code backgroundColor} becomes {@code background-color}). */
     public static String cssName(String name) {
         return name.startsWith("--") ? name : name.replaceAll("([a-z0-9])([A-Z])", "$1-$2").toLowerCase(java.util.Locale.ROOT);

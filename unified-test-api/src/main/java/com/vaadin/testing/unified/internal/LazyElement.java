@@ -94,6 +94,7 @@ public final class LazyElement implements UnifiedElement {
     @Override public boolean isVisible() { return read(UnifiedElement::isVisible); }
     @Override public boolean isEnabled() { return read(UnifiedElement::isEnabled); }
     @Override public List<UnifiedElement> findChildren(String tag) { return read(e -> e.findChildren(tag)); }
+    @Override public List<UnifiedElement> findDescendants(String tag) { return read(e -> e.findDescendants(tag)); }
 
     @Override public void setProperty(String name, Object value) { read(e -> { e.setProperty(name, value); return null; }); }
     @Override public void click() { act("click", UnifiedElement::click); }

@@ -132,7 +132,16 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public List<UnifiedElement> findChildren(String tag) {
-        return element.findElements(By.cssSelector(tag)).stream()
+        return lightDom(BrowserQueries.lightDomXPath(tag, false));
+    }
+
+    @Override
+    public List<UnifiedElement> findDescendants(String tag) {
+        return lightDom(BrowserQueries.lightDomXPath(tag, true));
+    }
+
+    private List<UnifiedElement> lightDom(String xpath) {
+        return SeleniumSession.stale(() -> element.findElements(By.xpath(xpath))).stream()
                 .map(e -> (UnifiedElement) new SeleniumElement(session, e, SeleniumComponents.DEFAULT)).toList();
     }
 
