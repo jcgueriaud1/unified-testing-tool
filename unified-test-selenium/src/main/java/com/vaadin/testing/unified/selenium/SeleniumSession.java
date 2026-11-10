@@ -9,6 +9,7 @@ import com.vaadin.testing.unified.internal.RoutePaths;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
+import com.vaadin.testing.unified.spi.StaleElementException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -22,6 +23,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.SearchContext;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.WindowType;
 import org.openqa.selenium.interactions.Actions;
@@ -87,7 +89,23 @@ final class SeleniumSession implements AdapterSession {
     }
 
     Object js(String script, Object... args) {
-        return ((JavascriptExecutor) driver()).executeScript(script, args);
+        return stale(() -> ((JavascriptExecutor) driver()).executeScript(script, args));
+    }
+
+    /** Runs a WebDriver call; an element that went stale meanwhile becomes the core's retryable exception. */
+    static <T> T stale(java.util.function.Supplier<T> call) {
+        try {
+            return call.get();
+        } catch (StaleElementReferenceException e) {
+            throw new StaleElementException("The element went stale (re-rendered by Vaadin)", e);
+        }
+    }
+
+    static void stale(Runnable call) {
+        stale(() -> {
+            call.run();
+            return null;
+        });
     }
 
     /** Waits until Vaadin has handled every pending request (TestBench's waitForVaadin). */
@@ -122,13 +140,18 @@ final class SeleniumSession implements AdapterSession {
         List<SearchContext> roots = spec.parent() == null ? List.of(driver())
                 : new ArrayList<>(((SeleniumElement) spec.parent()).roots());
         List<UnifiedElement> result = new ArrayList<>();
-        for (SearchContext root : roots) {
-            for (WebElement candidate : root.findElements(By.cssSelector(selector.toString()))) {
-                SeleniumElement element = new SeleniumElement(this, candidate, support);
-                if (spec.filters().stream().allMatch(element::matches)) {
-                    result.add(element);
+        try {
+            for (SearchContext root : roots) {
+                for (WebElement candidate : root.findElements(By.cssSelector(selector.toString()))) {
+                    SeleniumElement element = new SeleniumElement(this, candidate, support);
+                    if (spec.filters().stream().allMatch(element::matches)) {
+                        result.add(element);
+                    }
                 }
             }
+        } catch (StaleElementReferenceException e) {
+            // Vaadin re-rendered a candidate while it was checked: not ready yet, the core queries again
+            throw new StaleElementException("An element went stale while finding " + selector, e);
         }
         return result;
     }

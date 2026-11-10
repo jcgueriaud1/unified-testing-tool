@@ -58,12 +58,12 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public String getTag() {
-        return element.getTagName();
+        return SeleniumSession.stale(element::getTagName);
     }
 
     @Override
     public String getText() {
-        return support.text(element, session).orElseGet(element::getText).strip();
+        return SeleniumSession.stale(() -> support.text(element, session).orElseGet(element::getText).strip());
     }
 
     @Override
@@ -95,7 +95,7 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public String getAttribute(String name) {
-        return element.getDomAttribute(name);
+        return SeleniumSession.stale(() -> element.getDomAttribute(name));
     }
 
     @Override
@@ -105,7 +105,7 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public boolean isVisible() {
-        return support.visible(element, session).orElseGet(element::isDisplayed);
+        return SeleniumSession.stale(() -> support.visible(element, session).orElseGet(element::isDisplayed));
     }
 
     @Override
@@ -131,7 +131,7 @@ final class SeleniumElement implements UnifiedElement {
     public void click() {
         js("arguments[0].scrollIntoView({block: 'center', inline: 'center'});");
         try {
-            element.click();
+            SeleniumSession.stale(element::click);
         } catch (ElementNotInteractableException e) { // incl. ElementClickInterceptedException
             js("arguments[0].click();"); // e.g. a host element without a box of its own
         }
@@ -181,7 +181,7 @@ final class SeleniumElement implements UnifiedElement {
     public void pressKey(String key) {
         WebElement target = (WebElement) js("return arguments[0].focusElement || arguments[0].inputElement || arguments[0];");
         try {
-            target.sendKeys(SeleniumKeys.chord(key));
+            SeleniumSession.stale(() -> target.sendKeys(SeleniumKeys.chord(key)));
         } catch (ElementNotInteractableException e) {
             new Actions(session.driver()).sendKeys(SeleniumKeys.chord(key)).perform();
         }

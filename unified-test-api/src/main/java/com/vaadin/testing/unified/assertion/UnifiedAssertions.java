@@ -126,6 +126,16 @@ public final class UnifiedAssertions {
         public SELF isEnabled() { return check("to be enabled", null, wrapper::isEnabled, Boolean.TRUE::equals); }
         public SELF isDisabled() { return check("to be disabled", null, wrapper::isEnabled, Boolean.FALSE::equals); }
 
+        /** The element's text ({@link com.vaadin.testing.unified.UnifiedElement#getText()}), exactly. */
+        public SELF hasText(String expected) {
+            return check("to have text", expected, element::getText, v -> Objects.equals(v, expected));
+        }
+
+        public SELF hasTextContaining(String part) {
+            return check("to have text containing", part, element::getText,
+                    v -> v != null && v.toString().contains(part));
+        }
+
         public SELF hasProperty(String name, Object value) {
             String expected = String.valueOf(value);
             return check("to have property " + name, expected, () -> element.getProperty(name), expected::equals);
@@ -294,6 +304,7 @@ public final class UnifiedAssertions {
 
         ButtonAssert(UnifiedButton button) { super(button); this.button = button; }
 
+        @Override
         public ButtonAssert hasText(String expected) {
             return check("to have text", expected, button::getText, v -> Objects.equals(v, expected));
         }
@@ -395,10 +406,12 @@ public final class UnifiedAssertions {
             return check("to be open", null, notification::isOpen, Boolean.TRUE::equals);
         }
 
+        @Override
         public NotificationAssert hasText(String expected) {
             return check("to have text", expected, notification::getText, v -> Objects.equals(v, expected));
         }
 
+        @Override
         public NotificationAssert hasTextContaining(String part) {
             return check("to have text containing", part, notification::getText, v -> v != null && v.toString().contains(part));
         }
