@@ -16,6 +16,8 @@ import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 
@@ -123,5 +125,19 @@ class ProfileViewTest {
     void needsARealBrowser(UnifiedPage page) {
         page.navigate(ProfileView.class);
         assertThat(page.find(UnifiedButton.class).withText("Save").single()).hasCssValue("cursor", "pointer");
+    }
+
+    @Test
+    void screenshotOnlyWithARealBrowser(UnifiedPage page) throws Exception {
+        page.navigate(ProfileView.class);
+        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
+
+        Path file = Path.of("target/screenshots/profile-alice.png");
+        Files.deleteIfExists(file);
+        if (page.hasRealBrowser()) {
+            page.screenshot(file);
+        }
+
+        assertEquals(page.hasRealBrowser(), Files.isRegularFile(file));
     }
 }

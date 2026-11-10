@@ -34,6 +34,21 @@ void looksRight(UnifiedPage page) {
 
 Network interception, tracing and browser contexts: Escape Hatch only.
 
+### Browser-only steps in a test for every Testing Tool
+
+A test that runs on every Testing Tool but has a browser-only step asks `page.hasRealBrowser()` instead of declaring `@RequiresBrowser`. False on Browserless, true on Playwright and Selenium:
+
+```java
+@Test
+void editProfile(UnifiedPage page) {
+    page.navigate(ProfileView.class);
+    // ... steps and assertions, on every Testing Tool ...
+    if (page.hasRealBrowser()) {
+        page.screenshot(Path.of("target/profile.png"));
+    }
+}
+```
+
 ## Keyboard
 
 `pressKey` works on every Testing Tool, with Playwright's key names (`"Enter"`, `"Escape"`, `"Control+s"`). On Browserless keyboard and focus are simulated:
