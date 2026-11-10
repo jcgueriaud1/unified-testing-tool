@@ -142,3 +142,10 @@ mvn release:prepare release:clean -DreleaseVersion=0.1.0-alpha1 -DdevelopmentVer
 ```
 
 This runs the tests, sets the version in every module, commits, tags `unified-test-0.1.0-alpha1`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
+
+Then write the release notes in [docs/releases](docs/releases), add the version to its index, and create the GitHub release from the tag with those notes as its body:
+
+```
+gh release create unified-test-0.1.0-alpha1 --title 0.1.0-alpha1 --prerelease \
+    --notes-file docs/releases/0.1.0-alpha1.md
+```

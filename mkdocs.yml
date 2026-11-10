@@ -73,3 +73,6 @@ nav:
       - adr/0002-unified-wrapper-names-and-class-literal-lookups.md
       - adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md
   - Glossary: GLOSSARY.md
+  - Releases:
+      - releases/README.md
+      - 0.1.0-alpha1: releases/0.1.0-alpha1.md
