@@ -232,13 +232,23 @@ final class PlaywrightElement implements UnifiedElement {
         };
     }
 
+    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
     private String accessibleName() {
-        String aria = getAttribute("aria-label");
-        if (aria != null && !aria.isBlank()) {
-            return aria;
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> names = (java.util.Map<String, Object>) locator.evaluate("""
+                e => {
+                  const by = e.getAttribute('aria-labelledby');
+                  const target = by && document.getElementById(by);
+                  return {aria: e.getAttribute('aria-label'), name: e.accessibleName,
+                          by: target ? target.textContent : null, label: e.label};
+                }""");
+        for (String key : List.of("aria", "name", "by", "label")) {
+            Object value = names.get(key);
+            if (value != null && !value.toString().isBlank()) {
+                return value.toString();
+            }
         }
-        String label = getProperty("label");
-        return label != null && !label.isBlank() ? label : getText();
+        return getText();
     }
 
     @Override

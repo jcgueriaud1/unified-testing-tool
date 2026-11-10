@@ -242,15 +242,16 @@ final class SeleniumElement implements UnifiedElement {
         };
     }
 
-    /** What a screen reader announces, approximated: aria-label, aria-labelledby target, label, text. */
+    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
     private String accessibleName() {
         @SuppressWarnings("unchecked")
         Map<String, Object> names = (Map<String, Object>) js("""
                 const e = arguments[0];
                 const by = e.getAttribute('aria-labelledby');
                 const target = by && document.getElementById(by);
-                return {aria: e.getAttribute('aria-label'), by: target ? target.innerText : null, label: e.label};""");
-        for (String key : List.of("aria", "by", "label")) {
+                return {aria: e.getAttribute('aria-label'), name: e.accessibleName,
+                        by: target ? target.textContent : null, label: e.label};""");
+        for (String key : List.of("aria", "name", "by", "label")) {
             Object value = names.get(key);
             if (value != null && !value.toString().isBlank()) {
                 return value.toString();

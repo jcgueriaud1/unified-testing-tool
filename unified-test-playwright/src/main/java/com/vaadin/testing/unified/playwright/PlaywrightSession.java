@@ -107,7 +107,7 @@ final class PlaywrightSession implements AdapterSession {
         List<UnifiedElement> result = new ArrayList<>();
         for (Locator locator : candidates.all()) {
             PlaywrightElement element = new PlaywrightElement(this, locator, null, support);
-            if (spec.filters().stream().allMatch(f -> element.matches(f))) {
+            if (support.include(locator) && spec.filters().stream().allMatch(f -> element.matches(f))) {
                 result.add(element);
             }
         }
@@ -142,7 +142,7 @@ final class PlaywrightSession implements AdapterSession {
         }
         @SuppressWarnings("unchecked")
         List<VaadinElement> found = (List<VaadinElement>) invoke(query, "all", new Class<?>[0]);
-        return found.stream()
+        return found.stream().filter(e -> support.include(e.getLocator()))
                 .map(e -> (UnifiedElement) new PlaywrightElement(this, e.getLocator(), e, support)).toList();
     }
 

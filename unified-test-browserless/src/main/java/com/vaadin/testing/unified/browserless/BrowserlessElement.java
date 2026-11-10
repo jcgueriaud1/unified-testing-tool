@@ -256,12 +256,17 @@ final class BrowserlessElement implements UnifiedElement {
 
     // ---------------------------------------------------------------- helpers
 
-    /** What a screen reader announces, approximated: aria-label, aria-labelledby target, label, text. */
+    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
     static String accessibleName(Component c) {
         Element e = c.getElement();
         String ariaLabel = e.getAttribute("aria-label");
         if (ariaLabel != null && !ariaLabel.isBlank()) {
             return ariaLabel;
+        }
+        // a field's setAriaLabel(..): the web component forwards it to its input as aria-label
+        String accessibleName = e.getProperty("accessibleName");
+        if (accessibleName != null && !accessibleName.isBlank()) {
+            return accessibleName;
         }
         String labelledBy = e.getAttribute("aria-labelledby");
         if (labelledBy != null && !labelledBy.isBlank()) {

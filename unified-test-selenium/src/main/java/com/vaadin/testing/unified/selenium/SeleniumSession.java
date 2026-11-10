@@ -144,7 +144,7 @@ final class SeleniumSession implements AdapterSession {
             for (SearchContext root : roots) {
                 for (WebElement candidate : root.findElements(By.cssSelector(selector.toString()))) {
                     SeleniumElement element = new SeleniumElement(this, candidate, support);
-                    if (spec.filters().stream().allMatch(element::matches)) {
+                    if (support.include(candidate, this) && spec.filters().stream().allMatch(element::matches)) {
                         result.add(element);
                     }
                 }

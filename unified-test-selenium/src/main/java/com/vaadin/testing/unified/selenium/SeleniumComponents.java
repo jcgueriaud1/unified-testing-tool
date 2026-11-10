@@ -41,6 +41,11 @@ final class SeleniumComponents {
             return componentTag;
         }
 
+        /** Whether a found element counts as a match at all (e.g. only open dialogs). */
+        default boolean include(WebElement element, SeleniumSession session) {
+            return true;
+        }
+
         default Optional<String> text(WebElement element, SeleniumSession session) {
             return Optional.empty();
         }
@@ -119,6 +124,12 @@ final class SeleniumComponents {
             }
         });
         register(Dialog.class, new Support() {
+            /** Open dialogs only: closed ones (the app's or the dev tools') are not part of the page. */
+            @Override
+            public boolean include(WebElement element, SeleniumSession session) {
+                return Boolean.TRUE.equals(session.js("return !!arguments[0].opened;", element));
+            }
+
             @Override
             public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
                 // the dialog host has no box of its own; open means shown

@@ -55,6 +55,11 @@ final class PlaywrightComponents {
             return componentTag;
         }
 
+        /** Whether a found element counts as a match at all (e.g. only open dialogs). */
+        default boolean include(Locator locator) {
+            return true;
+        }
+
         /** Visible text, when it is not the element's own text. */
         default Optional<String> text(Locator locator) {
             return Optional.empty();
@@ -142,6 +147,12 @@ final class PlaywrightComponents {
             @Override
             public Class<? extends VaadinElement> dramafinderElement() {
                 return DialogElement.class;
+            }
+
+            /** Open dialogs only: closed ones (the app's or the dev tools') are not part of the page. */
+            @Override
+            public boolean include(Locator locator) {
+                return Boolean.TRUE.equals(locator.evaluate("e => !!e.opened"));
             }
 
             @Override
