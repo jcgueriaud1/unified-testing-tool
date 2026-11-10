@@ -33,4 +33,11 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
 
     /** Needs {@link RequiresBrowser}. */
     void screenshot(Path file);
+
+    /**
+     * Whether this run's Testing Tool has a real browser: false on Browserless. For a test that runs on
+     * every Testing Tool but does browser-only steps, such as {@link #screenshot}, only when it can.
+     * A test that only makes sense in a browser declares {@link RequiresBrowser} instead.
+     */
+    boolean hasRealBrowser();
 }

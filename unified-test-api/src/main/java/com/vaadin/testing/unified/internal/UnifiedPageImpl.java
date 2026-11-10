@@ -82,6 +82,11 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
+    public boolean hasRealBrowser() {
+        return run.tool().hasRealBrowser();
+    }
+
+    @Override
     public void screenshot(Path file) {
         run.requireBrowser("screenshot");
         run.session().screenshot(file);
