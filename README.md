@@ -146,6 +146,6 @@ This runs the tests, sets the version in every module, commits, tags `unified-te
 Then write the release notes in [docs/releases](docs/releases), add the version to its index, and create the GitHub release from the tag with those notes as its body:
 
 ```
-gh release create unified-test-0.1.0-alpha1 --title 0.1.0-alpha1 --prerelease \
+gh release create --repo parttio/unified-testing-tool unified-test-0.1.0-alpha1 --title 0.1.0-alpha1 --prerelease \
     --notes-file docs/releases/0.1.0-alpha1.md
 ```

@@ -1,7 +1,7 @@
 # Releases
 
 One file per release, named after the version. Each file is the body of the matching
-[GitHub release](https://github.com/jcgueriaud1/unified-testing-tool/releases), tagged
+[GitHub release](https://github.com/parttio/unified-testing-tool/releases), tagged
 `unified-test-<version>`.
 
 | Version | Date | Notes |
