@@ -5,7 +5,7 @@
     <!-- Standalone BOM (no parent), so importing it pulls in nothing else. -->
     <groupId>org.vaadin.addons</groupId>
     <artifactId>unified-test-bom</artifactId>
-    <version>0.1.0-alpha2</version>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Unified API BOM</name>
     <description>Versions of the Unified API artifacts and of the Testing Tools they run on.</description>
@@ -27,7 +27,7 @@
         <url>https://github.com/parttio/unified-testing-tool</url>
         <connection>scm:git:https://github.com/parttio/unified-testing-tool.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/parttio/unified-testing-tool.git</developerConnection>
-        <tag>unified-test-0.1.0-alpha2</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
