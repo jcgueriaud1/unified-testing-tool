@@ -7,6 +7,7 @@ import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -59,9 +60,23 @@ final class BrowserlessElement implements UnifiedElement {
         return element().getTag();
     }
 
+    /** The text of the server-side elements, whitespace collapsed: what a browser's textContent holds. */
     @Override
     public String getText() {
-        return support.text(component, session.window()).orElseGet(() -> element().getTextRecursively());
+        return BrowserQueries.normalize(
+                support.text(component, session.window()).orElseGet(() -> element().getTextRecursively()));
+    }
+
+    @Override
+    public String getVisibleText() {
+        throw new UnsupportedOperationException("Browserless has no rendering, so no visible text; use getText()"
+                + " or @RequiresBrowser");
+    }
+
+    @Override
+    public String getInlineStyle(String name) {
+        String value = element().getStyle().get(BrowserQueries.cssName(name));
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
     @Override
@@ -137,10 +152,22 @@ final class BrowserlessElement implements UnifiedElement {
      * clicked like any other.
      */
     public List<UnifiedElement> findChildren(String tag) {
-        return element().getChildren().filter(e -> tag.equals(e.getTag()))
-                .map(e -> (UnifiedElement) new BrowserlessElement(session,
-                        e.getComponent().orElseGet(() -> new PlainElement(e))))
-                .toList();
+        return element().getChildren().filter(e -> hasTag(e, tag)).map(this::toUnified).toList();
+    }
+
+    @Override
+    public List<UnifiedElement> findDescendants(String tag) {
+        return element().getChildren().flatMap(BrowserlessElement::descendants).filter(e -> hasTag(e, tag))
+                .map(this::toUnified).toList();
+    }
+
+    /** An element, not a text node, with this tag ({@code *}: any). */
+    private static boolean hasTag(Element e, String tag) {
+        return !e.isTextNode() && ("*".equals(tag) || tag.equalsIgnoreCase(e.getTag()));
+    }
+
+    private UnifiedElement toUnified(Element e) {
+        return new BrowserlessElement(session, e.getComponent().orElseGet(() -> new PlainElement(e)));
     }
 
     /** A component for an element that has none; no tag of its own, it takes the element's. */
@@ -154,64 +181,84 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void setProperty(String name, Object value) {
-        if (value instanceof Boolean b) {
-            element().setProperty(name, b);
-        } else if (value instanceof Number n) {
-            element().setProperty(name, n.doubleValue());
-        } else {
-            element().setProperty(name, value == null ? null : String.valueOf(value));
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (value instanceof Boolean b) {
+                element().setProperty(name, b);
+            } else if (value instanceof Number n) {
+                element().setProperty(name, n.doubleValue());
+            } else {
+                element().setProperty(name, value == null ? null : String.valueOf(value));
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void click() {
-        if (tester().getClass() != ComponentTester.class && hasTesterMethod("click", 0)) {
-            invokeTester("click"); // a component's own tester (Button, ...): its usability checks
-        } else {
-            // a DOM click: element listeners and @DomEvent("click") component listeners both run
-            com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "click");
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (tester().getClass() != ComponentTester.class && hasTesterMethod("click", 0)) {
+                invokeTester("click"); // a component's own tester (Button, ...): its usability checks
+            } else {
+                // a DOM click: element listeners and @DomEvent("click") component listeners both run
+                com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "click");
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void setValueAsUser(Object value) {
-        if (support.setValue(component, value, session.window())) {
+        session.act(() -> {
+            if (support.setValue(component, value, session.window())) {
+                session.window().roundTrip();
+                return;
+            }
+            if (value == null && hasTesterMethod("clear", 0)) {
+                invokeTester("clear");
+                session.window().roundTrip();
+                return;
+            }
+            Optional<Method> setValue = testerMethod("setValue", 1);
+            if (setValue.isPresent()) {
+                call(setValue.get(), value);
+            } else if (List.of("input", "textarea").contains(getTag())) {
+                // a native input with no tester (a bare Element): what the browser does when a user types
+                element().setProperty("value", value == null ? "" : String.valueOf(value));
+                com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "input");
+                com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "change");
+            } else {
+                throw new UnsupportedOperationException(component.getClass().getSimpleName()
+                        + " has no value to set on Browserless");
+            }
             session.window().roundTrip();
-            return;
-        }
-        if (value == null && hasTesterMethod("clear", 0)) {
-            invokeTester("clear");
-            session.window().roundTrip();
-            return;
-        }
-        Method setValue = testerMethod("setValue", 1)
-                .orElseThrow(() -> new UnsupportedOperationException(
-                        component.getClass().getSimpleName() + " has no value to set on Browserless"));
-        call(setValue, value);
-        session.window().roundTrip();
+        });
     }
 
     @Override
     public void focus() {
-        if (component instanceof Focusable<?> focusable) {
-            focusable.focus();
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (component instanceof Focusable<?> focusable) {
+                focusable.focus();
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void blur() {
-        if (component instanceof Focusable<?> focusable) {
-            focusable.blur();
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (component instanceof Focusable<?> focusable) {
+                focusable.blur();
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void pressKey(String key) {
-        pressKey(session, component, key);
+        session.act(() -> {
+            pressKey(session, component, key);
+        });
     }
 
     /** The component's own key handling (e.g. Escape closes a dialog), else a bubbling keydown. */
@@ -224,8 +271,10 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void dispatchEvent(String eventName) {
-        BrowserlessKeys.dispatch(component, eventName);
-        session.window().roundTrip();
+        session.act(() -> {
+            BrowserlessKeys.dispatch(component, eventName);
+            session.window().roundTrip();
+        });
     }
 
     // ---------------------------------------------------------------- Escape Hatch
@@ -256,12 +305,17 @@ final class BrowserlessElement implements UnifiedElement {
 
     // ---------------------------------------------------------------- helpers
 
-    /** What a screen reader announces, approximated: aria-label, aria-labelledby target, label, text. */
+    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
     static String accessibleName(Component c) {
         Element e = c.getElement();
         String ariaLabel = e.getAttribute("aria-label");
         if (ariaLabel != null && !ariaLabel.isBlank()) {
             return ariaLabel;
+        }
+        // a field's setAriaLabel(..): the web component forwards it to its input as aria-label
+        String accessibleName = e.getProperty("accessibleName");
+        if (accessibleName != null && !accessibleName.isBlank()) {
+            return accessibleName;
         }
         String labelledBy = e.getAttribute("aria-labelledby");
         if (labelledBy != null && !labelledBy.isBlank()) {

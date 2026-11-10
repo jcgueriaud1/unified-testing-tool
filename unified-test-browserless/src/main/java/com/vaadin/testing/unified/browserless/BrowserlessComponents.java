@@ -57,8 +57,8 @@ final class BrowserlessComponents {
             return Optional.empty();
         }
 
-        /** Whether Browserless's own text query sees this component's text. */
-        default boolean queryFindsText() {
+        /** Whether a found component counts as a match at all (e.g. only open dialogs). */
+        default boolean include(Component component) {
             return true;
         }
     }
@@ -89,9 +89,10 @@ final class BrowserlessComponents {
                 return Optional.of(((Notification) component).isOpened());
             }
 
+            /** Open notifications only: a browser adapter finds the open card. */
             @Override
-            public boolean queryFindsText() {
-                return false;
+            public boolean include(Component component) {
+                return ((Notification) component).isOpened();
             }
         });
     }
@@ -106,6 +107,12 @@ final class BrowserlessComponents {
             @Override
             public Optional<Boolean> visible(Component component) {
                 return Optional.of(((Dialog) component).isOpened());
+            }
+
+            /** Open dialogs only, as in a browser adapter: a closed dialog is not part of the page. */
+            @Override
+            public boolean include(Component component) {
+                return ((Dialog) component).isOpened();
             }
 
             @Override
@@ -159,6 +166,49 @@ final class BrowserlessComponents {
     }
 
     static {
+        register(com.vaadin.flow.component.tabs.Tabs.class, access(TabSheetAccess.class, (session, c) ->
+                new BrowserlessCoreSetAccess.TabsAccess(session, (com.vaadin.flow.component.tabs.Tabs) c)));
+        register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
+                (session, c) -> new BrowserlessCoreSetAccess.DetailsAccessImpl(session,
+                        (com.vaadin.flow.component.details.Details) c)));
+        register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
+                (session, c) -> new BrowserlessCoreSetAccess.MenuBarAccessImpl(session,
+                        (com.vaadin.flow.component.menubar.MenuBar) c)));
+        register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
+                (session, c) -> new BrowserlessCoreSetAccess.UploadAccessImpl(session,
+                        (com.vaadin.flow.component.upload.Upload) c)));
+        register(com.vaadin.flow.component.datepicker.DatePicker.class, new Support() {
+            /** A String: text typed as it is (UnifiedDatePicker.typeText); ISO dates are parsed. */
+            @Override
+            public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
+                if (!(value instanceof String text)) {
+                    return false;
+                }
+                com.vaadin.flow.component.datepicker.DatePicker picker = (com.vaadin.flow.component.datepicker.DatePicker) component;
+                java.time.LocalDate date = null;
+                try {
+                    date = text.isBlank() ? null : java.time.LocalDate.parse(text.strip());
+                } catch (java.time.format.DateTimeParseException e) {
+                    // not a date: what a browser does with text it can't parse, it reports an unparsable change
+                    picker.getElement().setProperty("_inputElementValue", text);
+                    com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "unparsable-change");
+                    return true;
+                }
+                Object tester = window.test(component);
+                try {
+                    if (date == null) {
+                        tester.getClass().getMethod("clear").invoke(tester);
+                    } else {
+                        tester.getClass().getMethod("setValue", java.time.LocalDate.class).invoke(tester, date);
+                    }
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    throw e.getCause() instanceof RuntimeException r ? r : new IllegalStateException(e.getCause());
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(e);
+                }
+                return true;
+            }
+        });
         register(Grid.class, new Support() {
             @Override
             public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
@@ -167,6 +217,17 @@ final class BrowserlessComponents {
                         : Optional.empty();
             }
         });
+    }
+
+    /** A support whose only job is giving the core an access object of this type. */
+    private static Support access(Class<?> accessType,
+            java.util.function.BiFunction<BrowserlessSession, Component, Object> factory) {
+        return new Support() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return type == accessType ? Optional.of(factory.apply(session, component)) : Optional.empty();
+            }
+        };
     }
 
     private static Object invoke(Object target, String method) {

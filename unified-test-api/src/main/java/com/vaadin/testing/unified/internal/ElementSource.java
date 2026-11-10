@@ -34,12 +34,14 @@ public record ElementSource(TestRun run, String wrapperName, Class<? extends Com
 
     /** Matching adapter elements now. Waits for the parent scope (if any) to exist. */
     public List<UnifiedElement> resolve() {
-        UnifiedElement parentElement = parent == null ? null : parent.concrete();
-        List<UnifiedElement> found = run.session().find(new QuerySpec(componentType, tag, filters, parentElement));
-        if (coreFilters.isEmpty()) {
-            return found;
-        }
-        return found.stream().filter(e -> coreFilters.stream().allMatch(f -> f.test(e))).toList();
+        return StaleRetry.call(run, () -> {
+            UnifiedElement parentElement = parent == null ? null : parent.concrete();
+            List<UnifiedElement> found = run.session().find(new QuerySpec(componentType, tag, filters, parentElement));
+            if (coreFilters.isEmpty()) {
+                return found;
+            }
+            return found.stream().filter(e -> coreFilters.stream().allMatch(f -> f.test(e))).toList();
+        });
     }
 
     public String describe() {

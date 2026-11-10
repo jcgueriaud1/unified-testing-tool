@@ -39,7 +39,7 @@ flowchart LR
     N[mvn verify -Dvaadin.testing.tool=playwright] -->|Failsafe, nightly| P[Playwright run]
 ```
 
-All other settings stay with each tool: browser type, headless mode, Selenium Grid, TestBench license key, Browserless `@ViewPackages`.
+All other settings stay with each tool: browser type, headless mode, Selenium Grid, TestBench license key, Browserless view packages.
 
 ## Reaching the application
 
@@ -47,7 +47,7 @@ The Unified API never starts a server itself.
 
 | App | Browserless | Browser Testing Tools |
 |---|---|---|
-| Spring Boot, `@UnifiedSpringBootTest` | App built in the test JVM from the Spring context (`SpringBrowserlessApplicationContext`) | Same Spring context, random port; base URL `http://localhost:<port>` |
+| Spring Boot, `@UnifiedSpringBootTest` | App built in the test JVM from the Spring context (`SpringBrowserlessApplicationContext`); routes from the packages of the `@SpringBootApplication` and the test's own package. Needs `com.vaadin:browserless-test-spring` (a Spring test without it fails at once). | Same Spring context, random port; base URL `http://localhost:<port>` |
 | Plain servlet / other | Views found with Browserless's `@ViewPackages` | Server started by the build (e.g. Failsafe + `jetty:start`); base URL from `vaadin.testing.base-url` |
 
 `@UnifiedSpringBootTest` always uses a random port, also on Browserless runs. Cost: one embedded-server start per cached Spring context, not per test. Benefit: same app setup on every Testing Tool.
@@ -68,9 +68,24 @@ class ProfileViewTest {
 | Browser runs | Need `com.vaadin:vaadin-dev` (dev mode with the pre-built dev bundle). |
 | Quarkus | Not specified yet ([open-questions.md](open-questions.md)). |
 
+## Test data
+
+On Browserless the views run on the test's thread; in a browser they run on the server's request threads.
+So a test's transaction doesn't reach the views in a browser:
+
+| `@Transactional` on a `@UnifiedSpringBootTest` | Browserless | Playwright, Selenium |
+|---|---|---|
+| Views see data the test wrote but didn't commit | yes | no |
+| What the views write is rolled back after the test | yes | no, later tests see it |
+
+A `@Transactional` test therefore fails on browser Testing Tools before it starts, with this reason
+(`propagation = NOT_SUPPORTED` or `NEVER` is allowed). To isolate test data on every Testing Tool, commit
+it, and reset the database after each test: delete what the test created, or restore the tables from a
+copy taken once after the context started (with Testcontainers, a fresh schema per test class also works).
+
 ## Requirements on Testing Tool adapters
 
 - Read the Testing Tool and timeout only from the JUnit configuration parameters above.
-- Browser adapters: own the browser lifecycle; one fresh page per test.
+- Browser adapters: own the browser lifecycle; one fresh page per test, signed out with fresh storage. Selenium reuses one browser per run (a fresh tab with no cookies or storage per test) unless `vaadin.testing.selenium.reuse-browser=false`.
 - Browserless adapter: build the app per test, from the Spring context if there is one.
 - Close everything after each test.

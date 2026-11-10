@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.playwright;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.Filter;
 import java.math.BigDecimal;
 import java.util.List;
@@ -47,16 +48,24 @@ final class PlaywrightElement implements UnifiedElement {
         return (String) locator.evaluate("e => e.localName");
     }
 
+    /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
     @Override
     public String getText() {
         Optional<String> special = support.text(locator);
         if (special.isPresent()) {
-            return special.get().strip();
+            return BrowserQueries.normalize(special.get());
         }
-        if (dramafinder != null) {
-            return dramafinder.getText().strip();
-        }
+        return (String) locator.evaluate(BrowserQueries.TEXT);
+    }
+
+    @Override
+    public String getVisibleText() {
         return locator.innerText().strip();
+    }
+
+    @Override
+    public String getInlineStyle(String name) {
+        return (String) locator.evaluate(BrowserQueries.INLINE_STYLE, BrowserQueries.cssName(name));
     }
 
     @Override
@@ -108,7 +117,16 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public List<UnifiedElement> findChildren(String tag) {
-        return locator.locator(tag).all().stream()
+        return lightDom(BrowserQueries.lightDomXPath(tag, false));
+    }
+
+    @Override
+    public List<UnifiedElement> findDescendants(String tag) {
+        return lightDom(BrowserQueries.lightDomXPath(tag, true));
+    }
+
+    private List<UnifiedElement> lightDom(String xpath) {
+        return locator.locator("xpath=" + xpath).all().stream()
                 .map(l -> (UnifiedElement) new PlaywrightElement(session, l, null, PlaywrightComponents.DEFAULT)).toList();
     }
 
@@ -136,14 +154,15 @@ final class PlaywrightElement implements UnifiedElement {
             AutoWait.afterAction(page());
             return;
         }
-        String text = value == null ? ""
-                : value instanceof Number n ? new BigDecimal(n.toString()).stripTrailingZeros().toPlainString()
-                : String.valueOf(value);
+        String text = BrowserQueries.typedText(value);
         if (dramafinder instanceof HasValueElement field) {
             field.setValue(text);
         } else {
-            locator.locator("input, textarea").first().fill(text);
-            locator.dispatchEvent("change");
+            // the element itself when it is the native input, else the input inside it
+            boolean isInput = Boolean.TRUE.equals(locator.evaluate("e => e.matches('input, textarea')"));
+            Locator input = isInput ? locator : locator.locator("input, textarea").first();
+            input.fill(text); // fires input
+            input.dispatchEvent("change");
         }
         AutoWait.afterAction(page());
     }
@@ -232,13 +251,23 @@ final class PlaywrightElement implements UnifiedElement {
         };
     }
 
+    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
     private String accessibleName() {
-        String aria = getAttribute("aria-label");
-        if (aria != null && !aria.isBlank()) {
-            return aria;
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> names = (java.util.Map<String, Object>) locator.evaluate("""
+                e => {
+                  const by = e.getAttribute('aria-labelledby');
+                  const target = by && document.getElementById(by);
+                  return {aria: e.getAttribute('aria-label'), name: e.accessibleName,
+                          by: target ? target.textContent : null, label: e.label};
+                }""");
+        for (String key : List.of("aria", "name", "by", "label")) {
+            Object value = names.get(key);
+            if (value != null && !value.toString().isBlank()) {
+                return value.toString();
+            }
         }
-        String label = getProperty("label");
-        return label != null && !label.isBlank() ? label : getText();
+        return getText();
     }
 
     @Override

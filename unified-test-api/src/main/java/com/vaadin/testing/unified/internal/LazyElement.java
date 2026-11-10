@@ -64,31 +64,45 @@ public final class LazyElement implements UnifiedElement {
 
     /** Runs a user action once the element is visible and enabled (Auto-Wait). */
     public void act(String action, Consumer<UnifiedElement> body) {
-        UnifiedElement element = run.poll(() -> {
-            UnifiedElement e = concrete();
-            return e.isVisible() && e.isEnabled() ? e : null;
-        }, () -> "Can't " + action + ": " + describe() + " is not visible and enabled");
-        body.accept(element);
+        StaleRetry.call(run, () -> {
+            UnifiedElement element = run.poll(() -> {
+                UnifiedElement e = concrete();
+                return e.isVisible() && e.isEnabled() ? e : null;
+            }, () -> "Can't " + action + ": " + describe() + " is not visible and enabled");
+            body.accept(element);
+            return null;
+        });
     }
 
-    @Override public String getTag() { return concrete().getTag(); }
-    @Override public String getText() { return concrete().getText(); }
-    @Override public String getProperty(String name) { return concrete().getProperty(name); }
-    @Override public Integer getPropertyInteger(String name) { return concrete().getPropertyInteger(name); }
-    @Override public Boolean getPropertyBoolean(String name) { return concrete().getPropertyBoolean(name); }
-    @Override public String getAttribute(String name) { return concrete().getAttribute(name); }
-    @Override public String getCssValue(String property) { return concrete().getCssValue(property); }
-    @Override public boolean isVisible() { return concrete().isVisible(); }
-    @Override public boolean isEnabled() { return concrete().isEnabled(); }
-    @Override public List<UnifiedElement> findChildren(String tag) { return concrete().findChildren(tag); }
+    /** Reads from the element, finding it again if it went stale meanwhile. */
+    private <T> T read(java.util.function.Function<UnifiedElement, T> reader) {
+        return StaleRetry.call(run, () -> reader.apply(concrete()));
+    }
 
-    @Override public void setProperty(String name, Object value) { concrete().setProperty(name, value); }
+    @Override public String getTag() { return read(UnifiedElement::getTag); }
+    @Override public String getText() { return read(UnifiedElement::getText); }
+    @Override public String getVisibleText() {
+        run.requireBrowser("getVisibleText");
+        return read(UnifiedElement::getVisibleText);
+    }
+    @Override public String getInlineStyle(String name) { return read(e -> e.getInlineStyle(name)); }
+    @Override public String getProperty(String name) { return read(e -> e.getProperty(name)); }
+    @Override public Integer getPropertyInteger(String name) { return read(e -> e.getPropertyInteger(name)); }
+    @Override public Boolean getPropertyBoolean(String name) { return read(e -> e.getPropertyBoolean(name)); }
+    @Override public String getAttribute(String name) { return read(e -> e.getAttribute(name)); }
+    @Override public String getCssValue(String property) { return read(e -> e.getCssValue(property)); }
+    @Override public boolean isVisible() { return read(UnifiedElement::isVisible); }
+    @Override public boolean isEnabled() { return read(UnifiedElement::isEnabled); }
+    @Override public List<UnifiedElement> findChildren(String tag) { return read(e -> e.findChildren(tag)); }
+    @Override public List<UnifiedElement> findDescendants(String tag) { return read(e -> e.findDescendants(tag)); }
+
+    @Override public void setProperty(String name, Object value) { read(e -> { e.setProperty(name, value); return null; }); }
     @Override public void click() { act("click", UnifiedElement::click); }
     @Override public void setValueAsUser(Object value) { act("set the value of", e -> e.setValueAsUser(value)); }
     @Override public void focus() { act("focus", UnifiedElement::focus); }
-    @Override public void blur() { concrete().blur(); }
+    @Override public void blur() { read(e -> { e.blur(); return null; }); }
     @Override public void pressKey(String key) { act("press " + key + " on", e -> e.pressKey(key)); }
-    @Override public void dispatchEvent(String eventName) { concrete().dispatchEvent(eventName); }
+    @Override public void dispatchEvent(String eventName) { read(e -> { e.dispatchEvent(eventName); return null; }); }
 
     @Override
     public <T> T unwrap(Class<T> type) {

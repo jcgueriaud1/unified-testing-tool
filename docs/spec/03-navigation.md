@@ -21,6 +21,7 @@ assertThat(page).hasPath("profile").hasQueryParameter("tab", "2");
 | Flow types | Route classes, `RouteParameters`, `QueryParameters` from `flow-server`. |
 | Reload | `page.reload()` on every Testing Tool (Browserless simulates it, `@PreserveOnRefresh` respected). |
 | Back / forward | Escape Hatch only. |
+| `isAt(view)` | Browsers compare the page's current location (read in the page, so a RouterLink or `history.pushState` navigation counts) with the view's route. A view with no route (an error view) is matched by the view the page's UI shows: `@UnifiedSpringBootTest` serves a test-only endpoint (`/__unified/current-view`) that answers for the caller's own Vaadin session. Browserless checks the current view's class. |
 
 ## Route class to URL (browser Testing Tools)
 

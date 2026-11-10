@@ -1,19 +1,29 @@
 package com.vaadin.testing.unified.browserless;
 
-import com.vaadin.browserless.BrowserlessApplicationContext;
-import com.vaadin.browserless.SpringBrowserlessApplicationContext;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.context.ApplicationContext;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-/** Spring-only code, loaded only when Spring test support and browserless-test-spring are on the classpath. */
+/**
+ * Spring-only code. {@link #hasSpringTest()} guards every other method: they run only when Spring's test
+ * support is on the classpath. {@link BrowserlessSpringSupport} needs browserless-test-spring too.
+ */
 final class SpringSupport {
     private SpringSupport() {}
 
-    static boolean isAvailable() {
+    static boolean hasSpringTest() {
+        return present("org.springframework.test.context.junit.jupiter.SpringExtension");
+    }
+
+    static boolean hasBrowserlessSpring() {
+        return present("com.vaadin.browserless.SpringBrowserlessApplicationContext");
+    }
+
+    private static boolean present(String className) {
         try {
-            Class.forName("org.springframework.test.context.junit.jupiter.SpringExtension");
-            Class.forName("com.vaadin.browserless.SpringBrowserlessApplicationContext");
+            Class.forName(className);
             return true;
         } catch (ClassNotFoundException | LinkageError e) {
             return false;
@@ -21,24 +31,32 @@ final class SpringSupport {
     }
 
     /**
-     * The test's page on the Browserless app built from its Spring context, or null if the test has none.
-     * With Spring Security in the context the app is secured and the page belongs to the test's user
-     * ({@code @WithMockUser}, {@code @WithUserDetails}), or to an anonymous user.
+     * Where the application's routes are: the packages Spring Boot scans (those of its
+     * {@code @SpringBootApplication}), plus the test's own package for test-only views.
      */
-    static BrowserlessSession open(ExtensionContext context, String[] viewPackages) {
-        if (!hasSpringExtension(context)) {
-            return null;
+    static String[] applicationPackages(ApplicationContext spring, Class<?> testClass) {
+        Set<String> packages = new LinkedHashSet<>(autoConfigurationPackages(spring));
+        packages.add(testClass.getPackageName());
+        return packages.toArray(String[]::new);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> autoConfigurationPackages(ApplicationContext spring) {
+        try {
+            Class<?> type = Class.forName("org.springframework.boot.autoconfigure.AutoConfigurationPackages");
+            Object beanFactory = spring.getAutowireCapableBeanFactory();
+            Class<?> factoryType = org.springframework.beans.factory.BeanFactory.class;
+            if (!(Boolean) type.getMethod("has", factoryType).invoke(null, beanFactory)) {
+                return List.of();
+            }
+            return (List<String>) type.getMethod("get", factoryType).invoke(null, beanFactory);
+        } catch (ReflectiveOperationException | LinkageError e) {
+            return List.of(); // not a Spring Boot app: only the test's package
         }
-        ApplicationContext spring = SpringExtension.getApplicationContext(context);
-        if (SecuritySupport.isSecured(spring)) {
-            return SecuritySupport.open(spring, viewPackages);
-        }
-        BrowserlessApplicationContext app = SpringBrowserlessApplicationContext.create(spring, viewPackages);
-        return new BrowserlessSession(app, app.newUser());
     }
 
     /** The test class or, for a {@code @Nested} class, an enclosing one is a Spring test. */
-    private static boolean hasSpringExtension(ExtensionContext context) {
+    static boolean isSpringTest(ExtensionContext context) {
         for (Class<?> c = context.getRequiredTestClass(); c != null; c = c.getEnclosingClass()) {
             if (org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(c,
                     org.springframework.test.context.BootstrapWith.class)

@@ -20,6 +20,14 @@ public interface UnifiedDatePicker extends UnifiedField, Findable<UnifiedDatePic
     default void setValue(LocalDate value) { element().setValueAsUser(value); }
     default void clear() { element().setValueAsUser(null); }
 
+    /**
+     * Types this text into the field as it is, without parsing it, then commits it like Enter: for testing
+     * how the app handles input it can't parse ("dsdds"). Text the field can't parse leaves the value empty
+     * and the field invalid (bad input), on every Testing Tool. Browserless parses only ISO dates
+     * ({@code 2026-11-08}); a browser parses the text in the field's locale format.
+     */
+    default void typeText(String text) { element().setValueAsUser(text); }
+
     // getters (immediate)
     /** The value property is an ISO date ({@code 2026-11-08}) in the browser and on the server. */
     default LocalDate getValue() {

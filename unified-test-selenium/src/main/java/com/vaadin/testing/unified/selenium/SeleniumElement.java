@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.selenium;
 
 import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.Filter;
 import java.math.BigDecimal;
 import java.util.List;
@@ -58,12 +59,28 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public String getTag() {
-        return element.getTagName();
+        return SeleniumSession.stale(element::getTagName);
+    }
+
+    /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
+    @Override
+    public String getText() {
+        Optional<String> special = SeleniumSession.stale(() -> support.text(element, session));
+        if (special.isPresent()) {
+            return BrowserQueries.normalize(special.get());
+        }
+        return (String) js("return (" + BrowserQueries.TEXT + ")(arguments[0]);");
     }
 
     @Override
-    public String getText() {
-        return support.text(element, session).orElseGet(element::getText).strip();
+    public String getVisibleText() {
+        return SeleniumSession.stale(element::getText).strip();
+    }
+
+    @Override
+    public String getInlineStyle(String name) {
+        return (String) js("return (" + BrowserQueries.INLINE_STYLE + ")(arguments[0], arguments[1]);",
+                BrowserQueries.cssName(name));
     }
 
     @Override
@@ -95,7 +112,7 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public String getAttribute(String name) {
-        return element.getDomAttribute(name);
+        return SeleniumSession.stale(() -> element.getDomAttribute(name));
     }
 
     @Override
@@ -105,7 +122,7 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public boolean isVisible() {
-        return support.visible(element, session).orElseGet(element::isDisplayed);
+        return SeleniumSession.stale(() -> support.visible(element, session).orElseGet(element::isDisplayed));
     }
 
     @Override
@@ -115,7 +132,16 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public List<UnifiedElement> findChildren(String tag) {
-        return element.findElements(By.cssSelector(tag)).stream()
+        return lightDom(BrowserQueries.lightDomXPath(tag, false));
+    }
+
+    @Override
+    public List<UnifiedElement> findDescendants(String tag) {
+        return lightDom(BrowserQueries.lightDomXPath(tag, true));
+    }
+
+    private List<UnifiedElement> lightDom(String xpath) {
+        return SeleniumSession.stale(() -> element.findElements(By.xpath(xpath))).stream()
                 .map(e -> (UnifiedElement) new SeleniumElement(session, e, SeleniumComponents.DEFAULT)).toList();
     }
 
@@ -131,7 +157,7 @@ final class SeleniumElement implements UnifiedElement {
     public void click() {
         js("arguments[0].scrollIntoView({block: 'center', inline: 'center'});");
         try {
-            element.click();
+            SeleniumSession.stale(element::click);
         } catch (ElementNotInteractableException e) { // incl. ElementClickInterceptedException
             js("arguments[0].click();"); // e.g. a host element without a box of its own
         }
@@ -148,9 +174,7 @@ final class SeleniumElement implements UnifiedElement {
     @Override
     public void setValueAsUser(Object value) {
         if (!support.setValue(element, value, session)) {
-            String text = value == null ? ""
-                    : value instanceof Number n ? new BigDecimal(n.toString()).stripTrailingZeros().toPlainString()
-                    : String.valueOf(value);
+            String text = BrowserQueries.typedText(value);
             // what TestBench's setValue does: set the value, then the events a user's input fires
             js("""
                     const e = arguments[0];
@@ -181,7 +205,7 @@ final class SeleniumElement implements UnifiedElement {
     public void pressKey(String key) {
         WebElement target = (WebElement) js("return arguments[0].focusElement || arguments[0].inputElement || arguments[0];");
         try {
-            target.sendKeys(SeleniumKeys.chord(key));
+            SeleniumSession.stale(() -> target.sendKeys(SeleniumKeys.chord(key)));
         } catch (ElementNotInteractableException e) {
             new Actions(session.driver()).sendKeys(SeleniumKeys.chord(key)).perform();
         }
@@ -242,15 +266,16 @@ final class SeleniumElement implements UnifiedElement {
         };
     }
 
-    /** What a screen reader announces, approximated: aria-label, aria-labelledby target, label, text. */
+    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
     private String accessibleName() {
         @SuppressWarnings("unchecked")
         Map<String, Object> names = (Map<String, Object>) js("""
                 const e = arguments[0];
                 const by = e.getAttribute('aria-labelledby');
                 const target = by && document.getElementById(by);
-                return {aria: e.getAttribute('aria-label'), by: target ? target.innerText : null, label: e.label};""");
-        for (String key : List.of("aria", "by", "label")) {
+                return {aria: e.getAttribute('aria-label'), name: e.accessibleName,
+                        by: target ? target.textContent : null, label: e.label};""");
+        for (String key : List.of("aria", "name", "by", "label")) {
             Object value = names.get(key);
             if (value != null && !value.toString().isBlank()) {
                 return value.toString();

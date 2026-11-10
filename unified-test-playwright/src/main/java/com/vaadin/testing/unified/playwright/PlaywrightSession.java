@@ -6,6 +6,8 @@ import com.microsoft.playwright.Page;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
+import com.vaadin.testing.unified.internal.CurrentView;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
@@ -17,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.vaadin.addons.dramafinder.AutoWait;
@@ -95,20 +98,20 @@ final class PlaywrightSession implements AdapterSession {
             throw new IllegalArgumentException(spec.componentType().getName()
                     + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
         }
-        // exact id and test id filters go into the selector: the page doesn't return every element to filter
-        StringBuilder selector = new StringBuilder(tag);
-        for (Filter f : spec.filters()) {
-            if (f.exact() && (f.kind() == Filter.Kind.TEST_ID || f.kind() == Filter.Kind.ID)) {
-                selector.append('[').append(f.kind() == Filter.Kind.ID ? "id" : "data-testid").append("=\"")
-                        .append(f.value().replace("\\", "\\\\").replace("\"", "\\\"")).append("\"]");
-            }
+        // what CSS can express goes into the selector; the rest is checked in the page, for every candidate in
+        // one round trip: no browser call per element, and no element detaching between two calls
+        String selector = BrowserQueries.selector(tag, spec.filters());
+        Locator candidates = scope == null ? page.locator(selector) : scope.locator(selector);
+        List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
+        List<Integer> indices = new ArrayList<>();
+        for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, remaining)) {
+            indices.add(((Number) i).intValue());
         }
-        Locator candidates = scope == null ? page.locator(selector.toString()) : scope.locator(selector.toString());
         List<UnifiedElement> result = new ArrayList<>();
-        for (Locator locator : candidates.all()) {
-            PlaywrightElement element = new PlaywrightElement(this, locator, null, support);
-            if (spec.filters().stream().allMatch(f -> element.matches(f))) {
-                result.add(element);
+        for (int i : indices) {
+            Locator locator = candidates.nth(i);
+            if (support.include(locator)) {
+                result.add(new PlaywrightElement(this, locator, null, support));
             }
         }
         return result;
@@ -142,7 +145,7 @@ final class PlaywrightSession implements AdapterSession {
         }
         @SuppressWarnings("unchecked")
         List<VaadinElement> found = (List<VaadinElement>) invoke(query, "all", new Class<?>[0]);
-        return found.stream()
+        return found.stream().filter(e -> support.include(e.getLocator()))
                 .map(e -> (UnifiedElement) new PlaywrightElement(this, e.getLocator(), e, support)).toList();
     }
 
@@ -213,12 +216,23 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public boolean isAt(Class<? extends Component> view) {
+        if (!CurrentView.hasRoute(view)) {
+            return CurrentView.shows((String) page.evaluate(CurrentView.SCRIPT, baseUrl + CurrentView.PATH), view);
+        }
         return currentPath().equals(strip(RouteNavigation.pathOf(view)));
+    }
+
+    /**
+     * The browser's location, read in the page: {@code page.url()} only learns about a client-side navigation
+     * (a RouterLink, {@code history.pushState}) on the next call to the browser.
+     */
+    private String location() {
+        return (String) page.evaluate("() => location.href");
     }
 
     @Override
     public String currentPath() {
-        String path = URI.create(page.url()).getPath();
+        String path = URI.create(location()).getPath();
         String basePath = URI.create(baseUrl).getPath();
         if (basePath != null && !basePath.isEmpty() && path.startsWith(basePath)) {
             path = path.substring(basePath.length());
@@ -239,7 +253,7 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public Optional<String> queryParameter(String name) {
-        String query = URI.create(page.url()).getRawQuery();
+        String query = URI.create(location()).getRawQuery();
         if (query == null) {
             return Optional.empty();
         }
@@ -305,7 +319,8 @@ final class PlaywrightSession implements AdapterSession {
         }
     }
 
+    /** Exactly this text, surrounding whitespace aside. Escaped by hand: Playwright runs it as a JS regex. */
     static Pattern exactText(String text) {
-        return Pattern.compile("^\\s*" + Pattern.quote(text) + "\\s*$");
+        return Pattern.compile("^\\s*" + text.replaceAll("[\\\\^$.|?*+()\\[\\]{}]", "\\\\$0") + "\\s*$");
     }
 }

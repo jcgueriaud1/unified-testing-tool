@@ -70,6 +70,7 @@ Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 | CSS, layout, client JS, screenshots | ✓ | ✓ | ✗ (text snapshot of the component tree) |
 | Real keyboard and focus | ✓ | ✓ | simulated |
 | "Visible" means | rendered | rendered | server-side `setVisible`; CSS-hidden counts as visible |
+| Text as rendered (`getVisibleText`) | ✓ | ✓ | ✗ (`getText()`, the DOM text, works everywhere) |
 | Property values | browser | browser | server-side; equal only for synchronised properties |
 | Server-side Java state | ✗ | ✗ | ✓ (Escape Hatch) |
 | Network interception, tracing | ✓ (Escape Hatch) | ✗ | ✗ |

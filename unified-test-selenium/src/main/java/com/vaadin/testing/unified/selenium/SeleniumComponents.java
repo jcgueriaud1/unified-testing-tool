@@ -41,6 +41,11 @@ final class SeleniumComponents {
             return componentTag;
         }
 
+        /** Whether a found element counts as a match at all (e.g. only open dialogs). */
+        default boolean include(WebElement element, SeleniumSession session) {
+            return true;
+        }
+
         default Optional<String> text(WebElement element, SeleniumSession session) {
             return Optional.empty();
         }
@@ -88,6 +93,12 @@ final class SeleniumComponents {
             @Override
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {
                 DatePickerElement picker = session.testBench(element).wrap(DatePickerElement.class);
+                if (value instanceof String text) { // UnifiedDatePicker.typeText: as it is, unparsed
+                    WebElement input = (WebElement) session.js("return arguments[0].inputElement;", element);
+                    input.clear();
+                    input.sendKeys(text + org.openqa.selenium.Keys.ENTER);
+                    return true;
+                }
                 if (value == null) {
                     picker.clear();
                 } else {
@@ -119,12 +130,65 @@ final class SeleniumComponents {
             }
         });
         register(Dialog.class, new Support() {
+            /** Open dialogs only: closed ones (the app's or the dev tools') are not part of the page. */
+            @Override
+            public boolean include(WebElement element, SeleniumSession session) {
+                return Boolean.TRUE.equals(session.js("return !!arguments[0].opened;", element));
+            }
+
             @Override
             public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
                 // the dialog host has no box of its own; open means shown
                 return Optional.of(Boolean.TRUE.equals(session.js("return !!arguments[0].opened;", element)));
             }
         });
+    }
+
+    static {
+        register(com.vaadin.flow.component.textfield.TextArea.class, new Support() {
+            @Override
+            public boolean setValue(WebElement element, Object value, SeleniumSession session) {
+                session.testBench(element).wrap(com.vaadin.flow.component.textfield.testbench.TextAreaElement.class)
+                        .setValue(value == null ? "" : value.toString());
+                return true;
+            }
+        });
+        register(com.vaadin.flow.component.textfield.IntegerField.class, new Support() {
+            @Override
+            public boolean setValue(WebElement element, Object value, SeleniumSession session) {
+                session.testBench(element).wrap(com.vaadin.flow.component.textfield.testbench.IntegerFieldElement.class)
+                        .setValue(com.vaadin.testing.unified.internal.BrowserQueries.typedText(value));
+                return true;
+            }
+        });
+        register(com.vaadin.flow.component.textfield.BigDecimalField.class, new Support() {
+            @Override
+            public boolean setValue(WebElement element, Object value, SeleniumSession session) {
+                session.testBench(element).wrap(com.vaadin.flow.component.textfield.testbench.BigDecimalFieldElement.class)
+                        .setValue(com.vaadin.testing.unified.internal.BrowserQueries.typedText(value));
+                return true;
+            }
+        });
+        register(com.vaadin.flow.component.datetimepicker.DateTimePicker.class, new Support() {
+            /** The ISO value on the element, as the picker sets it when the user commits both parts. */
+            @Override
+            public boolean setValue(WebElement element, Object value, SeleniumSession session) {
+                session.js("""
+                        const e = arguments[0];
+                        e.value = arguments[1];
+                        e.dispatchEvent(new Event('change', {bubbles: true}));""",
+                        element, value == null ? "" : value.toString());
+                return true;
+            }
+        });
+        register(com.vaadin.flow.component.tabs.Tabs.class, access(TabSheetAccess.class,
+                (element, session) -> new SeleniumTabSheetAccess(session, element)));
+        register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
+                (element, session) -> new SeleniumCoreSetAccess.DetailsAccessImpl(session, element)));
+        register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
+                (element, session) -> new SeleniumCoreSetAccess.MenuBarAccessImpl(session, element)));
+        register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
+                (element, session) -> new SeleniumCoreSetAccess.UploadAccessImpl(session, element)));
     }
 
     static {
