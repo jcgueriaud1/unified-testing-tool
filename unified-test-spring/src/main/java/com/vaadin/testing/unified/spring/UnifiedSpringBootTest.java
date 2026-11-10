@@ -20,7 +20,7 @@ import org.springframework.core.annotation.AliasFor;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(TestLoginConfiguration.class)
+@Import({ TestLoginConfiguration.class, CurrentViewConfiguration.class })
 @UnifiedUITest
 public @interface UnifiedSpringBootTest {
 

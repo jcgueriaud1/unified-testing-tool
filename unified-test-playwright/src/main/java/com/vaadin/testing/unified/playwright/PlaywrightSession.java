@@ -6,6 +6,7 @@ import com.microsoft.playwright.Page;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.CurrentView;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
@@ -213,12 +214,23 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public boolean isAt(Class<? extends Component> view) {
+        if (!CurrentView.hasRoute(view)) {
+            return CurrentView.shows((String) page.evaluate(CurrentView.SCRIPT, baseUrl + CurrentView.PATH), view);
+        }
         return currentPath().equals(strip(RouteNavigation.pathOf(view)));
+    }
+
+    /**
+     * The browser's location, read in the page: {@code page.url()} only learns about a client-side navigation
+     * (a RouterLink, {@code history.pushState}) on the next call to the browser.
+     */
+    private String location() {
+        return (String) page.evaluate("() => location.href");
     }
 
     @Override
     public String currentPath() {
-        String path = URI.create(page.url()).getPath();
+        String path = URI.create(location()).getPath();
         String basePath = URI.create(baseUrl).getPath();
         if (basePath != null && !basePath.isEmpty() && path.startsWith(basePath)) {
             path = path.substring(basePath.length());
@@ -239,7 +251,7 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public Optional<String> queryParameter(String name) {
-        String query = URI.create(page.url()).getRawQuery();
+        String query = URI.create(location()).getRawQuery();
         if (query == null) {
             return Optional.empty();
         }

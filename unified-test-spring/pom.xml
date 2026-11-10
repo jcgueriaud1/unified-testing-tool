@@ -32,5 +32,11 @@
             <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- the test-only current-view endpoint reads the app's Vaadin session; the app brings Vaadin -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>flow-server</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

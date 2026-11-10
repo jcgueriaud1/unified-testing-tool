@@ -5,6 +5,7 @@ import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testbench.TestBenchDriverProxy;
 import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.CurrentView;
 import com.vaadin.testing.unified.internal.RoutePaths;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
@@ -196,6 +197,13 @@ final class SeleniumSession implements AdapterSession {
 
     @Override
     public boolean isAt(Class<? extends Component> view) {
+        if (!CurrentView.hasRoute(view)) {
+            Object answer = ((JavascriptExecutor) driver()).executeAsyncScript(
+                    "const done = arguments[arguments.length - 1];"
+                            + "(" + CurrentView.SCRIPT + ")(arguments[0]).then(done, () => done(null));",
+                    baseUrl + CurrentView.PATH);
+            return CurrentView.shows((String) answer, view);
+        }
         return currentPath().equals(RoutePaths.pathOf(view));
     }
 
