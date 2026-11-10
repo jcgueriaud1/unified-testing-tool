@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.playwright;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.Filter;
 import java.math.BigDecimal;
 import java.util.List;
@@ -47,16 +48,24 @@ final class PlaywrightElement implements UnifiedElement {
         return (String) locator.evaluate("e => e.localName");
     }
 
+    /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
     @Override
     public String getText() {
         Optional<String> special = support.text(locator);
         if (special.isPresent()) {
-            return special.get().strip();
+            return BrowserQueries.normalize(special.get());
         }
-        if (dramafinder != null) {
-            return dramafinder.getText().strip();
-        }
+        return (String) locator.evaluate(BrowserQueries.TEXT);
+    }
+
+    @Override
+    public String getVisibleText() {
         return locator.innerText().strip();
+    }
+
+    @Override
+    public String getInlineStyle(String name) {
+        return (String) locator.evaluate(BrowserQueries.INLINE_STYLE, BrowserQueries.cssName(name));
     }
 
     @Override

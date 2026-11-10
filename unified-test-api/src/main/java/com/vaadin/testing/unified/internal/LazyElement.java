@@ -81,6 +81,11 @@ public final class LazyElement implements UnifiedElement {
 
     @Override public String getTag() { return read(UnifiedElement::getTag); }
     @Override public String getText() { return read(UnifiedElement::getText); }
+    @Override public String getVisibleText() {
+        run.requireBrowser("getVisibleText");
+        return read(UnifiedElement::getVisibleText);
+    }
+    @Override public String getInlineStyle(String name) { return read(e -> e.getInlineStyle(name)); }
     @Override public String getProperty(String name) { return read(e -> e.getProperty(name)); }
     @Override public Integer getPropertyInteger(String name) { return read(e -> e.getPropertyInteger(name)); }
     @Override public Boolean getPropertyBoolean(String name) { return read(e -> e.getPropertyBoolean(name)); }

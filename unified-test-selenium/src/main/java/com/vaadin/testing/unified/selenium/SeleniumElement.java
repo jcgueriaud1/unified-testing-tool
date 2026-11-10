@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.selenium;
 
 import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.Filter;
 import java.math.BigDecimal;
 import java.util.List;
@@ -61,9 +62,25 @@ final class SeleniumElement implements UnifiedElement {
         return SeleniumSession.stale(element::getTagName);
     }
 
+    /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
     @Override
     public String getText() {
-        return SeleniumSession.stale(() -> support.text(element, session).orElseGet(element::getText).strip());
+        Optional<String> special = SeleniumSession.stale(() -> support.text(element, session));
+        if (special.isPresent()) {
+            return BrowserQueries.normalize(special.get());
+        }
+        return (String) js("return (" + BrowserQueries.TEXT + ")(arguments[0]);");
+    }
+
+    @Override
+    public String getVisibleText() {
+        return SeleniumSession.stale(element::getText).strip();
+    }
+
+    @Override
+    public String getInlineStyle(String name) {
+        return (String) js("return (" + BrowserQueries.INLINE_STYLE + ")(arguments[0], arguments[1]);",
+                BrowserQueries.cssName(name));
     }
 
     @Override

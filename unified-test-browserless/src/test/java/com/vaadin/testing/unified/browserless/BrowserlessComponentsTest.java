@@ -1,9 +1,7 @@
 package com.vaadin.testing.unified.browserless;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.notification.Notification;
@@ -15,7 +13,7 @@ class BrowserlessComponentsTest {
 
     @Test
     void notificationIsRegistered() {
-        assertFalse(BrowserlessComponents.of(Notification.class).queryFindsText());
+        assertNotSame(BrowserlessComponents.of(Button.class), BrowserlessComponents.of(Notification.class));
     }
 
     @Test
@@ -31,7 +29,6 @@ class BrowserlessComponentsTest {
 
     @Test
     void unregisteredComponentsGetTheGenericDefault() {
-        assertTrue(BrowserlessComponents.of(Button.class).queryFindsText());
         assertNotSame(BrowserlessComponents.of(Notification.class), BrowserlessComponents.of(Button.class));
     }
 }

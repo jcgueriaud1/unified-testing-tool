@@ -12,7 +12,19 @@ import java.util.List;
  */
 public interface UnifiedElement extends HasEscapeHatch {
     String getTag();
+
+    /**
+     * The element's text as in the DOM ({@code textContent}), whitespace collapsed and trimmed. The same on
+     * every Testing Tool: CSS doesn't change it ({@code text-transform}, hidden descendants, line breaks
+     * between flex items). For the text as rendered, see {@link #getVisibleText()}.
+     */
     String getText();
+
+    /**
+     * The text as the browser renders it ({@code innerText}): CSS applied, hidden parts left out, line breaks
+     * between blocks. Needs a real browser ({@code @RequiresBrowser}).
+     */
+    String getVisibleText();
 
     String getProperty(String name);
     Integer getPropertyInteger(String name);
@@ -23,6 +35,12 @@ public interface UnifiedElement extends HasEscapeHatch {
 
     /** Computed CSS value. Needs a real browser ({@code @RequiresBrowser}). */
     String getCssValue(String property);
+
+    /**
+     * The value the element's inline style declares for a property, as written ({@code var(--gap)}, not the
+     * computed value), or null. The same on every Testing Tool. {@code name} is dash-separated or camelCase.
+     */
+    String getInlineStyle(String name);
 
     boolean isVisible();
     boolean isEnabled();

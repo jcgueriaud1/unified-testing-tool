@@ -56,11 +56,6 @@ final class BrowserlessComponents {
         default Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
             return Optional.empty();
         }
-
-        /** Whether Browserless's own text query sees this component's text. */
-        default boolean queryFindsText() {
-            return true;
-        }
     }
 
     private static final Support DEFAULT = new Support() {};
@@ -87,11 +82,6 @@ final class BrowserlessComponents {
             @Override
             public Optional<Boolean> visible(Component component) {
                 return Optional.of(((Notification) component).isOpened());
-            }
-
-            @Override
-            public boolean queryFindsText() {
-                return false;
             }
         });
     }

@@ -39,6 +39,7 @@ final class BrowserlessSession implements AdapterSession {
     private final boolean ownsUser;
     private final boolean ownsApp;
     private final List<BrowserlessSession> children = new ArrayList<>();
+    private boolean routeErrorsToSession;
 
     /** The test's own page: owns the app and the user. */
     BrowserlessSession(BrowserlessApplicationContext app, BrowserlessUserContext user) {
@@ -79,8 +80,45 @@ final class BrowserlessSession implements AdapterSession {
     }
 
     private BrowserlessSession child(BrowserlessSession session) {
+        session.routeErrorsToSession = routeErrorsToSession;
         children.add(session);
         return session;
+    }
+
+    /** {@code vaadin.testing.browserless.route-errors-to-session}: see {@link #act}. */
+    BrowserlessSession routeErrorsToSession(boolean route) {
+        this.routeErrorsToSession = route;
+        return this;
+    }
+
+    /**
+     * Runs a user action. In a browser, an exception thrown by an app listener goes to the session's
+     * ErrorHandler (the app's error UI); Browserless Test throws it into the test. With
+     * {@code route-errors-to-session}, it goes to the ErrorHandler as in a browser. Exceptions of Browserless
+     * Test itself (a component that isn't usable) are always thrown.
+     */
+    void act(Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException e) {
+            if (!routeErrorsToSession || thrownByBrowserless(e)) {
+                throw e;
+            }
+            com.vaadin.flow.server.VaadinSession session = window().getUI().getSession();
+            session.getErrorHandler().error(new com.vaadin.flow.server.ErrorEvent(e));
+            window().roundTrip();
+        }
+    }
+
+    private static boolean thrownByBrowserless(Throwable e) {
+        for (StackTraceElement frame : e.getStackTrace()) {
+            String type = frame.getClassName();
+            if (type.startsWith("java.") || type.startsWith("jdk.") || type.startsWith("kotlin.")) {
+                continue;
+            }
+            return type.startsWith("com.vaadin.browserless.") || type.startsWith("com.vaadin.testing.unified.");
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- finding
@@ -173,9 +211,8 @@ final class BrowserlessSession implements AdapterSession {
             query = switch (f.kind()) {
                 case LABEL -> f.exact() ? query.withLabel(f.value())
                         : query.withCondition(c -> f.matches(c.getElement().getProperty("label")));
-                case TEXT -> BrowserlessComponents.of(type).queryFindsText() && f.exact()
-                        ? query.withText(f.value())
-                        : query.withCondition(c -> f.matches(new BrowserlessElement(this, c).getText()));
+                // getText(), as in a browser: Browserless's own withText reads the element's own text only
+                case TEXT -> query.withCondition(c -> f.matches(new BrowserlessElement(this, c).getText()));
                 case PLACEHOLDER -> query.withPlaceholder(f.value());
                 case TEST_ID -> query.withTestId(f.value());
                 case ID -> query.withId(f.value());
@@ -268,6 +305,10 @@ final class BrowserlessSession implements AdapterSession {
 
     @Override
     public void pressKey(String key) {
+        act(() -> pressPageKey(key));
+    }
+
+    private void pressPageKey(String key) {
         List<Dialog> open = window().find(Dialog.class).all().stream().filter(Dialog::isOpened).toList();
         BrowserlessElement.pressKey(this, BrowserlessKeys.pageTarget(window().getUI(), open), key);
     }

@@ -63,18 +63,20 @@ final class BrowserlessSelectionAccess implements SelectionAccess {
 
     @Override
     public void select(String label) {
-        switch (tester()) {
-            case ComboBoxTester t -> t.selectItem(label);
-            case MultiSelectComboBoxTester t -> {
-                // the tester's selectItem replaces the selection; a user's click adds to it
-                List<String> labels = new java.util.ArrayList<>(selectedItems());
-                labels.add(label);
-                t.selectItem(labels.toArray(String[]::new));
+        session.act(() -> {
+            switch (tester()) {
+                case ComboBoxTester t -> t.selectItem(label);
+                case MultiSelectComboBoxTester t -> {
+                    // the tester's selectItem replaces the selection; a user's click adds to it
+                    List<String> labels = new java.util.ArrayList<>(selectedItems());
+                    labels.add(label);
+                    t.selectItem(labels.toArray(String[]::new));
+                }
+                case RadioButtonGroupTester t -> t.selectItem(label);
+                default -> throw new UnsupportedOperationException(component.getClass().getName());
             }
-            case RadioButtonGroupTester t -> t.selectItem(label);
-            default -> throw new UnsupportedOperationException(component.getClass().getName());
-        }
-        session.window().roundTrip();
+            session.window().roundTrip();
+        });
     }
 
     /**
@@ -92,17 +94,19 @@ final class BrowserlessSelectionAccess implements SelectionAccess {
     /** The clear button when it is shown, as a user would; otherwise empties the value on the server. */
     @Override
     public void clear() {
-        if (component instanceof ComboBoxBase<?, ?, ?> box && box.isClearButtonVisible()) {
-            if (tester() instanceof ComboBoxTester t) {
-                t.clickClearButton();
+        session.act(() -> {
+            if (component instanceof ComboBoxBase<?, ?, ?> box && box.isClearButtonVisible()) {
+                if (tester() instanceof ComboBoxTester t) {
+                    t.clickClearButton();
+                } else {
+                    ((MultiSelectComboBoxTester) tester()).clickClearButton();
+                }
+            } else if (component instanceof ComboBox<?> || component instanceof MultiSelectComboBox<?>) {
+                ((AbstractField<?, ?>) component).clear();
             } else {
-                ((MultiSelectComboBoxTester) tester()).clickClearButton();
+                throw new UnsupportedOperationException("A user can't clear a " + component.getClass().getSimpleName());
             }
-        } else if (component instanceof ComboBox<?> || component instanceof MultiSelectComboBox<?>) {
-            ((AbstractField<?, ?>) component).clear();
-        } else {
-            throw new UnsupportedOperationException("A user can't clear a " + component.getClass().getSimpleName());
-        }
-        session.window().roundTrip();
+            session.window().roundTrip();
+        });
     }
 }

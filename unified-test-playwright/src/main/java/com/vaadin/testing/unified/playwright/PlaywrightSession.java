@@ -6,6 +6,7 @@ import com.microsoft.playwright.Page;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.internal.CurrentView;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
@@ -18,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.vaadin.addons.dramafinder.AutoWait;
@@ -96,20 +98,26 @@ final class PlaywrightSession implements AdapterSession {
             throw new IllegalArgumentException(spec.componentType().getName()
                     + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
         }
-        // exact id and test id filters go into the selector: the page doesn't return every element to filter
-        StringBuilder selector = new StringBuilder(tag);
-        for (Filter f : spec.filters()) {
-            if (f.exact() && (f.kind() == Filter.Kind.TEST_ID || f.kind() == Filter.Kind.ID)) {
-                selector.append('[').append(f.kind() == Filter.Kind.ID ? "id" : "data-testid").append("=\"")
-                        .append(f.value().replace("\\", "\\\\").replace("\"", "\\\"")).append("\"]");
+        // what CSS can express goes into the selector; the rest is checked in the page, for every candidate in
+        // one round trip: no browser call per element, and no element detaching between two calls
+        String selector = BrowserQueries.selector(tag, spec.filters());
+        Locator candidates = scope == null ? page.locator(selector) : scope.locator(selector);
+        List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
+        List<Integer> indices = new ArrayList<>();
+        if (remaining.isEmpty()) {
+            for (int i = 0, n = candidates.count(); i < n; i++) {
+                indices.add(i);
+            }
+        } else {
+            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, remaining)) {
+                indices.add(((Number) i).intValue());
             }
         }
-        Locator candidates = scope == null ? page.locator(selector.toString()) : scope.locator(selector.toString());
         List<UnifiedElement> result = new ArrayList<>();
-        for (Locator locator : candidates.all()) {
-            PlaywrightElement element = new PlaywrightElement(this, locator, null, support);
-            if (support.include(locator) && spec.filters().stream().allMatch(f -> element.matches(f))) {
-                result.add(element);
+        for (int i : indices) {
+            Locator locator = candidates.nth(i);
+            if (support.include(locator)) {
+                result.add(new PlaywrightElement(this, locator, null, support));
             }
         }
         return result;

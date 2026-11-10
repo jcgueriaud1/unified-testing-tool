@@ -7,6 +7,7 @@ import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -59,9 +60,23 @@ final class BrowserlessElement implements UnifiedElement {
         return element().getTag();
     }
 
+    /** The text of the server-side elements, whitespace collapsed: what a browser's textContent holds. */
     @Override
     public String getText() {
-        return support.text(component, session.window()).orElseGet(() -> element().getTextRecursively());
+        return BrowserQueries.normalize(
+                support.text(component, session.window()).orElseGet(() -> element().getTextRecursively()));
+    }
+
+    @Override
+    public String getVisibleText() {
+        throw new UnsupportedOperationException("Browserless has no rendering, so no visible text; use getText()"
+                + " or @RequiresBrowser");
+    }
+
+    @Override
+    public String getInlineStyle(String name) {
+        String value = element().getStyle().get(BrowserQueries.cssName(name));
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
     @Override
@@ -154,72 +169,84 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void setProperty(String name, Object value) {
-        if (value instanceof Boolean b) {
-            element().setProperty(name, b);
-        } else if (value instanceof Number n) {
-            element().setProperty(name, n.doubleValue());
-        } else {
-            element().setProperty(name, value == null ? null : String.valueOf(value));
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (value instanceof Boolean b) {
+                element().setProperty(name, b);
+            } else if (value instanceof Number n) {
+                element().setProperty(name, n.doubleValue());
+            } else {
+                element().setProperty(name, value == null ? null : String.valueOf(value));
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void click() {
-        if (tester().getClass() != ComponentTester.class && hasTesterMethod("click", 0)) {
-            invokeTester("click"); // a component's own tester (Button, ...): its usability checks
-        } else {
-            // a DOM click: element listeners and @DomEvent("click") component listeners both run
-            com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "click");
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (tester().getClass() != ComponentTester.class && hasTesterMethod("click", 0)) {
+                invokeTester("click"); // a component's own tester (Button, ...): its usability checks
+            } else {
+                // a DOM click: element listeners and @DomEvent("click") component listeners both run
+                com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "click");
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void setValueAsUser(Object value) {
-        if (support.setValue(component, value, session.window())) {
+        session.act(() -> {
+            if (support.setValue(component, value, session.window())) {
+                session.window().roundTrip();
+                return;
+            }
+            if (value == null && hasTesterMethod("clear", 0)) {
+                invokeTester("clear");
+                session.window().roundTrip();
+                return;
+            }
+            Optional<Method> setValue = testerMethod("setValue", 1);
+            if (setValue.isPresent()) {
+                call(setValue.get(), value);
+            } else if (List.of("input", "textarea").contains(getTag())) {
+                // a native input with no tester (a bare Element): what the browser does when a user types
+                element().setProperty("value", value == null ? "" : String.valueOf(value));
+                com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "input");
+                com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "change");
+            } else {
+                throw new UnsupportedOperationException(component.getClass().getSimpleName()
+                        + " has no value to set on Browserless");
+            }
             session.window().roundTrip();
-            return;
-        }
-        if (value == null && hasTesterMethod("clear", 0)) {
-            invokeTester("clear");
-            session.window().roundTrip();
-            return;
-        }
-        Optional<Method> setValue = testerMethod("setValue", 1);
-        if (setValue.isPresent()) {
-            call(setValue.get(), value);
-        } else if (List.of("input", "textarea").contains(getTag())) {
-            // a native input with no tester (a bare Element): what the browser does when a user types
-            element().setProperty("value", value == null ? "" : String.valueOf(value));
-            com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "input");
-            com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "change");
-        } else {
-            throw new UnsupportedOperationException(component.getClass().getSimpleName()
-                    + " has no value to set on Browserless");
-        }
-        session.window().roundTrip();
+        });
     }
 
     @Override
     public void focus() {
-        if (component instanceof Focusable<?> focusable) {
-            focusable.focus();
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (component instanceof Focusable<?> focusable) {
+                focusable.focus();
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void blur() {
-        if (component instanceof Focusable<?> focusable) {
-            focusable.blur();
-        }
-        session.window().roundTrip();
+        session.act(() -> {
+            if (component instanceof Focusable<?> focusable) {
+                focusable.blur();
+            }
+            session.window().roundTrip();
+        });
     }
 
     @Override
     public void pressKey(String key) {
-        pressKey(session, component, key);
+        session.act(() -> {
+            pressKey(session, component, key);
+        });
     }
 
     /** The component's own key handling (e.g. Escape closes a dialog), else a bubbling keydown. */
@@ -232,8 +259,10 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void dispatchEvent(String eventName) {
-        BrowserlessKeys.dispatch(component, eventName);
-        session.window().roundTrip();
+        session.act(() -> {
+            BrowserlessKeys.dispatch(component, eventName);
+            session.window().roundTrip();
+        });
     }
 
     // ---------------------------------------------------------------- Escape Hatch

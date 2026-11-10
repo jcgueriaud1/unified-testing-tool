@@ -43,8 +43,10 @@ final class BrowserlessTabSheetAccess implements TabSheetAccess {
 
     @Override
     public void select(String label) {
-        tester().select(label);
-        session.window().roundTrip();
+        session.act(() -> {
+            tester().select(label);
+            session.window().roundTrip();
+        });
     }
 
     @Override

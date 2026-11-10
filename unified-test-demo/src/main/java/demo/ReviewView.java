@@ -28,7 +28,9 @@ public class ReviewView extends VerticalLayout {
             case "Draft" -> actions.add(button("Submit", "Submitted"), button("Delete", "Deleted"));
             case "Submitted" -> actions.add(button("Approve", "Approved"), button("Reject", "Draft"),
                     button("Comment", "Submitted"));
-            default -> actions.add(button("Reopen", "Draft"));
+            default -> actions.add(button("Reopen", "Draft"), new Button("Archive", e -> {
+                throw new IllegalStateException("The archive is not available");
+            }));
         }
     }
 

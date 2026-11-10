@@ -15,10 +15,15 @@ import java.util.Optional;
  * Setting {@code vaadin.testing.browserless.view-packages}: comma-separated packages to scan for routes.
  * Default: in a Spring test, the application's packages (those of its {@code @SpringBootApplication}) and
  * the test class's package; otherwise the test class's package.
+ * <p>
+ * Setting {@code vaadin.testing.browserless.route-errors-to-session}: {@code true} sends an exception thrown
+ * by an app listener during a user action to the session's ErrorHandler, as in a browser, instead of into the
+ * test. Default {@code false}.
  */
 public final class BrowserlessAdapter implements TestingToolAdapter {
 
     static final String VIEW_PACKAGES = "vaadin.testing.browserless.view-packages";
+    static final String ROUTE_ERRORS = "vaadin.testing.browserless.route-errors-to-session";
 
     @Override
     public TestingTool tool() {
@@ -27,6 +32,11 @@ public final class BrowserlessAdapter implements TestingToolAdapter {
 
     @Override
     public AdapterSession open(AdapterContext context) {
+        boolean routeErrors = "true".equalsIgnoreCase(context.configuration(ROUTE_ERRORS).orElse("false"));
+        return openSession(context).routeErrorsToSession(routeErrors);
+    }
+
+    private BrowserlessSession openSession(AdapterContext context) {
         Class<?> testClass = context.extensionContext().getRequiredTestClass();
         Optional<String[]> configured = context.configuration(VIEW_PACKAGES)
                 .map(v -> Arrays.stream(v.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new));

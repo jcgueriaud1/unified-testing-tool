@@ -5,6 +5,7 @@ import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testbench.TestBenchDriverProxy;
 import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.internal.CurrentView;
 import com.vaadin.testing.unified.internal.RoutePaths;
 import com.vaadin.testing.unified.spi.AdapterSession;
@@ -19,6 +20,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -54,19 +56,27 @@ final class SeleniumSession implements AdapterSession {
     private final Duration timeout;
     private final String handle;
     private final boolean ownsDriver;
+    /** Instead of quitting the driver on close: gives a shared browser back. Null: quit it. */
+    private final Runnable release;
 
     /** A page in a new browser from {@code browsers}; {@code openAsUser} starts its own browser the same way. */
     SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, String baseUrl, Duration timeout) {
-        this(browsers, new Browser(browsers.get()), baseUrl, timeout, true);
+        this(browsers, new Browser(browsers.get()), baseUrl, timeout, true, null);
+    }
+
+    /** A page in a browser shared by the run's tests: {@code release} gives it back when the test ends. */
+    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, TestBenchDriverProxy shared,
+            Runnable release, String baseUrl, Duration timeout) {
+        this(browsers, new Browser(shared), baseUrl, timeout, true, release);
     }
 
     private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
-            String baseUrl, Duration timeout, boolean ownsDriver) {
-        this(browsers, browser, baseUrl, timeout, browser.current, ownsDriver);
+            String baseUrl, Duration timeout, boolean ownsDriver, Runnable release) {
+        this(browsers, browser, baseUrl, timeout, browser.current, ownsDriver, release);
     }
 
     private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
-            String baseUrl, Duration timeout, String handle, boolean ownsDriver) {
+            String baseUrl, Duration timeout, String handle, boolean ownsDriver, Runnable release) {
         this.browsers = browsers;
         this.browser = browser;
         this.driver = browser.driver;
@@ -74,6 +84,7 @@ final class SeleniumSession implements AdapterSession {
         this.timeout = timeout;
         this.handle = handle;
         this.ownsDriver = ownsDriver;
+        this.release = release;
     }
 
     /** The driver, switched to this session's window first: several windows can live in one test. */
@@ -130,27 +141,31 @@ final class SeleniumSession implements AdapterSession {
             throw new IllegalArgumentException(spec.componentType().getName()
                     + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
         }
-        // exact id and test id filters go into the selector: the browser doesn't return every element to filter
-        StringBuilder selector = new StringBuilder(tag);
-        for (Filter f : spec.filters()) {
-            if (f.exact() && (f.kind() == Filter.Kind.TEST_ID || f.kind() == Filter.Kind.ID)) {
-                selector.append('[').append(f.kind() == Filter.Kind.ID ? "id" : "data-testid").append("=\"")
-                        .append(f.value().replace("\\", "\\\\").replace("\"", "\\\"")).append("\"]");
-            }
-        }
+        // what CSS can express goes into the selector; the rest is checked in the page, for every candidate in
+        // one round trip
+        String selector = BrowserQueries.selector(tag, spec.filters());
+        List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
         List<SearchContext> roots = spec.parent() == null ? List.of(driver())
                 : new ArrayList<>(((SeleniumElement) spec.parent()).roots());
         List<UnifiedElement> result = new ArrayList<>();
         try {
             for (SearchContext root : roots) {
-                for (WebElement candidate : root.findElements(By.cssSelector(selector.toString()))) {
-                    SeleniumElement element = new SeleniumElement(this, candidate, support);
-                    if (support.include(candidate, this) && spec.filters().stream().allMatch(element::matches)) {
-                        result.add(element);
+                List<WebElement> candidates = root.findElements(By.cssSelector(selector));
+                List<WebElement> matching = candidates;
+                if (!remaining.isEmpty() && !candidates.isEmpty()) {
+                    matching = new ArrayList<>();
+                    for (Object i : (List<?>) js("return (" + BrowserQueries.MATCH + ")(arguments[0], arguments[1]);",
+                            candidates, remaining)) {
+                        matching.add(candidates.get(((Number) i).intValue()));
+                    }
+                }
+                for (WebElement candidate : matching) {
+                    if (support.include(candidate, this)) {
+                        result.add(new SeleniumElement(this, candidate, support));
                     }
                 }
             }
-        } catch (StaleElementReferenceException e) {
+        } catch (StaleElementReferenceException | StaleElementException e) {
             // Vaadin re-rendered a candidate while it was checked: not ready yet, the core queries again
             throw new StaleElementException("An element went stale while finding " + selector, e);
         }
@@ -245,14 +260,15 @@ final class SeleniumSession implements AdapterSession {
     public AdapterSession openWindow() {
         driver().switchTo().newWindow(WindowType.TAB);
         browser.current = driver.getWindowHandle();
-        return new SeleniumSession(browsers, browser, baseUrl, timeout, browser.current, false);
+        return new SeleniumSession(browsers, browser, baseUrl, timeout, browser.current, false, null);
     }
 
     /** A browser of its own (own cookies, own session), logged in through the test-only endpoint. */
     @Override
     public AdapterSession openAsUser(String username, String... roles) {
         String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
-        SeleniumSession session = new SeleniumSession(browsers, new Browser(browsers.get()), baseUrl, timeout, true);
+        SeleniumSession session = new SeleniumSession(browsers, new Browser(browsers.get()), baseUrl, timeout, true,
+                null);
         children.add(session);
         session.logIn(loginUrl);
         return session;
@@ -313,7 +329,9 @@ final class SeleniumSession implements AdapterSession {
         for (SeleniumSession child : children) {
             child.close();
         }
-        if (ownsDriver) {
+        if (ownsDriver && release != null) {
+            release.run(); // a shared browser: cleaned for the next test
+        } else if (ownsDriver) {
             driver.quit(); // closes the windows opened from this one too
         } else {
             driver().close();
