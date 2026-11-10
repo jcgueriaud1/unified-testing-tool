@@ -104,14 +104,8 @@ final class PlaywrightSession implements AdapterSession {
         Locator candidates = scope == null ? page.locator(selector) : scope.locator(selector);
         List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
         List<Integer> indices = new ArrayList<>();
-        if (remaining.isEmpty()) {
-            for (int i = 0, n = candidates.count(); i < n; i++) {
-                indices.add(i);
-            }
-        } else {
-            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, remaining)) {
-                indices.add(((Number) i).intValue());
-            }
+        for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, remaining)) {
+            indices.add(((Number) i).intValue());
         }
         List<UnifiedElement> result = new ArrayList<>();
         for (int i : indices) {
@@ -325,7 +319,8 @@ final class PlaywrightSession implements AdapterSession {
         }
     }
 
+    /** Exactly this text, surrounding whitespace aside. Escaped by hand: Playwright runs it as a JS regex. */
     static Pattern exactText(String text) {
-        return Pattern.compile("^\\s*" + Pattern.quote(text) + "\\s*$");
+        return Pattern.compile("^\\s*" + text.replaceAll("[\\\\^$.|?*+()\\[\\]{}]", "\\\\$0") + "\\s*$");
     }
 }

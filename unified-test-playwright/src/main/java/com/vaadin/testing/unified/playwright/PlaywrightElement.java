@@ -154,9 +154,7 @@ final class PlaywrightElement implements UnifiedElement {
             AutoWait.afterAction(page());
             return;
         }
-        String text = value == null ? ""
-                : value instanceof Number n ? new BigDecimal(n.toString()).stripTrailingZeros().toPlainString()
-                : String.valueOf(value);
+        String text = BrowserQueries.typedText(value);
         if (dramafinder instanceof HasValueElement field) {
             field.setValue(text);
         } else {

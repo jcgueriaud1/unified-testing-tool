@@ -174,9 +174,7 @@ final class SeleniumElement implements UnifiedElement {
     @Override
     public void setValueAsUser(Object value) {
         if (!support.setValue(element, value, session)) {
-            String text = value == null ? ""
-                    : value instanceof Number n ? new BigDecimal(n.toString()).stripTrailingZeros().toPlainString()
-                    : String.valueOf(value);
+            String text = BrowserQueries.typedText(value);
             // what TestBench's setValue does: set the value, then the events a user's input fires
             js("""
                     const e = arguments[0];

@@ -94,6 +94,23 @@ public final class BrowserQueries {
               return null;
             }""";
 
+    /**
+     * The text a user types for a value: a BigDecimal as it is ({@code 54.20}, its scale is what the user
+     * typed), other numbers without trailing zeros ({@code 3.0} as {@code 3}), null as empty.
+     */
+    public static String typedText(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof java.math.BigDecimal decimal) {
+            return decimal.toPlainString();
+        }
+        if (value instanceof Number n) {
+            return new java.math.BigDecimal(n.toString()).stripTrailingZeros().toPlainString();
+        }
+        return String.valueOf(value);
+    }
+
     /** Whitespace collapsed and trimmed, as {@link #TEXT} does in the browser. */
     public static String normalize(String text) {
         return text == null ? "" : text.replaceAll("\\s+", " ").strip();
@@ -126,7 +143,8 @@ public final class BrowserQueries {
 
     /**
      * Browser function {@code (elements, filters) => indices}: the indices of the elements matching every
-     * filter of {@link #remaining}. Matching is as in {@link Filter#matches}.
+     * filter of {@link #remaining}, leaving out the shadow DOM of Vaadin's components and dev tools. Matching
+     * is as in {@link Filter#matches}.
      */
     public static final String MATCH = """
             (elements, filters) => {
@@ -152,8 +170,16 @@ public final class BrowserQueries {
                   default: return false;
                 }
               };
+              // CSS in Playwright enters shadow roots: leave out what Vaadin's own components and dev tools have
+              // there, which is no app content (an app's own template keeps its shadow DOM searchable)
+              const appContent = e => {
+                for (let r = e.getRootNode(); r instanceof ShadowRoot; r = r.host.getRootNode()) {
+                  if (/^(vaadin-|copilot-)/.test(r.host.localName)) return false;
+                }
+                return true;
+              };
               const found = [];
-              elements.forEach((e, i) => { if (filters.every(f => check(e, f))) found.push(i); });
+              elements.forEach((e, i) => { if (appContent(e) && filters.every(f => check(e, f))) found.push(i); });
               return found;
             }""".formatted(TEXT, ACCESSIBLE_NAME);
 }

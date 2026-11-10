@@ -53,6 +53,12 @@ public final class UnifiedAssertions {
     }
     public static MultiSelectAssert assertThat(UnifiedMultiSelectComboBox field) { return new MultiSelectAssert(field); }
     public static TabSheetAssert assertThat(UnifiedTabSheet tabSheet) { return new TabSheetAssert(tabSheet); }
+    public static TextAreaAssert assertThat(com.vaadin.testing.unified.component.UnifiedTextArea field) { return new TextAreaAssert(field); }
+    public static IntegerFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedIntegerField field) { return new IntegerFieldAssert(field); }
+    public static BigDecimalFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedBigDecimalField field) { return new BigDecimalFieldAssert(field); }
+    public static DateTimePickerAssert assertThat(com.vaadin.testing.unified.component.UnifiedDateTimePicker field) { return new DateTimePickerAssert(field); }
+    public static TabsAssert assertThat(com.vaadin.testing.unified.component.UnifiedTabs tabs) { return new TabsAssert(tabs); }
+    public static DetailsAssert assertThat(com.vaadin.testing.unified.component.UnifiedDetails details) { return new DetailsAssert(details); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
@@ -414,6 +420,93 @@ public final class UnifiedAssertions {
         @Override
         public NotificationAssert hasTextContaining(String part) {
             return check("to have text containing", part, notification::getText, v -> v != null && v.toString().contains(part));
+        }
+    }
+
+    public static final class TextAreaAssert extends FieldAssert<TextAreaAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedTextArea textArea;
+
+        TextAreaAssert(com.vaadin.testing.unified.component.UnifiedTextArea field) { super(field); this.textArea = field; }
+
+        public TextAreaAssert hasValue(String expected) {
+            return check("to have value", expected, textArea::getValue, v -> Objects.equals(v, expected));
+        }
+
+        public TextAreaAssert isEmpty() {
+            return check("to be empty", null, textArea::getValue, v -> v == null || v.toString().isEmpty());
+        }
+    }
+
+    public static final class IntegerFieldAssert extends FieldAssert<IntegerFieldAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedIntegerField integerField;
+
+        IntegerFieldAssert(com.vaadin.testing.unified.component.UnifiedIntegerField field) { super(field); this.integerField = field; }
+
+        public IntegerFieldAssert hasValue(int expected) {
+            return check("to have value", expected, integerField::getValue, v -> Objects.equals(v, expected));
+        }
+
+        public IntegerFieldAssert isEmpty() {
+            return check("to be empty", null, integerField::getValue, Objects::isNull);
+        }
+    }
+
+    public static final class BigDecimalFieldAssert extends FieldAssert<BigDecimalFieldAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedBigDecimalField decimalField;
+
+        BigDecimalFieldAssert(com.vaadin.testing.unified.component.UnifiedBigDecimalField field) { super(field); this.decimalField = field; }
+
+        /** Numerically equal: {@code 54.2} and {@code 54.20} match. */
+        public BigDecimalFieldAssert hasValue(java.math.BigDecimal expected) {
+            return check("to have value", expected, decimalField::getValue,
+                    v -> v != null && ((java.math.BigDecimal) v).compareTo(expected) == 0);
+        }
+
+        public BigDecimalFieldAssert isEmpty() {
+            return check("to be empty", null, decimalField::getValue, Objects::isNull);
+        }
+    }
+
+    public static final class DateTimePickerAssert extends FieldAssert<DateTimePickerAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedDateTimePicker picker;
+
+        DateTimePickerAssert(com.vaadin.testing.unified.component.UnifiedDateTimePicker field) { super(field); this.picker = field; }
+
+        public DateTimePickerAssert hasValue(java.time.LocalDateTime expected) {
+            return check("to have value", expected, picker::getValue, v -> Objects.equals(v, expected));
+        }
+
+        public DateTimePickerAssert isEmpty() {
+            return check("to be empty", null, picker::getValue, Objects::isNull);
+        }
+    }
+
+    public static final class TabsAssert extends WrapperAssert<TabsAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedTabs tabs;
+
+        TabsAssert(com.vaadin.testing.unified.component.UnifiedTabs tabs) { super(tabs); this.tabs = tabs; }
+
+        public TabsAssert hasSelectedTab(String expected) {
+            return check("to have selected tab", expected, tabs::getSelectedTab, v -> Objects.equals(v, expected));
+        }
+
+        /** Exactly these tabs, in this order. */
+        public TabsAssert hasTabs(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have tabs", list, tabs::getTabs, list::equals);
+        }
+    }
+
+    public static final class DetailsAssert extends WrapperAssert<DetailsAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedDetails details;
+
+        DetailsAssert(com.vaadin.testing.unified.component.UnifiedDetails details) { super(details); this.details = details; }
+
+        public DetailsAssert isOpen() { return check("to be open", null, details::isOpen, Boolean.TRUE::equals); }
+        public DetailsAssert isClosed() { return check("to be closed", null, details::isOpen, Boolean.FALSE::equals); }
+
+        public DetailsAssert hasSummaryText(String expected) {
+            return check("to have summary text", expected, details::getSummaryText, v -> Objects.equals(v, expected));
         }
     }
 }

@@ -103,6 +103,12 @@ final class PlaywrightComponents {
             public boolean setValue(Locator locator, Object value) {
                 // typed in the input in the page's locale format, then committed
                 DatePickerElement picker = new DatePickerElement(locator);
+                if (value instanceof String text) { // UnifiedDatePicker.typeText: as it is, unparsed
+                    Locator input = picker.getFocusLocator();
+                    input.fill(text);
+                    input.press("Enter");
+                    return true;
+                }
                 if (value == null) {
                     picker.clear();
                 } else {
@@ -217,6 +223,52 @@ final class PlaywrightComponents {
                         : Optional.empty();
             }
         });
+    }
+
+    static {
+        register(com.vaadin.flow.component.textfield.TextArea.class,
+                dramafinder(org.vaadin.addons.dramafinder.element.TextAreaElement.class));
+        register(com.vaadin.flow.component.textfield.IntegerField.class,
+                dramafinder(org.vaadin.addons.dramafinder.element.IntegerFieldElement.class));
+        register(com.vaadin.flow.component.textfield.BigDecimalField.class,
+                dramafinder(org.vaadin.addons.dramafinder.element.BigDecimalFieldElement.class));
+        register(com.vaadin.flow.component.datetimepicker.DateTimePicker.class, new Support() {
+            @Override
+            public Class<? extends VaadinElement> dramafinderElement() {
+                return org.vaadin.addons.dramafinder.element.DateTimePickerElement.class;
+            }
+
+            @Override
+            public boolean setValue(Locator locator, Object value) {
+                org.vaadin.addons.dramafinder.element.DateTimePickerElement picker =
+                        new org.vaadin.addons.dramafinder.element.DateTimePickerElement(locator);
+                if (value == null) {
+                    picker.setValue("");
+                } else {
+                    picker.setValue((java.time.LocalDateTime) value);
+                }
+                return true;
+            }
+        });
+        register(com.vaadin.flow.component.tabs.Tabs.class, access(TabSheetAccess.class,
+                PlaywrightCoreSetAccess.TabsAccess::new));
+        register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
+                PlaywrightCoreSetAccess.DetailsAccessImpl::new));
+        register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
+                PlaywrightCoreSetAccess.MenuBarAccessImpl::new));
+        register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
+                PlaywrightCoreSetAccess.UploadAccessImpl::new));
+    }
+
+    /** A support on plain locators whose job is giving the core an access object of this type. */
+    private static Support access(Class<?> accessType,
+            java.util.function.BiFunction<PlaywrightSession, Locator, Object> factory) {
+        return new Support() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
+                return type == accessType ? Optional.of(factory.apply(session, locator)) : Optional.empty();
+            }
+        };
     }
 
     static void register(Class<? extends Component> type, Support support) {
