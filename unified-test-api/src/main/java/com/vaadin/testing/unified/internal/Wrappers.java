@@ -35,9 +35,18 @@ public final class Wrappers {
         if (annotation == null) {
             throw new IllegalArgumentException(wrapperType.getName() + " has no @UnifiedComponent annotation");
         }
+        for (Class<?> c = wrapperType; c != null; c = c.getEnclosingClass()) {
+            if (!java.lang.reflect.Modifier.isPublic(c.getModifiers())) {
+                throw new IllegalArgumentException(wrapperType.getName() + " must be public, and so must the classes"
+                        + " it is nested in: the Unified API implements it at runtime");
+            }
+        }
         Class<?> queryType = typeArgument(wrapperType, Findable.class, 0);
-        ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), annotation.value(),
-                tagOf(annotation.value(), annotation.tag()), List.of(), List.of(), List.of(), parent);
+        String tag = requireTag(annotation.value(), annotation.tag(), wrapperType.getSimpleName());
+        List<Filter> filters = annotation.selector().isBlank() ? List.of()
+                : WrapperSelector.filters(annotation.selector(), wrapperType.getName());
+        ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), annotation.value(), tag,
+                filters, List.of(), List.of(), parent);
         @SuppressWarnings("unchecked")
         Q query = (Q) newQueryProxy(queryType, source);
         return query;
@@ -45,8 +54,9 @@ public final class Wrappers {
 
     public static ComponentQuery newComponentQuery(TestRun run, Class<? extends Component> componentType,
             LazyElement parent) {
-        ElementSource source = new ElementSource(run, "findComponent(" + componentType.getSimpleName() + ")",
-                componentType, tagOf(componentType, ""), List.of(), List.of(), List.of(), parent);
+        String name = "findComponent(" + componentType.getSimpleName() + ")";
+        ElementSource source = new ElementSource(run, name, componentType,
+                requireTag(componentType, "", name), List.of(), List.of(), List.of(), parent);
         return (ComponentQuery) newQueryProxy(ComponentQuery.class, source);
     }
 
@@ -60,6 +70,21 @@ public final class Wrappers {
             return lazy;
         }
         throw new IllegalArgumentException("Not a Unified API wrapper: " + wrapper);
+    }
+
+    /**
+     * The tag, or a failure on every Testing Tool when there is none: Browserless could find the component by
+     * class, but a browser can't, and the test must not pass on one and fail on the other.
+     */
+    static String requireTag(Class<? extends Component> componentType, String explicitTag, String where) {
+        String tag = tagOf(componentType, explicitTag);
+        if (tag == null) {
+            throw new IllegalArgumentException(where + ": " + componentType.getName() + " has no @Tag, so a browser"
+                    + " can't find it. Write a wrapper with @UnifiedComponent(value = " + componentType.getSimpleName()
+                    + ".class, tag = \"...\") naming the element it renders (for a Composite: its content's tag), or"
+                    + " search with UnifiedContainer.");
+        }
+        return tag;
     }
 
     static String tagOf(Class<? extends Component> componentType, String explicitTag) {
