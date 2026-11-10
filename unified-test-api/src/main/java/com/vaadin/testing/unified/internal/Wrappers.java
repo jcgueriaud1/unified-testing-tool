@@ -128,6 +128,7 @@ public final class Wrappers {
                     yield source.with(e -> Objects.equals(String.valueOf(expected), e.getProperty(property)),
                             "withProperty(\"" + property + "\", " + expected + ")");
                 }
+                case "visible" -> source.with(UnifiedElement::isVisible, "visible()");
                 case "where" -> {
                     @SuppressWarnings("unchecked")
                     Predicate<UnifiedElement> condition = (Predicate<UnifiedElement>) args[0];

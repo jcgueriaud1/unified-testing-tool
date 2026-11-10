@@ -56,6 +56,11 @@ final class BrowserlessComponents {
         default Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
             return Optional.empty();
         }
+
+        /** Whether a found component counts as a match at all (e.g. only open dialogs). */
+        default boolean include(Component component) {
+            return true;
+        }
     }
 
     private static final Support DEFAULT = new Support() {};
@@ -83,6 +88,12 @@ final class BrowserlessComponents {
             public Optional<Boolean> visible(Component component) {
                 return Optional.of(((Notification) component).isOpened());
             }
+
+            /** Open notifications only: a browser adapter finds the open card. */
+            @Override
+            public boolean include(Component component) {
+                return ((Notification) component).isOpened();
+            }
         });
     }
 
@@ -96,6 +107,12 @@ final class BrowserlessComponents {
             @Override
             public Optional<Boolean> visible(Component component) {
                 return Optional.of(((Dialog) component).isOpened());
+            }
+
+            /** Open dialogs only, as in a browser adapter: a closed dialog is not part of the page. */
+            @Override
+            public boolean include(Component component) {
+                return ((Dialog) component).isOpened();
             }
 
             @Override

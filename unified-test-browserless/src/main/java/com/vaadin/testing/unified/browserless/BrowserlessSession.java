@@ -5,7 +5,6 @@ import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.browserless.BrowserlessUserContext;
 import com.vaadin.browserless.SecuredBrowserlessApplicationContext;
 import java.util.ArrayList;
-import com.vaadin.browserless.ComponentQuery;
 import com.vaadin.flow.component.Component;
 import com.vaadin.browserless.internal.PrettyPrintTreeKt;
 import com.vaadin.flow.component.UI;
@@ -123,38 +122,59 @@ final class BrowserlessSession implements AdapterSession {
 
     // ---------------------------------------------------------------- finding
 
+    /**
+     * Matching components in document order, hidden ones included (as in a browser, where a component hidden
+     * after it was shown stays in the page): Browserless Test's own queries skip them, so the adapter walks
+     * the component tree itself.
+     */
     @Override
-    @SuppressWarnings("unchecked")
     public List<UnifiedElement> find(QuerySpec spec) {
-        Class<Component> type = (Class<Component>) spec.componentType();
-        java.util.Set<Component> found = new java.util.LinkedHashSet<>();
-        List<Component> roots = spec.parent() == null ? List.of()
+        List<Component> roots = spec.parent() == null ? List.of(window().getUI())
                 : ((BrowserlessElement) spec.parent()).scopeRoots();
-        if (spec.parent() == null) {
-            found.addAll(applyFilters(window().find(type), type, spec).all());
-        } else {
-            // scoped: every root and its descendants (a root can itself be the match, e.g. a button in a grid cell)
-            for (Component root : roots) {
-                found.addAll(findIn(root, type, spec));
-            }
+        java.util.Set<Component> found = new java.util.LinkedHashSet<>();
+        for (Component root : roots) {
+            found.addAll(findIn(root, spec, spec.parent() != null));
         }
-        // a Grid's cell components are not in the component tree that find walks: add those the grid rendered
-        // for the client, as a browser has them in the page
-        for (Component cell : renderedGridCells(spec.parent() == null ? List.of(window().getUI()) : roots)) {
-            found.addAll(findIn(cell, type, spec));
+        // a Grid's cell components are not in the component tree: add those the grid rendered for the client,
+        // as a browser has them in the page
+        for (Component cell : renderedGridCells(roots)) {
+            found.addAll(findIn(cell, spec, true));
         }
         return found.stream().map(c -> (UnifiedElement) new BrowserlessElement(this, c)).toList();
     }
 
-    /** {@code root} itself if it matches, and its matching descendants. */
-    private List<Component> findIn(Component root, Class<Component> type, QuerySpec spec) {
+    /** Matching components under {@code root}, and {@code root} itself when {@code includeRoot}. */
+    private List<Component> findIn(Component root, QuerySpec spec, boolean includeRoot) {
+        BrowserlessComponents.Support support = BrowserlessComponents.of(spec.componentType());
         List<Component> found = new ArrayList<>();
-        if (type.isInstance(root) && root.getParent().isPresent()) {
-            found.addAll(applyFilters(window().find(type, root.getParent().get()), type, spec)
-                    .withCondition(c -> c == root).all());
+        for (Component c : com.vaadin.browserless.internal.LocatorKt._walkAll(root)) {
+            if ((c != root || includeRoot) && spec.componentType().isInstance(c) && support.include(c)
+                    && spec.filters().stream().allMatch(f -> matches(c, f))) {
+                found.add(c);
+            }
         }
-        found.addAll(applyFilters(window().find(type, root), type, spec).all());
         return found;
+    }
+
+    private boolean matches(Component c, Filter f) {
+        com.vaadin.flow.dom.Element e = c.getElement();
+        return switch (f.kind()) {
+            case LABEL -> f.exact() ? com.vaadin.browserless.ElementConditions.hasLabel(f.value()).test(c)
+                    : f.matches(e.getProperty("label"));
+            // getText(), as in a browser: Browserless's own withText reads the element's own text only
+            case TEXT -> f.matches(new BrowserlessElement(this, c).getText());
+            case PLACEHOLDER -> f.matches(e.getProperty("placeholder"));
+            case TEST_ID -> f.value().equals(e.getAttribute("data-testid"));
+            case ID -> f.value().equals(e.getAttribute("id"));
+            case CLASS_NAME -> java.util.Arrays.stream(f.value().trim().split("\\s+"))
+                    .allMatch(e.getClassList()::contains);
+            case THEME -> {
+                String theme = e.getAttribute("theme");
+                yield theme != null && java.util.Arrays.asList(theme.split("\\s+")).contains(f.value());
+            }
+            case ATTRIBUTE -> f.value().equals(e.getAttribute(f.name()));
+            case ACCESSIBLE_NAME -> f.matches(BrowserlessElement.accessibleName(c));
+        };
     }
 
     /** How many rows of a grid are checked for rendered cell components, at most. */
@@ -203,26 +223,6 @@ final class BrowserlessSession implements AdapterSession {
             }
         }
         return cells;
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private ComponentQuery<Component> applyFilters(ComponentQuery<Component> query, Class<Component> type, QuerySpec spec) {
-        for (Filter f : spec.filters()) {
-            query = switch (f.kind()) {
-                case LABEL -> f.exact() ? query.withLabel(f.value())
-                        : query.withCondition(c -> f.matches(c.getElement().getProperty("label")));
-                // getText(), as in a browser: Browserless's own withText reads the element's own text only
-                case TEXT -> query.withCondition(c -> f.matches(new BrowserlessElement(this, c).getText()));
-                case PLACEHOLDER -> query.withPlaceholder(f.value());
-                case TEST_ID -> query.withTestId(f.value());
-                case ID -> query.withId(f.value());
-                case CLASS_NAME -> query.withClassName(f.value());
-                case THEME -> query.withTheme(f.value());
-                case ATTRIBUTE -> query.withAttribute(f.name(), f.value());
-                case ACCESSIBLE_NAME -> query.withCondition(c -> f.matches(BrowserlessElement.accessibleName(c)));
-            };
-        }
-        return query;
     }
 
     // ---------------------------------------------------------------- navigation
