@@ -68,6 +68,21 @@ class ProfileViewTest {
 | Browser runs | Need `com.vaadin:vaadin-dev` (dev mode with the pre-built dev bundle). |
 | Quarkus | Not specified yet ([open-questions.md](open-questions.md)). |
 
+## Test data
+
+On Browserless the views run on the test's thread; in a browser they run on the server's request threads.
+So a test's transaction doesn't reach the views in a browser:
+
+| `@Transactional` on a `@UnifiedSpringBootTest` | Browserless | Playwright, Selenium |
+|---|---|---|
+| Views see data the test wrote but didn't commit | yes | no |
+| What the views write is rolled back after the test | yes | no, later tests see it |
+
+A `@Transactional` test therefore fails on browser Testing Tools before it starts, with this reason
+(`propagation = NOT_SUPPORTED` or `NEVER` is allowed). To isolate test data on every Testing Tool, commit
+it, and reset the database after each test: delete what the test created, or restore the tables from a
+copy taken once after the context started (with Testcontainers, a fresh schema per test class also works).
+
 ## Requirements on Testing Tool adapters
 
 - Read the Testing Tool and timeout only from the JUnit configuration parameters above.
