@@ -86,23 +86,85 @@ final class BrowserlessSession implements AdapterSession {
     // ---------------------------------------------------------------- finding
 
     @Override
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("unchecked")
     public List<UnifiedElement> find(QuerySpec spec) {
         Class<Component> type = (Class<Component>) spec.componentType();
-        if (spec.parent() == null) {
-            return (List) applyFilters(window().find(type), type, spec).all().stream()
-                    .map(c -> new BrowserlessElement(this, c)).toList();
-        }
-        // scoped: every root and its descendants (a root can itself be the match, e.g. a button in a grid cell)
         java.util.Set<Component> found = new java.util.LinkedHashSet<>();
-        for (Component root : ((BrowserlessElement) spec.parent()).scopeRoots()) {
-            if (type.isInstance(root) && root.getParent().isPresent()) {
-                found.addAll(applyFilters(window().find(type, root.getParent().get()), type, spec)
-                        .withCondition(c -> c == root).all());
+        List<Component> roots = spec.parent() == null ? List.of()
+                : ((BrowserlessElement) spec.parent()).scopeRoots();
+        if (spec.parent() == null) {
+            found.addAll(applyFilters(window().find(type), type, spec).all());
+        } else {
+            // scoped: every root and its descendants (a root can itself be the match, e.g. a button in a grid cell)
+            for (Component root : roots) {
+                found.addAll(findIn(root, type, spec));
             }
-            found.addAll(applyFilters(window().find(type, root), type, spec).all());
+        }
+        // a Grid's cell components are not in the component tree that find walks: add those the grid rendered
+        // for the client, as a browser has them in the page
+        for (Component cell : renderedGridCells(spec.parent() == null ? List.of(window().getUI()) : roots)) {
+            found.addAll(findIn(cell, type, spec));
         }
         return found.stream().map(c -> (UnifiedElement) new BrowserlessElement(this, c)).toList();
+    }
+
+    /** {@code root} itself if it matches, and its matching descendants. */
+    private List<Component> findIn(Component root, Class<Component> type, QuerySpec spec) {
+        List<Component> found = new ArrayList<>();
+        if (type.isInstance(root) && root.getParent().isPresent()) {
+            found.addAll(applyFilters(window().find(type, root.getParent().get()), type, spec)
+                    .withCondition(c -> c == root).all());
+        }
+        found.addAll(applyFilters(window().find(type, root), type, spec).all());
+        return found;
+    }
+
+    /** How many rows of a grid are checked for rendered cell components, at most. */
+    private static final int GRID_ROWS_CHECKED = 500;
+
+    /**
+     * The components that Grids under {@code roots} have rendered for the rows the client has, in their
+     * component columns: what a browser has in the page. Grids inside those components count too.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private List<Component> renderedGridCells(List<Component> roots) {
+        List<Component> cells = new ArrayList<>();
+        java.util.Set<com.vaadin.flow.component.grid.Grid> grids = new java.util.LinkedHashSet<>();
+        for (Component root : roots) {
+            if (root instanceof com.vaadin.flow.component.grid.Grid grid) {
+                grids.add(grid);
+            }
+            grids.addAll(window().find(com.vaadin.flow.component.grid.Grid.class, root).all());
+        }
+        for (com.vaadin.flow.component.grid.Grid<?> grid : grids) {
+            List<com.vaadin.flow.component.grid.Grid.Column<?>> columns = (List) grid.getColumns().stream()
+                    .filter(c -> c.isVisible() && c.getRenderer() instanceof com.vaadin.flow.data.renderer.ComponentRenderer)
+                    .toList();
+            if (columns.isEmpty()) {
+                continue;
+            }
+            com.vaadin.flow.data.provider.DataCommunicator<Object> communicator =
+                    (com.vaadin.flow.data.provider.DataCommunicator<Object>) grid.getDataCommunicator();
+            com.vaadin.flow.component.grid.GridTester<?, Object> tester =
+                    (com.vaadin.flow.component.grid.GridTester<?, Object>) (Object) window().test(grid);
+            int size = Math.min(tester.size(), GRID_ROWS_CHECKED);
+            for (int row = 0; row < size; row++) {
+                Object item = tester.getRow(row);
+                if (!communicator.isItemActive(item)) {
+                    continue;
+                }
+                String key = communicator.getKeyMapper().key(item);
+                for (com.vaadin.flow.component.grid.Grid.Column<?> column : columns) {
+                    Component cell = com.vaadin.browserless.internal.RenderedComponentSupport
+                            .getRenderedComponent(column, key);
+                    if (cell != null) {
+                        cells.add(cell);
+                        cells.addAll(renderedGridCells(List.of(cell)));
+                    }
+                }
+            }
+        }
+        return cells;
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

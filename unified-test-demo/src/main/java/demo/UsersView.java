@@ -32,8 +32,11 @@ public class UsersView extends VerticalLayout {
         Grid.Column<User> name = users.addColumn(User::name).setHeader("Name").setKey("name");
         users.addColumn(User::email).setHeader("Email").setKey("email");
         users.addColumn(User::role).setHeader("Role").setKey("role");
-        users.addComponentColumn(u -> new Button("Edit", e -> Notification.show("Editing " + u.name())))
-                .setHeader("Actions");
+        users.addComponentColumn(u -> {
+            Button edit = new Button("Edit", e -> Notification.show("Editing " + u.name()));
+            edit.setAriaLabel("Edit " + u.name());
+            return edit;
+        }).setHeader("Actions");
         users.setItems(DataProvider.fromCallbacks(
                 query -> filtered().skip(query.getOffset()).limit(query.getLimit()),
                 query -> (int) filtered().count()));

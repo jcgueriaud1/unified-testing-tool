@@ -35,6 +35,16 @@ class GridInteractionTest {
         assertNotification(page, "Editing User 3");
     }
 
+    /** A page-wide find reaches components rendered in grid cells, as in a browser. */
+    @Test
+    void findsACellComponentPageWide(UnifiedPage page) {
+        grid(page, "users");
+
+        page.find(UnifiedButton.class).withAccessibleName("Edit User 3").single().click();
+
+        assertNotification(page, "Editing User 3");
+    }
+
     @Test
     void filtersThroughAHeaderField(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
