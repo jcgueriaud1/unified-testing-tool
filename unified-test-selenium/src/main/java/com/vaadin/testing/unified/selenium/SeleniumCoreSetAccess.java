@@ -87,18 +87,27 @@ final class SeleniumCoreSetAccess {
             if (path.size() > 1) {
                 open(path.subList(0, path.size() - 1));
             }
-            item(path, path.size() - 1).click();
+            click(item(path, path.size() - 1));
+        }
+
+        /**
+         * A DOM click on the item: WebDriver's native click on a menu-bar button doesn't open its sub-menu in
+         * headless Chrome, a DOM click does (as the menu bar's own keyboard handling does).
+         */
+        private void click(WebElement item) {
+            session.js("arguments[0].click();", item);
+            session.waitForVaadin();
         }
 
         private void open(List<String> path) {
             for (int i = 0; i < path.size(); i++) {
                 long before = openCount();
-                item(path, i).click();
+                click(item(path, i));
                 new WebDriverWait(session.driver(), Duration.ofSeconds(5)).until(d -> openCount() > before);
             }
         }
 
-        private SeleniumElement item(List<String> path, int level) {
+        private WebElement item(List<String> path, int level) {
             WebElement item = (WebElement) session.js(HELPERS
                     + "return items(arguments[1]).find(i => text(i) === arguments[2]) || null;",
                     element, level, path.get(level));
@@ -106,7 +115,7 @@ final class SeleniumCoreSetAccess {
                 throw new IllegalArgumentException("No menu item \"" + path.get(level) + "\" at "
                         + path.subList(0, level + 1));
             }
-            return new SeleniumElement(session, item, SeleniumComponents.DEFAULT);
+            return item;
         }
     }
 
@@ -125,7 +134,9 @@ final class SeleniumCoreSetAccess {
                 throw new UncheckedIOException(e);
             }
             try {
-                WebElement input = element.getShadowRoot().findElement(By.cssSelector("input[type=file]"));
+                // through JavaScript: TestBench's element proxy doesn't support getShadowRoot()
+                WebElement input = (WebElement) session.js(
+                        "return arguments[0].shadowRoot.querySelector('input[type=file]');", element);
                 input.sendKeys(file.toAbsolutePath().toString());
                 new WebDriverWait(session.driver(), session.timeout()).until(d -> Boolean.TRUE.equals(session.js(
                         "const e = arguments[0]; return (e.files || []).length > 0"
