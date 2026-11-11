@@ -4,21 +4,30 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.details.DetailsTester;
 import com.vaadin.flow.component.contextmenu.MenuItem;
+import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.menubar.MenuBarTester;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsTester;
+import com.vaadin.flow.component.timepicker.TimePicker;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.UploadTester;
+import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
-/** Access to Tabs, Details, MenuBar and Upload on Browserless, through their testers. */
+/** Access to Tabs, Details, MenuBar, Upload and DateTimePicker on Browserless, through their testers. */
 final class BrowserlessCoreSetAccess {
     private BrowserlessCoreSetAccess() {}
 
@@ -131,6 +140,98 @@ final class BrowserlessCoreSetAccess {
                 level = item.getSubMenu().getItems();
             }
             return chosen;
+        }
+    }
+
+    /**
+     * Typing into a DateTimePicker's halves, as a browser reports it to the server: each half is a date or
+     * time picker child of the field, set from the client when its text parses (ISO only), else given the
+     * text as input and an {@code unparsable-change}; then the field gets the value, or an
+     * {@code unparsable-change} that makes it validate the halves (bad input, incomplete). Builds on Flow's
+     * internals: Browserless Test can't type into a DateTimePicker (#100).
+     */
+    record DateTimePickerAccessImpl(BrowserlessSession session, DateTimePicker picker) implements DateTimePickerAccess {
+        @Override
+        public void typeText(String date, String time) {
+            session.act(() -> {
+                BrowserlessUIContext window = session.window();
+                Optional<LocalDate> parsedDate = parse(date, LocalDate::parse);
+                Optional<LocalTime> parsedTime = parse(time, LocalTime::parse);
+                type(window, half(picker, DatePicker.class), date, parsedDate, LocalDate.class);
+                type(window, half(picker, TimePicker.class), time, parsedTime, LocalTime.class);
+                if (parsedDate.isPresent() && parsedTime.isPresent()) {
+                    tester(window, picker, "setValue", LocalDateTime.class,
+                            LocalDateTime.of(parsedDate.get(), parsedTime.get()));
+                } else {
+                    if (!picker.isEmpty()) {
+                        tester(window, picker, "setValue", LocalDateTime.class, null);
+                    }
+                    if (!date.isBlank() || !time.isBlank()) {
+                        com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(picker, "unparsable-change");
+                    }
+                }
+                window.roundTrip();
+            });
+        }
+
+        /**
+         * Sets the value as a user entering it does: both halves from the client, then the field. Browserless
+         * Test's DateTimePickerTester sets the field only, so a half kept text it couldn't parse.
+         */
+        static void setValueAsUser(BrowserlessUIContext window, DateTimePicker picker, LocalDateTime value) {
+            setHalf(window, half(picker, DatePicker.class), value == null ? null : value.toLocalDate(), LocalDate.class);
+            setHalf(window, half(picker, TimePicker.class), value == null ? null : value.toLocalTime(), LocalTime.class);
+            tester(window, picker, "setValue", LocalDateTime.class, value);
+        }
+
+        private static void type(BrowserlessUIContext window, Component half, String text, Optional<?> parsed,
+                Class<?> type) {
+            if (parsed.isPresent() || text.isBlank()) {
+                setHalf(window, half, parsed.orElse(null), type);
+            } else {
+                half.getElement().setProperty("_inputElementValue", text);
+                com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(half, "unparsable-change");
+            }
+        }
+
+        /** A half's value from the client; its input text is no longer what it couldn't parse. */
+        private static void setHalf(BrowserlessUIContext window, Component half, Object value, Class<?> type) {
+            half.getElement().setProperty("_inputElementValue", "");
+            if (value == null) {
+                tester(window, half, "clear", null, null);
+            } else {
+                tester(window, half, "setValue", type, value);
+            }
+        }
+
+        private static Component half(DateTimePicker picker, Class<? extends Component> type) {
+            return picker.getChildren().filter(type::isInstance).findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No " + type.getSimpleName() + " in the DateTimePicker"));
+        }
+
+        private static <T> Optional<T> parse(String text, java.util.function.Function<String, T> parser) {
+            try {
+                return text.isBlank() ? Optional.empty() : Optional.of(parser.apply(text.strip()));
+            } catch (java.time.format.DateTimeParseException e) {
+                return Optional.empty();
+            }
+        }
+
+        /** Calls the tester's method: with no argument when {@code type} is null. */
+        private static void tester(BrowserlessUIContext window, Component component, String method, Class<?> type,
+                Object value) {
+            Object tester = window.test(component);
+            try {
+                if (type == null) {
+                    tester.getClass().getMethod(method).invoke(tester);
+                } else {
+                    tester.getClass().getMethod(method, type).invoke(tester, value);
+                }
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                throw e.getCause() instanceof RuntimeException r ? r : new IllegalStateException(e.getCause());
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 

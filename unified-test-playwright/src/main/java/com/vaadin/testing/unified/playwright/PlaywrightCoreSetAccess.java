@@ -5,6 +5,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.FilePayload;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
+import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
@@ -14,7 +15,7 @@ import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.element.DetailsElement;
 import org.vaadin.addons.dramafinder.element.TabsElement;
 
-/** Access to Tabs, Details, MenuBar and Upload on Playwright. */
+/** Access to Tabs, Details, MenuBar, Upload and DateTimePicker on Playwright. */
 final class PlaywrightCoreSetAccess {
     private PlaywrightCoreSetAccess() {}
 
@@ -172,6 +173,26 @@ final class PlaywrightCoreSetAccess {
             }
             locator.page().waitForCondition(() -> openMenus().count() == 0,
                     new Page.WaitForConditionOptions().setTimeout(5000));
+        }
+    }
+
+    /**
+     * Types into the inputs of the date and time halves, each committed with Enter, then leaves the field as
+     * a user does: the field checks its halves (bad input, incomplete) when focus leaves it.
+     */
+    record DateTimePickerAccessImpl(PlaywrightSession session, Locator locator) implements DateTimePickerAccess {
+        @Override
+        public void typeText(String date, String time) {
+            type(locator.locator("[slot=date-picker] input"), date);
+            Locator timeInput = locator.locator("[slot=time-picker] input");
+            type(timeInput, time);
+            timeInput.blur();
+            AutoWait.afterAction(session.page());
+        }
+
+        private static void type(Locator input, String text) {
+            input.fill(text);
+            input.press("Enter");
         }
     }
 

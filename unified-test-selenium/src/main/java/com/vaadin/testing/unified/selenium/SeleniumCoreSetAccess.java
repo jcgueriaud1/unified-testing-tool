@@ -8,6 +8,7 @@ import com.vaadin.flow.component.menubar.testbench.MenuBarSubMenuElement;
 import com.vaadin.flow.component.upload.testbench.UploadElement;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
+import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
@@ -19,7 +20,7 @@ import java.util.List;
 import org.openqa.selenium.WebElement;
 
 /**
- * Access to Details, MenuBar and Upload on Selenium, through TestBench's element classes; a bare Tabs bar
+ * Access to Details, MenuBar, Upload and DateTimePicker on Selenium, through TestBench's element classes; a bare Tabs bar
  * uses {@link SeleniumTabSheetAccess}.
  */
 final class SeleniumCoreSetAccess {
@@ -142,6 +143,31 @@ final class SeleniumCoreSetAccess {
                         + path.subList(0, level + 1) + "; there are " + names);
             }
             return items.get(index);
+        }
+    }
+
+    /**
+     * Types into the inputs of the date and time halves, each committed with Enter, then leaves the field as
+     * a user does: the field checks its halves (bad input, incomplete) when focus leaves it.
+     */
+    record DateTimePickerAccessImpl(SeleniumSession session, WebElement element) implements DateTimePickerAccess {
+        @Override
+        public void typeText(String date, String time) {
+            type(input("date-picker"), date);
+            WebElement timeInput = input("time-picker");
+            type(timeInput, time);
+            session.js("arguments[0].blur();", timeInput);
+            session.waitForVaadin();
+        }
+
+        private WebElement input(String slot) {
+            return (WebElement) session.js("return arguments[0].querySelector('[slot=' + arguments[1] + '] input');",
+                    element, slot);
+        }
+
+        private static void type(WebElement input, String text) {
+            input.clear();
+            input.sendKeys(text + org.openqa.selenium.Keys.ENTER);
         }
     }
 

@@ -234,6 +234,13 @@ final class PlaywrightComponents {
                 dramafinder(org.vaadin.addons.dramafinder.element.BigDecimalFieldElement.class));
         register(com.vaadin.flow.component.datetimepicker.DateTimePicker.class, new Support() {
             @Override
+            public Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
+                return type == com.vaadin.testing.unified.spi.DateTimePickerAccess.class
+                        ? Optional.of(new PlaywrightCoreSetAccess.DateTimePickerAccessImpl(session, locator))
+                        : Optional.empty();
+            }
+
+            @Override
             public Class<? extends VaadinElement> dramafinderElement() {
                 return org.vaadin.addons.dramafinder.element.DateTimePickerElement.class;
             }
