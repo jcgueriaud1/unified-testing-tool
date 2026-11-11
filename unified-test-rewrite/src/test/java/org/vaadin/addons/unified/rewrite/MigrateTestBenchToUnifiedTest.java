@@ -626,4 +626,49 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void aTestCallingAHelperThatEscapesRequiresSelenium() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void countsPeople() {
+                        rowCount();
+                    }
+
+                    private int rowCount() {
+                        return $(GridElement.class).first().getRowCount();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void countsPeople(UnifiedPage page) {
+                        rowCount(page);
+                    }
+
+                    private int rowCount(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: TestBench Escape Hatch: $(GridElement.class)
+                        return testBench.$(GridElement.class).first().getRowCount();
+                    }
+                }
+                """));
+    }
 }

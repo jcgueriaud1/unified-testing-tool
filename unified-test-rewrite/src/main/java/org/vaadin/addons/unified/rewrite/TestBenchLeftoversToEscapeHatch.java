@@ -69,18 +69,45 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                 getCursor().putMessage(LEFTOVERS, escapes);
                 J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
                 if (!escapes.get()) {
-                    return m;
+                    return requiresSeleniumIfItCallsAnEscapingHelper(m);
                 }
                 m = MigrationMarkers.write(m, markers);
                 maybeAddImport(ESCAPE_HATCH);
-                maybeAddImport(REQUIRES_TESTING_TOOL);
-                maybeAddImport(TESTING_TOOL);
                 m = JavaTemplate.builder("TestBenchEscapeHatch " + VARIABLE + " = TestBenchEscapeHatch.of(#{any("
                                 + TestBenchSetupToUnified.UNIFIED_PAGE + ")});")
                         .imports(ESCAPE_HATCH)
                         .javaParser(Stubs.parser())
                         .build()
                         .apply(updateCursor(m), m.getBody().getStatements().get(0).getCoordinates().before(), Stubs.page());
+                if (!Helpers.isBrowserTest(m)) {
+                    return m;
+                }
+                return requiresSelenium(m);
+            }
+
+            /** A test that calls a helper going through the Escape Hatch runs on Selenium only, too. */
+            private J.MethodDeclaration requiresSeleniumIfItCallsAnEscapingHelper(J.MethodDeclaration m) {
+                J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                if (!Helpers.isBrowserTest(m) || c == null) {
+                    return m;
+                }
+                Set<String> escaping = Helpers.usingTestBench(c);
+                AtomicBoolean calls = new AtomicBoolean();
+                new JavaIsoVisitor<Integer>() {
+                    @Override
+                    public J.MethodInvocation visitMethodInvocation(J.MethodInvocation call, Integer p) {
+                        if (call.getSelect() == null && escaping.contains(call.getSimpleName())) {
+                            calls.set(true);
+                        }
+                        return super.visitMethodInvocation(call, p);
+                    }
+                }.visit(m.getBody(), 0);
+                return calls.get() ? requiresSelenium(m) : m;
+            }
+
+            private J.MethodDeclaration requiresSelenium(J.MethodDeclaration m) {
+                maybeAddImport(REQUIRES_TESTING_TOOL);
+                maybeAddImport(TESTING_TOOL);
                 return JavaTemplate.builder("@RequiresTestingTool(TestingTool.SELENIUM)")
                         .imports(REQUIRES_TESTING_TOOL, TESTING_TOOL)
                         .javaParser(Stubs.parser())
