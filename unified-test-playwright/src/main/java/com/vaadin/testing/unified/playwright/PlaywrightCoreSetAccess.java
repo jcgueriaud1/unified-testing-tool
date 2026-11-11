@@ -11,14 +11,13 @@ import com.vaadin.testing.unified.spi.UploadAccess;
 import java.util.List;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.element.DetailsElement;
-import org.vaadin.addons.dramafinder.element.TabElement;
 import org.vaadin.addons.dramafinder.element.TabsElement;
 
 /** Access to Tabs, Details, MenuBar and Upload on Playwright. */
 final class PlaywrightCoreSetAccess {
     private PlaywrightCoreSetAccess() {}
 
-    /** A bare Tabs bar through Dramafinder's TabsElement: TabSheetAccess without content. */
+    /** A bare Tabs bar through Dramafinder's TabsElement: TabSheetAccess without content; tabs by Item Name. */
     record TabsAccess(PlaywrightSession session, Locator locator) implements TabSheetAccess {
         private TabsElement bar() {
             return new TabsElement(locator);
@@ -26,24 +25,22 @@ final class PlaywrightCoreSetAccess {
 
         @Override
         public List<String> tabs() {
-            return bar().getTabs().all().stream().map(t -> new TabElement(t).getLabel().strip()).toList();
+            return PlaywrightTabItems.names(bar().getTabs());
         }
 
         @Override
         public String selectedTab() {
-            Locator selected = bar().getTabs().and(locator.page().locator("[selected]"));
-            return selected.count() == 0 ? null : new TabElement(selected.first()).getLabel().strip();
+            return PlaywrightTabItems.selected(bar().getTabs());
         }
 
         @Override
         public boolean isEnabled(String label) {
-            return !bar().getTab(label).getLocator().first().isDisabled();
+            return PlaywrightTabItems.isEnabled(bar().getTabs(), label);
         }
 
         @Override
         public void select(String label) {
-            bar().selectTab(label);
-            AutoWait.waitForVaadinIdle(session.page());
+            PlaywrightTabItems.select(session, bar().getTabs(), label);
         }
 
         @Override

@@ -21,32 +21,35 @@ import java.util.List;
 final class BrowserlessCoreSetAccess {
     private BrowserlessCoreSetAccess() {}
 
-    /** A bare Tabs bar: TabSheetAccess without content. */
+    /** A bare Tabs bar: TabSheetAccess without content. Tabs are found by their Item Name. */
     record TabsAccess(BrowserlessSession session, Tabs bar) implements TabSheetAccess {
-        private TabsTester<?> tester() {
-            return (TabsTester<?>) session.window().test(bar);
+        private List<Tab> all() {
+            return bar.getChildren().filter(Tab.class::isInstance).map(Tab.class::cast).toList();
         }
 
         @Override
         public List<String> tabs() {
-            return bar.getChildren().filter(Tab.class::isInstance).map(t -> ((Tab) t).getLabel()).toList();
+            return all().stream().map(ItemNames::of).toList();
         }
 
         @Override
         public String selectedTab() {
             Tab selected = bar.getSelectedTab();
-            return selected == null ? null : selected.getLabel();
+            return selected == null ? null : ItemNames.of(selected);
         }
 
         @Override
         public boolean isEnabled(String label) {
-            return tester().getTab(label).isEnabled();
+            return ItemNames.find(all(), label, "tab \"" + label + "\"").isEnabled();
         }
 
+        /** By position: TabsTester.select(label) compares the label, which a tab holding a component lacks. */
         @Override
         public void select(String label) {
             session.act(() -> {
-                tester().select(label);
+                List<Tab> all = all();
+                int position = ItemNames.visiblePosition(all, ItemNames.find(all, label, "tab \"" + label + "\""), "Tab");
+                ((TabsTester<?>) session.window().test(bar)).select(position);
                 session.window().roundTrip();
             });
         }

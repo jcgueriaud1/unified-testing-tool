@@ -18,7 +18,7 @@ One component per interaction pattern. Every other component follows the same pa
 | Disclosure | `UnifiedDetails` | implemented: `open()`, `close()`, `content()` Scope |
 | Files | `UnifiedUpload` | implemented: `upload(name, type, bytes)` waits until the server has the file |
 | Data | `UnifiedGrid` | in the sketch: [07-grid.md](07-grid.md) |
-| Navigation | `UnifiedTabSheet`, `UnifiedTabs` | implemented: `selectTab(label)`, `getSelectedTab()`; a TabSheet's `content()` Scope follows the selected tab |
+| Navigation | `UnifiedTabSheet`, `UnifiedTabs` | implemented: `selectTab(name)`, `getSelectedTab()`; a tab's name is its Item Name (the text of a tab holding a `RouterLink`); a TabSheet's `content()` Scope follows the selected tab |
 | (layouts, for scoping) | `UnifiedContainer` | implemented: any component, found by test id or id |
 | (plain HTML, for scoping and text) | `UnifiedDiv`, `UnifiedSpan`, `UnifiedParagraph`, `UnifiedSection`, `UnifiedNav`, `UnifiedHeader`, `UnifiedFooter`, `UnifiedMain`, `UnifiedArticle`, `UnifiedAside` | implemented: bound to their tag, so one browser query; Scopes |
 

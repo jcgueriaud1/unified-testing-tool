@@ -9,7 +9,7 @@ import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import java.util.List;
 
-/** TabSheet on Browserless through TabSheetTester, which works with tab labels. */
+/** TabSheet on Browserless through TabSheetTester; tabs are found by their Item Name. */
 final class BrowserlessTabSheetAccess implements TabSheetAccess {
 
     private final BrowserlessSession session;
@@ -24,27 +24,33 @@ final class BrowserlessTabSheetAccess implements TabSheetAccess {
         return (TabSheetTester<?>) session.window().test(tabSheet);
     }
 
+    private List<Tab> all() {
+        return tabSheet.getChildren().filter(Tabs.class::isInstance).flatMap(Component::getChildren)
+                .filter(Tab.class::isInstance).map(Tab.class::cast).toList();
+    }
+
     @Override
     public List<String> tabs() {
-        return tabSheet.getChildren().filter(Tabs.class::isInstance).flatMap(Component::getChildren)
-                .filter(Tab.class::isInstance).map(t -> ((Tab) t).getLabel()).toList();
+        return all().stream().map(ItemNames::of).toList();
     }
 
     @Override
     public String selectedTab() {
         Tab selected = tabSheet.getSelectedTab();
-        return selected == null ? null : selected.getLabel();
+        return selected == null ? null : ItemNames.of(selected);
     }
 
     @Override
     public boolean isEnabled(String label) {
-        return tester().getTab(label).isEnabled();
+        return ItemNames.find(all(), label, "tab \"" + label + "\"").isEnabled();
     }
 
+    /** By position: TabSheetTester.select(label) compares the label, which a tab holding a component lacks. */
     @Override
     public void select(String label) {
         session.act(() -> {
-            tester().select(label);
+            List<Tab> all = all();
+            tester().select(ItemNames.visiblePosition(all, ItemNames.find(all, label, "tab \"" + label + "\""), "Tab"));
             session.window().roundTrip();
         });
     }
