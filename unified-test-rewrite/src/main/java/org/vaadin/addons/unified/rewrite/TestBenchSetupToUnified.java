@@ -17,6 +17,7 @@ import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.Space;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeUtils;
 
@@ -31,6 +32,8 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
     static final String BROWSER_TEST_BASE = "com.vaadin.testbench.BrowserTestBase";
     static final String BROWSER_TEST = "com.vaadin.testbench.BrowserTest";
     static final String LOCAL_SERVER_PORT = "org.springframework.boot.test.web.server.LocalServerPort";
+    static final String BEFORE_EACH = "org.junit.jupiter.api.BeforeEach";
+    private static final String HELPERS = "unified.helpers";
     static final String ROUTE = "com.vaadin.flow.router.Route";
     /** Gated on the Unified API's own setting, a TestBench test ran only on Selenium; migrated, it runs on all. */
     private static final AnnotationMatcher TESTING_TOOL_GATE = new AnnotationMatcher(
@@ -101,7 +104,10 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
                         || !TypeUtils.isOfClassType(classDecl.getExtends().getType(), BROWSER_TEST_BASE)) {
                     return super.visitClassDeclaration(classDecl, ctx);
                 }
+                Set<String> helpers = Helpers.usingTestBench(classDecl);
+                getCursor().putMessage(HELPERS, helpers);
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
+                c = c.withBody(c.getBody().withStatements(Helpers.callBeforeEachFirst(c, beforeEachOf(classDecl, helpers))));
                 c = c.withExtends(null);
                 doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
                 c = c.withBody(c.getBody().withStatements(withoutUnusedPortFields(c)));
@@ -113,22 +119,44 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
             @Override
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
+                Set<String> helpers = getCursor().getNearestMessage(HELPERS, Set.of());
                 boolean browserTest = m.getLeadingAnnotations().stream()
                         .anyMatch(a -> TypeUtils.isOfClassType(a.getType(), BROWSER_TEST));
-                if (!browserTest || !m.getParameters().stream().allMatch(p -> p instanceof J.Empty)) {
+                if (!browserTest && !helpers.contains(m.getSimpleName()) || Pages.hasPageParameter(m)) {
                     return m;
                 }
                 maybeAddImport(UNIFIED_PAGE);
-                return JavaTemplate.builder("UnifiedPage page")
+                if (helpers.contains(m.getSimpleName())) {
+                    m = (J.MethodDeclaration) new RemoveAnnotationVisitor(new AnnotationMatcher("@" + BEFORE_EACH))
+                            .visitNonNull(m, ctx, getCursor().getParentOrThrow());
+                }
+                List<Statement> others = m.getParameters().stream().filter(p -> !(p instanceof J.Empty)).toList();
+                J.MethodDeclaration withPage = JavaTemplate.builder("UnifiedPage page")
                         .imports(UNIFIED_PAGE)
                         .javaParser(Stubs.parser())
                         .build()
                         .apply(updateCursor(m), m.getCoordinates().replaceParameters());
+                List<Statement> parameters = new ArrayList<>(withPage.getParameters());
+                for (Statement other : others) {
+                    parameters.add(other.withPrefix(Space.SINGLE_SPACE));
+                }
+                return withPage.withParameters(parameters);
             }
 
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+                Set<String> helpers = getCursor().getNearestMessage(HELPERS, Set.of());
+                if (m.getSelect() == null && helpers.contains(m.getSimpleName())) {
+                    List<Expression> arguments = new ArrayList<>();
+                    arguments.add(Stubs.page());
+                    for (Expression a : m.getArguments()) {
+                        if (!(a instanceof J.Empty)) {
+                            arguments.add(a.withPrefix(Space.SINGLE_SPACE));
+                        }
+                    }
+                    return m.withArguments(arguments);
+                }
                 if (!DRIVER_GET.matches(m) || !(m.getSelect() instanceof J.MethodInvocation select)
                         || !GET_DRIVER.matches(select)) {
                     return m;
@@ -153,6 +181,18 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
                         .apply(getCursor(), m.getCoordinates().replace(), Stubs.page(), Stubs.literal(path));
             }
         };
+    }
+
+    /** The helpers that are {@code @BeforeEach} methods, in declaration order. */
+    private static List<String> beforeEachOf(J.ClassDeclaration c, Set<String> helpers) {
+        List<String> names = new ArrayList<>();
+        for (Statement s : c.getBody().getStatements()) {
+            if (s instanceof J.MethodDeclaration m && helpers.contains(m.getSimpleName())
+                    && m.getLeadingAnnotations().stream().anyMatch(a -> TypeUtils.isOfClassType(a.getType(), BEFORE_EACH))) {
+                names.add(m.getSimpleName());
+            }
+        }
+        return names;
     }
 
     private static String simpleName(String fqn) {

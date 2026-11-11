@@ -103,7 +103,7 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
         };
     }
 
-    private static boolean isTestBaseCall(J.MethodInvocation m) {
+    static boolean isTestBaseCall(J.MethodInvocation m) {
         JavaType.Method type = m.getMethodType();
         return type != null && TEST_BASE_TYPES.contains(type.getDeclaringType().getFullyQualifiedName());
     }

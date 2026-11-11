@@ -572,4 +572,58 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void beforeEachAndHelpersUsingTestBenchGetThePage() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.BeforeEach;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BeforeEach
+                    void open() {
+                        getDriver().get("http://localhost:8080/profile");
+                    }
+
+                    @BrowserTest
+                    void savesTheName() {
+                        fillName("Alice");
+                        $(ButtonElement.class).withText("Save").single().click();
+                    }
+
+                    private void fillName(String name) {
+                        $(TextFieldElement.class).withLabel("Name").single().setValue(name);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    void open(UnifiedPage page) {
+                        page.navigate("profile");
+                    }
+
+                    @Test
+                    void savesTheName(UnifiedPage page) {
+                        open(page);
+                        fillName(page, "Alice");
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                    }
+
+                    private void fillName(UnifiedPage page, String name) {
+                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
+                    }
+                }
+                """));
+    }
 }
