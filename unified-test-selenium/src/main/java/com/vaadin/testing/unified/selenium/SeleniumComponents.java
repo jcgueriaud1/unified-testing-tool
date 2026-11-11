@@ -171,6 +171,13 @@ final class SeleniumComponents {
         });
         register(com.vaadin.flow.component.datetimepicker.DateTimePicker.class, new Support() {
             @Override
+            public Optional<Object> unwrap(Class<?> type, WebElement element, SeleniumSession session) {
+                return type == com.vaadin.testing.unified.spi.DateTimePickerAccess.class
+                        ? Optional.of(new SeleniumCoreSetAccess.DateTimePickerAccessImpl(session, element))
+                        : Optional.empty();
+            }
+
+            @Override
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {
                 session.testBench(element)
                         .wrap(com.vaadin.flow.component.datetimepicker.testbench.DateTimePickerElement.class)

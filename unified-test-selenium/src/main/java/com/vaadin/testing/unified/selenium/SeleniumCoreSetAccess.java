@@ -7,6 +7,8 @@ import com.vaadin.flow.component.menubar.testbench.MenuBarItemElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarSubMenuElement;
 import com.vaadin.flow.component.upload.testbench.UploadElement;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
+import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
@@ -18,15 +20,11 @@ import java.util.List;
 import org.openqa.selenium.WebElement;
 
 /**
- * Access to Details, MenuBar and Upload on Selenium, through TestBench's element classes; a bare Tabs bar
+ * Access to Details, MenuBar, Upload and DateTimePicker on Selenium, through TestBench's element classes; a bare Tabs bar
  * uses {@link SeleniumTabSheetAccess}.
  */
 final class SeleniumCoreSetAccess {
     private SeleniumCoreSetAccess() {}
-
-    private static String text(WebElement element) {
-        return element.getText().replaceAll("\\s+", " ").strip();
-    }
 
     /** Through TestBench's DetailsElement. */
     record DetailsAccessImpl(SeleniumSession session, WebElement element) implements DetailsAccess {
@@ -58,9 +56,12 @@ final class SeleniumCoreSetAccess {
 
     /**
      * Through TestBench's MenuBarElement: a top-level button opens its sub-menu when clicked, a nested item
-     * when hovered (TestBench's {@code openSubMenu()}).
+     * when hovered (TestBench's {@code openSubMenu()}). Items are found by their Item Name.
      */
     record MenuBarAccessImpl(SeleniumSession session, WebElement element) implements MenuBarAccess {
+        private static final String ENABLED =
+                "e => !(e.hasAttribute('disabled') || e.getAttribute('aria-disabled') === 'true')";
+
         private MenuBarElement menuBar() {
             return session.testBench(element).wrap(MenuBarElement.class);
         }
@@ -68,16 +69,13 @@ final class SeleniumCoreSetAccess {
         @Override
         public List<String> items(List<String> path) {
             if (path.isEmpty()) {
-                return menuBar().getButtons().stream().map(SeleniumCoreSetAccess::text).toList();
+                return names(menuBar().getButtons());
             }
             MenuBarSubMenuElement subMenu = open(path);
             try {
-                return subMenu.getMenuItems().stream().map(SeleniumCoreSetAccess::text).toList();
+                return names(subMenu.getMenuItems());
             } finally {
-                session.pressKey("Escape");
-                if (menuBar().getAllSubMenus().stream().anyMatch(s -> s.hasAttribute("opened"))) {
-                    session.pressKey("Escape");
-                }
+                close();
             }
         }
 
@@ -91,6 +89,35 @@ final class SeleniumCoreSetAccess {
             session.waitForVaadin();
         }
 
+        @Override
+        public boolean isEnabled(List<String> path) {
+            if (path.size() == 1) {
+                return enabled(button(path.get(0)));
+            }
+            try {
+                return enabled(item(open(path.subList(0, path.size() - 1)), path, path.size() - 1));
+            } finally {
+                close();
+            }
+        }
+
+        private boolean enabled(WebElement item) {
+            return Boolean.TRUE.equals(session.js("return (" + ENABLED + ")(arguments[0]);", item));
+        }
+
+        private void close() {
+            session.pressKey("Escape");
+            if (menuBar().getAllSubMenus().stream().anyMatch(s -> s.hasAttribute("opened"))) {
+                session.pressKey("Escape");
+            }
+        }
+
+        /** The Item Names of these items, in one round trip. */
+        @SuppressWarnings("unchecked")
+        private List<String> names(List<? extends WebElement> items) {
+            return (List<String>) session.js("return arguments[0].map(" + BrowserQueries.ITEM_NAME + ");", items);
+        }
+
         /** Opens the sub-menus along the path; returns the last one. */
         private MenuBarSubMenuElement open(List<String> path) {
             MenuBarSubMenuElement subMenu = button(path.get(0)).openSubMenu();
@@ -100,16 +127,47 @@ final class SeleniumCoreSetAccess {
             return subMenu;
         }
 
-        private MenuBarButtonElement button(String text) {
-            return menuBar().getButtons().stream().filter(b -> text.equals(text(b))).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("No menu item \"" + text + "\" at [" + text + "]"));
+        private MenuBarButtonElement button(String name) {
+            return named(menuBar().getButtons(), List.of(name), 0);
         }
 
-        private static MenuBarItemElement item(MenuBarSubMenuElement subMenu, List<String> path, int level) {
-            String text = path.get(level);
-            return subMenu.getMenuItems().stream().filter(i -> text.equals(text(i))).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("No menu item \"" + text + "\" at "
-                            + path.subList(0, level + 1)));
+        private MenuBarItemElement item(MenuBarSubMenuElement subMenu, List<String> path, int level) {
+            return named(subMenu.getMenuItems(), path, level);
+        }
+
+        private <T extends WebElement> T named(List<T> items, List<String> path, int level) {
+            List<String> names = names(items);
+            int index = names.indexOf(path.get(level));
+            if (index < 0) {
+                throw new IllegalArgumentException("No menu item \"" + path.get(level) + "\" at "
+                        + path.subList(0, level + 1) + "; there are " + names);
+            }
+            return items.get(index);
+        }
+    }
+
+    /**
+     * Types into the inputs of the date and time halves, each committed with Enter, then leaves the field as
+     * a user does: the field checks its halves (bad input, incomplete) when focus leaves it.
+     */
+    record DateTimePickerAccessImpl(SeleniumSession session, WebElement element) implements DateTimePickerAccess {
+        @Override
+        public void typeText(String date, String time) {
+            type(input("date-picker"), date);
+            WebElement timeInput = input("time-picker");
+            type(timeInput, time);
+            session.js("arguments[0].blur();", timeInput);
+            session.waitForVaadin();
+        }
+
+        private WebElement input(String slot) {
+            return (WebElement) session.js("return arguments[0].querySelector('[slot=' + arguments[1] + '] input');",
+                    element, slot);
+        }
+
+        private static void type(WebElement input, String text) {
+            input.clear();
+            input.sendKeys(text + org.openqa.selenium.Keys.ENTER);
         }
     }
 

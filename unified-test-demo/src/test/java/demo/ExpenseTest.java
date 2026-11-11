@@ -68,6 +68,34 @@ class ExpenseTest {
     }
 
     @Test
+    void typesTextADateTimePickerCantParse(UnifiedPage page) {
+        page.navigate(ExpenseView.class);
+        UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure").single();
+
+        departure.typeText("dsdds", "10:00");
+
+        assertThat(departure).isInvalid();
+        assertNull(departure.getValue());
+
+        LocalDateTime value = LocalDateTime.of(2026, 11, 8, 10, 30);
+        departure.setValue(value);
+
+        assertThat(departure).isValid().hasValue(value);
+    }
+
+    @Test
+    void typesAnIncompleteDateTime(UnifiedPage page) {
+        page.navigate(ExpenseView.class);
+        UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure").single();
+        departure.setValue(LocalDateTime.of(2026, 11, 8, 10, 30));
+
+        departure.typeText("", "10:00");
+
+        assertThat(departure).isInvalid();
+        assertNull(departure.getValue());
+    }
+
+    @Test
     void selectsATab(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         UnifiedTabs filter = page.find(UnifiedTabs.class).withTab("Approved").single();

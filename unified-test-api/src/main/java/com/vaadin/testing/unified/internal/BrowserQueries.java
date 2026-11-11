@@ -127,6 +127,22 @@ public final class BrowserQueries {
     public static final String TEXT = "e => (e.textContent || '').replace(/\\s+/g, ' ').trim()";
 
     /**
+     * The Item Name of a tab or a menu item: its text, whitespace collapsed, leaving out children in a named
+     * slot (a tooltip); when it shows no text, its {@code aria-label}, or that of the component it holds (a
+     * menu-bar button holds the app's item). Browserless reads the same from the server-side elements.
+     */
+    public static final String ITEM_NAME = """
+            e => {
+              // text and elements only: comments (Lit's markers) have a textContent too
+              const text = [...e.childNodes]
+                  .filter(n => n.nodeType === 3 || (n.nodeType === 1 && !n.hasAttribute('slot')))
+                  .map(n => n.textContent).join('').replace(/\\s+/g, ' ').trim();
+              if (text) return text;
+              const named = e.hasAttribute('aria-label') ? e : e.querySelector('[aria-label]');
+              return named ? named.getAttribute('aria-label').trim() : '';
+            }""";
+
+    /**
      * What a screen reader announces, approximated as on every Testing Tool: aria-label, the accessibleName
      * property ({@code setAriaLabel} on a field), the aria-labelledby target's text, label, text.
      */
