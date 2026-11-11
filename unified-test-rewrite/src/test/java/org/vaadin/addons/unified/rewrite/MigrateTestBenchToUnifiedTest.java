@@ -375,4 +375,46 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void leftoverTestBenchCallsRunThroughTheEscapeHatchOnSeleniumOnly() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void countsPeople() {
+                        getDriver().get("http://localhost:8080/people");
+                        int rows = $(GridElement.class).first().getRowCount();
+                        executeScript("window.scrollTo(0, 0)");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void countsPeople(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        page.navigate("people");
+                        // TODO unified: TestBench Escape Hatch: $(GridElement.class)
+                        int rows = testBench.$(GridElement.class).first().getRowCount();
+                        // TODO unified: TestBench Escape Hatch: executeScript("window.scrollTo(0, 0)")
+                        testBench.executeScript("window.scrollTo(0, 0)");
+                    }
+                }
+                """));
+    }
 }

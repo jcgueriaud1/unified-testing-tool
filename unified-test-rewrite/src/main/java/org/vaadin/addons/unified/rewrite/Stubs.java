@@ -26,6 +26,22 @@ final class Stubs {
             }
             """,
             """
+            package com.vaadin.testing.unified.selenium;
+            public final class TestBenchEscapeHatch {
+                public static TestBenchEscapeHatch of(com.vaadin.testing.unified.UnifiedPage page) { return null; }
+            }
+            """,
+            """
+            package com.vaadin.testing.unified;
+            public enum TestingTool { BROWSERLESS, PLAYWRIGHT, SELENIUM }
+            """,
+            """
+            package com.vaadin.testing.unified;
+            public @interface RequiresTestingTool {
+                TestingTool[] value();
+            }
+            """,
+            """
             package com.vaadin.testing.unified.assertion;
             public final class UnifiedAssertions {
                 public static Assert assertThat(Object wrapper) { return null; }

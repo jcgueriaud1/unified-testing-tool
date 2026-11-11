@@ -8,7 +8,6 @@ import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
-import org.openrewrite.java.tree.TypeUtils;
 
 /**
  * Turns {@code $(XElement.class)} into {@code page.find(UnifiedX.class)} for elements that have a Wrapper,
@@ -56,9 +55,7 @@ public class TestBenchLookupsToUnified extends Recipe {
 
             private boolean hasPageParameter() {
                 J.MethodDeclaration enclosing = getCursor().firstEnclosing(J.MethodDeclaration.class);
-                return enclosing != null && enclosing.getParameters().stream()
-                        .anyMatch(p -> p instanceof J.VariableDeclarations v
-                                && TypeUtils.isOfClassType(v.getType(), TestBenchSetupToUnified.UNIFIED_PAGE));
+                return enclosing != null && Pages.hasPageParameter(enclosing);
             }
         };
     }
