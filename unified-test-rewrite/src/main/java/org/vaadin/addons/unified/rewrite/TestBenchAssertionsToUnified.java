@@ -7,10 +7,7 @@ import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
-import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.JavaType;
-import org.openrewrite.java.tree.TypeUtils;
 
 /**
  * Turns {@code assertEquals(expected, element.getValue())} and {@code assertEquals(expected, element.getText())}
@@ -19,7 +16,7 @@ import org.openrewrite.java.tree.TypeUtils;
  */
 public class TestBenchAssertionsToUnified extends Recipe {
 
-    private static final String UNIFIED_ASSERTIONS = "com.vaadin.testing.unified.assertion.UnifiedAssertions";
+    static final String UNIFIED_ASSERTIONS = "com.vaadin.testing.unified.assertion.UnifiedAssertions";
     private static final MethodMatcher ASSERT_EQUALS =
             new MethodMatcher("org.junit.jupiter.api.Assertions assertEquals(Object, Object)");
     /** Getter on the element → the Unified assertion that retries it. */
@@ -44,7 +41,11 @@ public class TestBenchAssertionsToUnified extends Recipe {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 if (!ASSERT_EQUALS.matches(m) || !(m.getArguments().get(1) instanceof J.MethodInvocation getter)
                         || !getter.getArguments().stream().allMatch(a -> a instanceof J.Empty)
-                        || getter.getSelect() == null || !hasWrapper(getter.getSelect())) {
+                        || getter.getSelect() == null) {
+                    return m;
+                }
+                Wrappers.Wrapper wrapper = Wrappers.ofLookup(getter.getSelect());
+                if (wrapper == null || !wrapper.methods().contains(getter.getSimpleName())) {
                     return m;
                 }
                 String assertion = ASSERTION_BY_GETTER.get(getter.getSimpleName());
@@ -61,10 +62,5 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         .apply(getCursor(), m.getCoordinates().replace(), getter.getSelect(), m.getArguments().get(0));
             }
         };
-    }
-
-    private static boolean hasWrapper(Expression element) {
-        JavaType.FullyQualified type = TypeUtils.asFullyQualified(element.getType());
-        return type != null && Wrappers.forElement(type.getFullyQualifiedName()) != null;
     }
 }

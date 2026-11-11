@@ -1,5 +1,6 @@
 package org.vaadin.addons.unified.rewrite;
 
+import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
@@ -39,18 +40,49 @@ public class TestBenchLookupsToUnified extends Recipe {
                         || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
                     return m;
                 }
-                String wrapper = Wrappers.forElement(element.getFullyQualifiedName());
-                if (wrapper == null) {
+                Wrappers.Wrapper wrapper = Wrappers.forElement(element.getFullyQualifiedName());
+                if (wrapper == null || !onlyUsesWhatTheWrapperHas(wrapper)) {
                     return m;
                 }
-                maybeAddImport(wrapper);
+                maybeAddImport(wrapper.fqn());
                 maybeRemoveImport(element.getFullyQualifiedName());
                 return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.find("
-                                + wrapper.substring(wrapper.lastIndexOf('.') + 1) + ".class)")
-                        .imports(wrapper)
-                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper)))
+                                + wrapper.simpleName() + ".class)")
+                        .imports(wrapper.fqn())
+                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
                         .build()
                         .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
+            }
+
+            /**
+             * Whether the chain on this {@code $(..)} only uses the Wrapper's filters, then {@code single()}, then at
+             * most one of the Wrapper's methods, or ends in a Unified assertion or a statement of its own.
+             */
+            private boolean onlyUsesWhatTheWrapperHas(Wrappers.Wrapper wrapper) {
+                Cursor c = getCursor();
+                boolean found = false;
+                while (true) {
+                    Cursor parent = c.getParentTreeCursor();
+                    if (!(parent.getValue() instanceof J.MethodInvocation call) || call.getSelect() != c.getValue()) {
+                        return found && (parent.getValue() instanceof J.Block || isUnifiedAssertion(parent.getValue()));
+                    }
+                    String name = call.getSimpleName();
+                    if (!found && name.equals("single")) {
+                        found = true;
+                    } else if (!found && wrapper.filters().contains(name)) {
+                        // a filter before the terminal
+                    } else {
+                        return found && wrapper.methods().contains(name);
+                    }
+                    c = parent;
+                }
+            }
+
+            private boolean isUnifiedAssertion(Object tree) {
+                return tree instanceof J.MethodInvocation call && call.getSimpleName().equals("assertThat")
+                        && call.getMethodType() != null
+                        && call.getMethodType().getDeclaringType().getFullyQualifiedName()
+                                .equals(TestBenchAssertionsToUnified.UNIFIED_ASSERTIONS);
             }
 
             private boolean hasPageParameter() {
