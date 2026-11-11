@@ -1,0 +1,30 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.MigrateTestBenchToUnified
+displayName: Migrate TestBench tests to Unified UI Tests
+description: >-
+  Rewrites TestBench (Selenium) tests in place into Unified UI Tests that run on every Testing Tool
+  (ADR 0004). Code with no Unified equivalent is kept running through the Escape Hatch.
+recipeList:
+  - org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode
+displayName: Migrate TestBench test code to the Unified API
+description: Rewrites the source of TestBench tests; only touches files that use TestBench.
+preconditions:
+  - org.openrewrite.java.search.FindTypes:
+      fullyQualifiedTypeName: com.vaadin.testbench.BrowserTestBase
+recipeList:
+  - com.vaadin.testing.unified.rewrite.TestBenchSetupToUnified
+  - com.vaadin.testing.unified.rewrite.TestBenchLookupsToUnified
+  - org.openrewrite.java.RemoveAnnotationAttribute:
+      annotationType: org.springframework.boot.test.context.SpringBootTest
+      attributeName: webEnvironment
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: org.springframework.boot.test.context.SpringBootTest
+      newFullyQualifiedTypeName: com.vaadin.testing.unified.spring.UnifiedSpringBootTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.BrowserTest
+      newFullyQualifiedTypeName: org.junit.jupiter.api.Test
+  - org.openrewrite.java.RemoveUnusedImports
