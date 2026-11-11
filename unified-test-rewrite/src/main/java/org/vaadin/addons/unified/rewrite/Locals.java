@@ -53,7 +53,7 @@ final class Locals {
                 }
                 return identifier;
             }
-        }.visit(method.getBody(), other);
+        }.visit(method, other); // the whole method, so a Conversion can find it from its cursor
         return !other.get();
     }
 }

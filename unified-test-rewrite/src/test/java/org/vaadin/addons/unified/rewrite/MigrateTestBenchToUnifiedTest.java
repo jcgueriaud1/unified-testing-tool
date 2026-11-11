@@ -744,4 +744,43 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void aCellFoundByTextBecomesItsRow() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.flow.component.grid.testbench.GridTHTDElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void opensAlan() {
+                        GridElement people = $(GridElement.class).single();
+                        GridTHTDElement alan = people.getCell("Alan Turing");
+                        int row = alan.getRow();
+                        alan.click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest {
+
+                    @Test
+                    void opensAlan(UnifiedPage page) {
+                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        // TODO unified: was getCell("Alan Turing"); single() fails when several rows match
+                        UnifiedGrid.UnifiedGridRow alan = people.rows().withCellText("Alan Turing").single();
+                        int row = alan.getIndex();
+                        alan.click();
+                    }
+                }
+                """));
+    }
 }
