@@ -19,6 +19,18 @@
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-testbench-core</artifactId>
         </dependency>
+        <!-- TestBenchEscapeHatch: TestBench's test base API on the Unified Page's driver, for migrated tests -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-testbench-core-junit6</artifactId>
+            <!-- only its base classes: Selenium comes with vaadin-testbench-core, JUnit with the test project -->
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-text-field-testbench</artifactId>

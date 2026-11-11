@@ -29,9 +29,17 @@ class GoldenMigrationTest implements RewriteTest {
 
     @Test
     void profileTestBenchTestBecomesProfileMigratedTest() throws IOException {
-        String before = Files.readString(DEMO_TESTS.resolve("ProfileTestBenchTest.java"));
-        String after = Files.readString(DEMO_TESTS.resolve("ProfileMigratedTest.java"))
-                .replace("class ProfileMigratedTest", "class ProfileTestBenchTest");
+        assertMigrates("ProfileTestBenchTest", "ProfileMigratedTest");
+    }
+
+    @Test
+    void leftoversRunThroughTheEscapeHatch() throws IOException {
+        assertMigrates("ProfileEscapeHatchTestBenchTest", "ProfileEscapeHatchMigratedTest");
+    }
+
+    private void assertMigrates(String input, String twin) throws IOException {
+        String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
+        String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
         rewriteRun(
                 // the demo's view, reduced to its route: the real one needs the whole application on the classpath
                 java("""

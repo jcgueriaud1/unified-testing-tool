@@ -1,14 +1,19 @@
 package org.vaadin.addons.unified.rewrite;
 
+import static java.util.Collections.emptyList;
+
+import java.util.Set;
+import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
+import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
+import org.openrewrite.marker.Markers;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
-import org.openrewrite.java.tree.TypeUtils;
 
 /**
  * Turns {@code $(XElement.class)} into {@code page.find(UnifiedX.class)} for elements that have a Wrapper,
@@ -18,6 +23,8 @@ import org.openrewrite.java.tree.TypeUtils;
 public class TestBenchLookupsToUnified extends Recipe {
 
     private static final MethodMatcher DOLLAR = new MethodMatcher("com.vaadin.testbench.HasElementQuery $(java.lang.Class)", true);
+
+    private static final Set<String> FIRST = Set.of("first", "waitForFirst");
 
     @Override
     public String getDisplayName() {
@@ -33,32 +40,91 @@ public class TestBenchLookupsToUnified extends Recipe {
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
             @Override
+            public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
+                var markers = MigrationMarkers.collect(getCursor());
+                return MigrationMarkers.write(super.visitMethodDeclaration(method, ctx), markers);
+            }
+
+            @Override
+            public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext ctx) {
+                J.MethodDeclaration method = getCursor().firstEnclosing(J.MethodDeclaration.class);
+                Wrappers.Wrapper wrapper = method == null || multiVariable.getVariables().size() != 1
+                        || multiVariable.getTypeExpression() == null || !Pages.hasPageParameter(method)
+                        ? null : Locals.wrapperOf(method, multiVariable.getVariables().get(0));
+                J.VariableDeclarations v = super.visitVariableDeclarations(multiVariable, ctx);
+                if (wrapper == null) {
+                    return v;
+                }
+                maybeAddImport(wrapper.fqn());
+                return v.withTypeExpression(new J.Identifier(Tree.randomId(), v.getTypeExpression().getPrefix(),
+                        Markers.EMPTY, emptyList(), wrapper.simpleName(), JavaType.ShallowClass.build(wrapper.fqn()), null));
+            }
+
+            @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+                if (FIRST.contains(m.getSimpleName()) && hasPageParameter()) {
+                    Wrappers.Wrapper wrapper = Wrappers.ofLookup(method);
+                    if (wrapper != null && onlyUsesWhatTheWrapperHas(getCursor(), true, wrapper)
+                            && MigrationMarkers.add(getCursor(),
+                                    "was " + m.getSimpleName() + "(); single() fails when several components match")) {
+                        return m.withName(m.getName().withSimpleName("single"));
+                    }
+                    return m;
+                }
                 if (!DOLLAR.matches(m) || m.getSelect() != null || !hasPageParameter()
                         || !(m.getArguments().get(0) instanceof J.FieldAccess classLiteral)
                         || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
                     return m;
                 }
-                String wrapper = Wrappers.forElement(element.getFullyQualifiedName());
-                if (wrapper == null) {
+                Wrappers.Wrapper wrapper = Wrappers.forElement(element.getFullyQualifiedName());
+                if (wrapper == null || !onlyUsesWhatTheWrapperHas(wrapper)) {
                     return m;
                 }
-                maybeAddImport(wrapper);
+                maybeAddImport(wrapper.fqn());
                 maybeRemoveImport(element.getFullyQualifiedName());
                 return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.find("
-                                + wrapper.substring(wrapper.lastIndexOf('.') + 1) + ".class)")
-                        .imports(wrapper)
-                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper)))
+                                + wrapper.simpleName() + ".class)")
+                        .imports(wrapper.fqn())
+                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
                         .build()
                         .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
             }
 
+            /**
+             * Whether the chain on this {@code $(..)} only uses the Wrapper's filters, then {@code single()}, then at
+             * most one of the Wrapper's methods, or ends in a Unified assertion or a statement of its own.
+             */
+            private boolean onlyUsesWhatTheWrapperHas(Wrappers.Wrapper wrapper) {
+                return onlyUsesWhatTheWrapperHas(getCursor(), false, wrapper);
+            }
+
+            private boolean onlyUsesWhatTheWrapperHas(Cursor start, boolean afterTerminal, Wrappers.Wrapper wrapper) {
+                Cursor c = start;
+                boolean found = afterTerminal;
+                while (true) {
+                    Cursor parent = c.getParentTreeCursor();
+                    if (!(parent.getValue() instanceof J.MethodInvocation call) || call.getSelect() != c.getValue()) {
+                        return found && (parent.getValue() instanceof J.Block || TestBenchAssertionsToUnified.isUnifiedAssertion(parent.getValue())
+                                || parent.getValue() instanceof J.VariableDeclarations.NamedVariable variable
+                                        && Locals.wrapperOf(getCursor().firstEnclosing(J.MethodDeclaration.class),
+                                                variable) != null);
+                    }
+                    String name = call.getSimpleName();
+                    if (!found && Wrappers.TERMINALS.contains(name)) {
+                        found = true;
+                    } else if (!found && wrapper.filters().contains(name)) {
+                        // a filter before the terminal
+                    } else {
+                        return found && wrapper.methods().contains(name);
+                    }
+                    c = parent;
+                }
+            }
+
             private boolean hasPageParameter() {
                 J.MethodDeclaration enclosing = getCursor().firstEnclosing(J.MethodDeclaration.class);
-                return enclosing != null && enclosing.getParameters().stream()
-                        .anyMatch(p -> p instanceof J.VariableDeclarations v
-                                && TypeUtils.isOfClassType(v.getType(), TestBenchSetupToUnified.UNIFIED_PAGE));
+                return enclosing != null && Pages.hasPageParameter(enclosing);
             }
         };
     }

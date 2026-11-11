@@ -47,6 +47,7 @@ recipeList:
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchLookupsToUnified
+  - org.vaadin.addons.unified.rewrite.TestBenchLeftoversToEscapeHatch
   - org.openrewrite.java.RemoveAnnotationAttribute:
       annotationType: org.springframework.boot.test.context.SpringBootTest
       attributeName: webEnvironment

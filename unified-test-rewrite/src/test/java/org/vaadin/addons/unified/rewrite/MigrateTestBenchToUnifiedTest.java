@@ -375,4 +375,300 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void leftoverTestBenchCallsRunThroughTheEscapeHatchOnSeleniumOnly() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void countsPeople() {
+                        getDriver().get("http://localhost:8080/people");
+                        int rows = $(GridElement.class).first().getRowCount();
+                        executeScript("window.scrollTo(0, 0)");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void countsPeople(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        page.navigate("people");
+                        // TODO unified: TestBench Escape Hatch: $(GridElement.class)
+                        int rows = testBench.$(GridElement.class).first().getRowCount();
+                        // TODO unified: TestBench Escape Hatch: executeScript("window.scrollTo(0, 0)")
+                        testBench.executeScript("window.scrollTo(0, 0)");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLookupStaysTestBenchWhenTheWrapperLacksACallUsedOnIt() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void typesTheName() {
+                        $(TextFieldElement.class).withLabel("Name").single().sendKeys("Alice");
+                        $(TextFieldElement.class).withLabel("Email").single().setValue("alice@example.com");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void typesTheName(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: TestBench Escape Hatch: $(TextFieldElement.class)
+                        testBench.$(TextFieldElement.class).withLabel("Name").single().sendKeys("Alice");
+                        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("alice@example.com");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void anAssertionStaysJUnitWhenItsLookupStaysTestBench() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void showsTheNickname() {
+                        Assertions.assertEquals("Ali", $(TextFieldElement.class).withAttribute("name", "nick").single().getValue());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void showsTheNickname(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: TestBench Escape Hatch: $(TextFieldElement.class)
+                        Assertions.assertEquals("Ali", testBench.$(TextFieldElement.class).withAttribute("name", "nick").single().getValue());
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLocalHoldingAConvertedLookupTakesTheWrapperType() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void savesTheName() {
+                        TextFieldElement name = $(TextFieldElement.class).withLabel("Name").single();
+                        name.setValue("Alice");
+                        Assertions.assertEquals("Alice", name.getValue());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class ProfileTest {
+
+                    @Test
+                    void savesTheName(UnifiedPage page) {
+                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+                        name.setValue("Alice");
+                        assertThat(name).hasValue("Alice");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void firstBecomesSingleWithAMarker() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void saves() {
+                        $(ButtonElement.class).withText("Save").first().click();
+                        Assertions.assertEquals("Archive", $(ButtonElement.class).withText("Archive").waitForFirst().getText());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class ProfileTest {
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        // TODO unified: was first(); single() fails when several components match
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        // TODO unified: was waitForFirst(); single() fails when several components match
+                        assertThat(page.find(UnifiedButton.class).withText("Archive").single()).hasText("Archive");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void beforeEachAndHelpersUsingTestBenchGetThePage() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.BeforeEach;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BeforeEach
+                    void open() {
+                        getDriver().get("http://localhost:8080/profile");
+                    }
+
+                    @BrowserTest
+                    void savesTheName() {
+                        fillName("Alice");
+                        $(ButtonElement.class).withText("Save").single().click();
+                    }
+
+                    private void fillName(String name) {
+                        $(TextFieldElement.class).withLabel("Name").single().setValue(name);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    void open(UnifiedPage page) {
+                        page.navigate("profile");
+                    }
+
+                    @Test
+                    void savesTheName(UnifiedPage page) {
+                        open(page);
+                        fillName(page, "Alice");
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                    }
+
+                    private void fillName(UnifiedPage page, String name) {
+                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aTestCallingAHelperThatEscapesRequiresSelenium() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void countsPeople() {
+                        rowCount();
+                    }
+
+                    private int rowCount() {
+                        return $(GridElement.class).first().getRowCount();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void countsPeople(UnifiedPage page) {
+                        rowCount(page);
+                    }
+
+                    private int rowCount(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: TestBench Escape Hatch: $(GridElement.class)
+                        return testBench.$(GridElement.class).first().getRowCount();
+                    }
+                }
+                """));
+    }
 }

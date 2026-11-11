@@ -87,6 +87,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.vaadin.addons</groupId>
+            <artifactId>unified-test-selenium</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-testbench-core-junit6</artifactId>
             <scope>test</scope>
