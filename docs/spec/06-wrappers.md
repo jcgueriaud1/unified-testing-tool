@@ -13,7 +13,7 @@ One component per interaction pattern. Every other component follows the same pa
 | Boolean value | `UnifiedCheckbox` | implemented |
 | Single selection | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | implemented |
 | Multi selection | `UnifiedMultiSelectComboBox` | implemented |
-| Action | `UnifiedButton`, `UnifiedMenuBar` | implemented: `clickItem("File", "Export", "PDF")` opens the menus as a user does |
+| Action | `UnifiedButton`, `UnifiedMenuBar` | implemented: `clickItem("File", "Export", "PDF")` opens the menus as a user does; items by Item Name (an icon-only item by its `aria-label`); `isItemEnabled(..)` |
 | Overlays | `UnifiedDialog`, `UnifiedNotification` | implemented |
 | Disclosure | `UnifiedDetails` | implemented: `open()`, `close()`, `content()` Scope |
 | Files | `UnifiedUpload` | implemented: `upload(name, type, bytes)` waits until the server has the file |

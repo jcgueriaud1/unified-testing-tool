@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.browserless;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.details.DetailsTester;
+import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.menubar.MenuBarTester;
 import com.vaadin.flow.component.tabs.Tab;
@@ -86,25 +87,50 @@ final class BrowserlessCoreSetAccess {
         }
     }
 
+    /**
+     * Items found by their Item Name, then clicked by position: MenuBarTester matches an item's own text,
+     * which an icon-only item lacks.
+     */
     record MenuBarAccessImpl(BrowserlessSession session, MenuBar menuBar) implements MenuBarAccess {
-        private MenuBarTester<?> tester() {
-            return (MenuBarTester<?>) session.window().test(menuBar);
-        }
 
         @Override
         public List<String> items(List<String> path) {
-            if (path.isEmpty()) {
-                return tester().getItemTexts();
-            }
-            return tester().getItemTexts(path.get(0), path.subList(1, path.size()).toArray(String[]::new));
+            List<MenuItem> items = path.isEmpty() ? menuBar.getItems()
+                    : resolve(path).get(path.size() - 1).getSubMenu().getItems();
+            return items.stream().filter(Component::isVisible).map(ItemNames::of).toList();
         }
 
         @Override
         public void click(List<String> path) {
             session.act(() -> {
-                tester().clickItem(path.get(0), path.subList(1, path.size()).toArray(String[]::new));
+                List<MenuItem> chosen = resolve(path);
+                int[] positions = new int[path.size()];
+                List<MenuItem> level = menuBar.getItems();
+                for (int i = 0; i < path.size(); i++) {
+                    positions[i] = ItemNames.visiblePosition(level, chosen.get(i), "Menu item");
+                    level = chosen.get(i).getSubMenu().getItems();
+                }
+                ((MenuBarTester<?>) session.window().test(menuBar)).clickItem(positions[0],
+                        java.util.Arrays.copyOfRange(positions, 1, positions.length));
                 session.window().roundTrip();
             });
+        }
+
+        @Override
+        public boolean isEnabled(List<String> path) {
+            return resolve(path).get(path.size() - 1).isEnabled();
+        }
+
+        /** The item of each level of the path. */
+        private List<MenuItem> resolve(List<String> path) {
+            List<MenuItem> chosen = new java.util.ArrayList<>();
+            List<MenuItem> level = menuBar.getItems();
+            for (int i = 0; i < path.size(); i++) {
+                MenuItem item = ItemNames.find(level, path.get(i), "menu item \"" + path.get(i) + "\" at " + path.subList(0, i + 1));
+                chosen.add(item);
+                level = item.getSubMenu().getItems();
+            }
+            return chosen;
         }
     }
 

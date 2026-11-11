@@ -4,6 +4,7 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.FilePayload;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
@@ -79,7 +80,8 @@ final class PlaywrightCoreSetAccess {
      * (each opened sub-menu comes after its parent in the page).
      */
     record MenuBarAccessImpl(PlaywrightSession session, Locator locator) implements MenuBarAccess {
-        private static final String TEXTS = "els => els.map(e => e.textContent.replace(/\\s+/g, ' ').trim())";
+        private static final String NAMES = "els => els.map(" + BrowserQueries.ITEM_NAME + ")";
+        private static final String ENABLED = "e => !(e.hasAttribute('disabled') || e.getAttribute('aria-disabled') === 'true')";
 
         private Locator topLevel() {
             return locator.locator("xpath=./vaadin-menu-bar-button[not(@hidden)]");
@@ -102,11 +104,11 @@ final class PlaywrightCoreSetAccess {
         @Override
         public List<String> items(List<String> path) {
             if (path.isEmpty()) {
-                return (List<String>) topLevel().evaluateAll(TEXTS);
+                return (List<String>) topLevel().evaluateAll(NAMES);
             }
             open(path);
             try {
-                return (List<String>) openMenu().locator("xpath=./vaadin-menu-bar-item").evaluateAll(TEXTS);
+                return (List<String>) openMenu().locator("xpath=./vaadin-menu-bar-item").evaluateAll(NAMES);
             } finally {
                 close();
             }
@@ -121,6 +123,19 @@ final class PlaywrightCoreSetAccess {
             AutoWait.afterAction(session.page());
         }
 
+        @Override
+        public boolean isEnabled(List<String> path) {
+            if (path.size() == 1) {
+                return Boolean.TRUE.equals(item(path, 0).evaluate(ENABLED));
+            }
+            open(path.subList(0, path.size() - 1));
+            try {
+                return Boolean.TRUE.equals(item(path, path.size() - 1).evaluate(ENABLED));
+            } finally {
+                close();
+            }
+        }
+
         /** Opens the menus of every item of the path: each click opens one more sub-menu. */
         private void open(List<String> path) {
             for (int i = 0; i < path.size(); i++) {
@@ -132,22 +147,31 @@ final class PlaywrightCoreSetAccess {
             }
         }
 
+        /** The item of this Item Name at this level of the path. */
+        @SuppressWarnings("unchecked")
         private Locator item(List<String> path, int level) {
             Locator candidates = level == 0 ? topLevel() : openMenu().locator("xpath=./vaadin-menu-bar-item");
-            String text = path.get(level);
-            Locator item = candidates.filter(new Locator.FilterOptions().setHasText(
-                    PlaywrightSession.exactText(text)));
-            if (item.count() == 0) {
-                throw new IllegalArgumentException("No menu item \"" + text + "\" at " + path.subList(0, level + 1));
+            String name = path.get(level);
+            List<String> names = (List<String>) candidates.evaluateAll(NAMES);
+            int index = names.indexOf(name);
+            if (index < 0) {
+                throw new IllegalArgumentException("No menu item \"" + name + "\" at " + path.subList(0, level + 1)
+                        + "; there are " + names);
             }
-            return item.first();
+            return candidates.nth(index);
         }
 
+        /**
+         * Closes the open menus and waits until they are gone: a closing sub-menu stays visible while it
+         * animates, and opening the menu again would count it as open.
+         */
         private void close() {
             locator.page().keyboard().press("Escape");
-            if (locator.locator("vaadin-menu-bar-list-box:visible").count() > 0) {
+            if (locator.locator("vaadin-menu-bar-submenu[opened]:not([closing])").count() > 0) {
                 locator.page().keyboard().press("Escape");
             }
+            locator.page().waitForCondition(() -> openMenus().count() == 0,
+                    new Page.WaitForConditionOptions().setTimeout(5000));
         }
     }
 
