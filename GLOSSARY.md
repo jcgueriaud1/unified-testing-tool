@@ -43,3 +43,11 @@ _Avoid_: UI, window, driver, browser
 **Unified Element**:
 The portable, low-level handle to one component (properties, attributes, text, user actions) that every Testing Tool supports and on which Wrappers are written.
 _Avoid_: Raw element, WebElement, locator
+
+**Migration Recipe**:
+An OpenRewrite recipe that rewrites a Testing Tool's existing tests into Unified UI Tests, converting what maps and leaving a Migration Marker where it can't.
+_Avoid_: Converter, codemod, migration script
+
+**Migration Marker**:
+The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch.
+_Avoid_: TODO, FIXME, warning
