@@ -47,3 +47,11 @@ _Avoid_: Raw element, WebElement, locator
 **Item Name**:
 What a test calls one item of a component with several (a tab, a menu item): its visible text, or its accessible name when it shows no text, the same on every Testing Tool.
 _Avoid_: Label, caption, item text
+
+**Migration Recipe**:
+An OpenRewrite recipe that rewrites a Testing Tool's existing tests into Unified UI Tests, converting what maps and leaving a Migration Marker where it can't.
+_Avoid_: Converter, codemod, migration script
+
+**Migration Marker**:
+The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch.
+_Avoid_: TODO, FIXME, warning

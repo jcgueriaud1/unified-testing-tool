@@ -72,4 +72,5 @@ nav:
       - adr/0001-locator-filters-follow-component-type.md
       - adr/0002-unified-wrapper-names-and-class-literal-lookups.md
       - adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md
+      - adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md
   - Glossary: GLOSSARY.md
