@@ -59,6 +59,22 @@
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-notification-testbench</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-menu-bar-testbench</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-upload-testbench</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-date-time-picker-testbench</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-details-testbench</artifactId>
+        </dependency>
         <!-- browser runs serve the app in dev mode -->
         <dependency>
             <groupId>com.vaadin</groupId>
