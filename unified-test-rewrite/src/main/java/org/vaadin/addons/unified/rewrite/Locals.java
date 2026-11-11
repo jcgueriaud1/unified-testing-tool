@@ -47,7 +47,7 @@ final class Locals {
                 if (identifier.getSimpleName().equals(name)
                         && !(parent instanceof J.VariableDeclarations.NamedVariable)
                         && !(parent instanceof J.MethodInvocation call && call.getSelect() == identifier
-                                && wrapper.methods().contains(call.getSimpleName()))
+                                && wrapper.supports(call, getCursor().getParentTreeCursor()))
                         && !TestBenchAssertionsToUnified.isUnifiedAssertion(parent)) {
                     found.set(true);
                 }

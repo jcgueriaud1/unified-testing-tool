@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.openrewrite.Cursor;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
@@ -16,11 +17,25 @@ import org.openrewrite.java.tree.JavaType;
 final class Wrappers {
 
     /** A Wrapper and the TestBench calls it shares: query filters, and methods on the element found. */
-    record Wrapper(String fqn, Set<String> filters, Set<String> methods) {
+    record Wrapper(String fqn, Set<String> filters, Set<String> methods, Conversion conversion) {
+
+        Wrapper(String fqn, Set<String> filters, Set<String> methods) {
+            this(fqn, filters, methods, (call, cursor) -> false);
+        }
+
+        /** Whether a call on the element is one the Wrapper has, by name or through a recipe's conversion. */
+        boolean supports(J.MethodInvocation call, Cursor callCursor) {
+            return methods.contains(call.getSimpleName()) || conversion.converts(call, callCursor);
+        }
 
         String simpleName() {
             return fqn.substring(fqn.lastIndexOf('.') + 1);
         }
+    }
+
+    /** A TestBench call a recipe converts to a differently named Wrapper call, such as {@code getCell(..)}. */
+    interface Conversion {
+        boolean converts(J.MethodInvocation call, Cursor callCursor);
     }
 
     /** TestBench query terminals; {@code first()} and {@code waitForFirst()} become {@code single()}. */
@@ -37,7 +52,17 @@ final class Wrappers {
             "com.vaadin.flow.component.button.testbench.ButtonElement",
             new Wrapper("com.vaadin.testing.unified.component.UnifiedButton",
                     with(COMMON_FILTERS, "withText"),
-                    Set.of("click", "getText", "isEnabled")));
+                    Set.of("click", "getText", "isEnabled")),
+            "com.vaadin.flow.component.notification.testbench.NotificationElement",
+            new Wrapper("com.vaadin.testing.unified.component.UnifiedNotification",
+                    with(COMMON_FILTERS, "withText"),
+                    Set.of("getText", "isOpen")),
+            "com.vaadin.flow.component.grid.testbench.GridElement",
+            new Wrapper("com.vaadin.testing.unified.component.UnifiedGrid",
+                    COMMON_FILTERS,
+                    // row and rows are what GridCells writes for getCell(..)
+                    Set.of("getRowCount", "row", "rows"),
+                    GridCells::converts));
 
     private Wrappers() {
     }

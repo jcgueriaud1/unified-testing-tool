@@ -116,7 +116,7 @@ public class TestBenchLookupsToUnified extends Recipe {
                     } else if (!found && wrapper.filters().contains(name)) {
                         // a filter before the terminal
                     } else {
-                        return found && wrapper.methods().contains(name);
+                        return found && wrapper.supports(call, parent);
                     }
                     c = parent;
                 }

@@ -380,7 +380,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     void leftoverTestBenchCallsRunThroughTheEscapeHatchOnSeleniumOnly() {
         rewriteRun(java(
                 """
-                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.flow.component.upload.testbench.UploadElement;
                 import com.vaadin.testbench.BrowserTest;
                 import com.vaadin.testbench.BrowserTestBase;
 
@@ -389,13 +389,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     @BrowserTest
                     void countsPeople() {
                         getDriver().get("http://localhost:8080/people");
-                        int rows = $(GridElement.class).first().getRowCount();
+                        String text = $(UploadElement.class).first().getText();
                         executeScript("window.scrollTo(0, 0)");
                     }
                 }
                 """,
                 """
-                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.flow.component.upload.testbench.UploadElement;
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
@@ -409,8 +409,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     void countsPeople(UnifiedPage page) {
                         TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
                         page.navigate("people");
-                        // TODO unified: TestBench Escape Hatch: $(GridElement.class)
-                        int rows = testBench.$(GridElement.class).first().getRowCount();
+                        // TODO unified: TestBench Escape Hatch: $(UploadElement.class)
+                        String text = testBench.$(UploadElement.class).first().getText();
                         // TODO unified: TestBench Escape Hatch: executeScript("window.scrollTo(0, 0)")
                         testBench.executeScript("window.scrollTo(0, 0)");
                     }
@@ -631,7 +631,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     void aTestCallingAHelperThatEscapesRequiresSelenium() {
         rewriteRun(java(
                 """
-                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.flow.component.upload.testbench.UploadElement;
                 import com.vaadin.testbench.BrowserTest;
                 import com.vaadin.testbench.BrowserTestBase;
 
@@ -639,16 +639,16 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @BrowserTest
                     void countsPeople() {
-                        rowCount();
+                        uploadText();
                     }
 
-                    private int rowCount() {
-                        return $(GridElement.class).first().getRowCount();
+                    private String uploadText() {
+                        return $(UploadElement.class).first().getText();
                     }
                 }
                 """,
                 """
-                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.flow.component.upload.testbench.UploadElement;
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
@@ -660,13 +660,86 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     @Test
                     @RequiresTestingTool(TestingTool.SELENIUM)
                     void countsPeople(UnifiedPage page) {
-                        rowCount(page);
+                        uploadText(page);
                     }
 
-                    private int rowCount(UnifiedPage page) {
+                    private String uploadText(UnifiedPage page) {
                         TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
-                        // TODO unified: TestBench Escape Hatch: $(GridElement.class)
-                        return testBench.$(GridElement.class).first().getRowCount();
+                        // TODO unified: TestBench Escape Hatch: $(UploadElement.class)
+                        return testBench.$(UploadElement.class).first().getText();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void notificationLookupsFindTheUnifiedNotification() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.notification.testbench.NotificationElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void confirmsTheSave() {
+                        Assertions.assertEquals("Saved", $(NotificationElement.class).waitForFirst().getText());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedNotification;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class ProfileTest {
+
+                    @Test
+                    void confirmsTheSave(UnifiedPage page) {
+                        // TODO unified: was waitForFirst(); single() fails when several components match
+                        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void gridLookupsFindTheUnifiedGridAndCellsByIndexReadThroughTheRow() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void listsPeople() {
+                        GridElement people = $(GridElement.class).waitForFirst();
+                        Assertions.assertEquals("Alan Turing", people.getCell(0, 0).getText());
+                        Assertions.assertEquals(3, people.getRowCount());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest {
+
+                    @Test
+                    void listsPeople(UnifiedPage page) {
+                        // TODO unified: was waitForFirst(); single() fails when several components match
+                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        Assertions.assertEquals("Alan Turing", people.row(0).getCellText(0));
+                        Assertions.assertEquals(3, people.getRowCount());
                     }
                 }
                 """));
