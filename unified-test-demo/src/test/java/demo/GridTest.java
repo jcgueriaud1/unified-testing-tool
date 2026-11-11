@@ -39,6 +39,16 @@ class GridTest {
     }
 
     @Test
+    void findsARowByCellTextInAnyColumn(UnifiedPage page) {
+        UnifiedGrid users = grid(page, "users");
+
+        // "user110@example.com" is in the Email column, "User 110" in the Name column
+        assertEquals(109, users.rows().withCellText("user110@example.com").single().getIndex());
+        assertEquals(109, users.rows().withCellText("User 110").single().getIndex());
+        assertFalse(users.rows().withCellText("user110@example").exists());
+    }
+
+    @Test
     void combinesCellFilters(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 

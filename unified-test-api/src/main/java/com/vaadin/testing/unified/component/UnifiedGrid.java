@@ -42,6 +42,8 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
 
     interface RowQuery {
         RowQuery withCellText(String columnHeader, String text);
+        /** Rows with a cell showing exactly this text, in any column. */
+        RowQuery withCellText(String text);
         RowQuery withCellTextContaining(String columnHeader, String part);
         RowQuery selected();
         UnifiedGridRow single();

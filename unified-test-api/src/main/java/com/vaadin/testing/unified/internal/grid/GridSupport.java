@@ -77,11 +77,23 @@ public final class GridSupport {
 
     // ---------------------------------------------------------------- rows
 
+    /** A cell filter on one column, or on any column when {@code column} is null. */
     private record CellFilter(String column, Filter filter) {
         @Override
         public String toString() {
-            return (filter.exact() ? "withCellText" : "withCellTextContaining") + "(\"" + column + "\", \""
-                    + filter.value() + "\")";
+            return (filter.exact() ? "withCellText" : "withCellTextContaining") + "("
+                    + (column == null ? "" : "\"" + column + "\", ") + "\"" + filter.value() + "\")";
+        }
+
+        List<Integer> matching(GridAccess access) {
+            if (column != null) {
+                return access.rowsWhere(columnIndex(access, column), filter::matches);
+            }
+            java.util.TreeSet<Integer> rows = new java.util.TreeSet<>();
+            for (int c = 0; c < access.columnHeaders().size(); c++) {
+                rows.addAll(access.rowsWhere(c, filter::matches));
+            }
+            return new ArrayList<>(rows);
         }
     }
 
@@ -103,6 +115,7 @@ public final class GridSupport {
         }
 
         @Override public RowQuery withCellText(String column, String text) { return with(column, text, true); }
+        @Override public RowQuery withCellText(String text) { return with(null, text, true); }
         @Override public RowQuery withCellTextContaining(String column, String part) { return with(column, part, false); }
 
         /** Matching row indexes right now. */
@@ -110,7 +123,7 @@ public final class GridSupport {
             GridAccess access = access(grid);
             List<Integer> rows = null;
             for (CellFilter f : filters) {
-                List<Integer> matching = access.rowsWhere(columnIndex(access, f.column()), f.filter()::matches);
+                List<Integer> matching = f.matching(access);
                 if (rows == null) {
                     rows = new ArrayList<>(matching);
                 } else {
