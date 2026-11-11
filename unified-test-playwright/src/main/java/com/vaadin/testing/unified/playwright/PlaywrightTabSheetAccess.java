@@ -4,11 +4,9 @@ import com.microsoft.playwright.Locator;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import java.util.List;
-import org.vaadin.addons.dramafinder.AutoWait;
-import org.vaadin.addons.dramafinder.element.TabElement;
 import org.vaadin.addons.dramafinder.element.TabSheetElement;
 
-/** TabSheet on Playwright through Dramafinder's TabSheetElement. */
+/** TabSheet on Playwright through Dramafinder's TabSheetElement; tabs by their Item Name. */
 final class PlaywrightTabSheetAccess implements TabSheetAccess {
 
     private final PlaywrightSession session;
@@ -19,27 +17,28 @@ final class PlaywrightTabSheetAccess implements TabSheetAccess {
         this.tabSheet = new TabSheetElement(locator);
     }
 
+    private Locator tabLocators() {
+        return tabSheet.getTabsElement().getTabs();
+    }
+
     @Override
     public List<String> tabs() {
-        return tabSheet.getTabsElement().getTabs().all().stream().map(t -> new TabElement(t).getLabel().strip())
-                .toList();
+        return PlaywrightTabItems.names(tabLocators());
     }
 
     @Override
     public String selectedTab() {
-        Locator selected = tabSheet.getTabsElement().getTabs().and(tabSheet.getLocator().page().locator("[selected]"));
-        return selected.count() == 0 ? null : new TabElement(selected.first()).getLabel().strip();
+        return PlaywrightTabItems.selected(tabLocators());
     }
 
     @Override
     public boolean isEnabled(String label) {
-        return !tabSheet.getTab(label).getLocator().first().isDisabled();
+        return PlaywrightTabItems.isEnabled(tabLocators(), label);
     }
 
     @Override
     public void select(String label) {
-        tabSheet.selectTab(label);
-        AutoWait.waitForVaadinIdle(session.page());
+        PlaywrightTabItems.select(session, tabLocators(), label);
     }
 
     /** The visible panel: Flow keeps the content of the other tabs out of the page or hidden. */

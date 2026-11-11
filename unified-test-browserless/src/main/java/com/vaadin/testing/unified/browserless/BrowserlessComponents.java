@@ -174,6 +174,24 @@ final class BrowserlessComponents {
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
                 (session, c) -> new BrowserlessCoreSetAccess.MenuBarAccessImpl(session,
                         (com.vaadin.flow.component.menubar.MenuBar) c)));
+        register(com.vaadin.flow.component.datetimepicker.DateTimePicker.class, new Support() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return type == com.vaadin.testing.unified.spi.DateTimePickerAccess.class
+                        ? Optional.of(new BrowserlessCoreSetAccess.DateTimePickerAccessImpl(session,
+                                (com.vaadin.flow.component.datetimepicker.DateTimePicker) component))
+                        : Optional.empty();
+            }
+
+            /** Both halves and the field, as a user entering the value does. */
+            @Override
+            public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
+                BrowserlessCoreSetAccess.DateTimePickerAccessImpl.setValueAsUser(window,
+                        (com.vaadin.flow.component.datetimepicker.DateTimePicker) component,
+                        (java.time.LocalDateTime) value);
+                return true;
+            }
+        });
         register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
                 (session, c) -> new BrowserlessCoreSetAccess.UploadAccessImpl(session,
                         (com.vaadin.flow.component.upload.Upload) c)));
