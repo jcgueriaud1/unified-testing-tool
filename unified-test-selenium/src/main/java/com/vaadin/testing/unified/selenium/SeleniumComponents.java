@@ -170,14 +170,11 @@ final class SeleniumComponents {
             }
         });
         register(com.vaadin.flow.component.datetimepicker.DateTimePicker.class, new Support() {
-            /** The ISO value on the element, as the picker sets it when the user commits both parts. */
             @Override
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {
-                session.js("""
-                        const e = arguments[0];
-                        e.value = arguments[1];
-                        e.dispatchEvent(new Event('change', {bubbles: true}));""",
-                        element, value == null ? "" : value.toString());
+                session.testBench(element)
+                        .wrap(com.vaadin.flow.component.datetimepicker.testbench.DateTimePickerElement.class)
+                        .setDateTime((java.time.LocalDateTime) value);
                 return true;
             }
         });

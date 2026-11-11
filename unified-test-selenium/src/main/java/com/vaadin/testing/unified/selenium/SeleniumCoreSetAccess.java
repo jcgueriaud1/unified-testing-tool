@@ -1,5 +1,11 @@
 package com.vaadin.testing.unified.selenium;
 
+import com.vaadin.flow.component.details.testbench.DetailsElement;
+import com.vaadin.flow.component.menubar.testbench.MenuBarButtonElement;
+import com.vaadin.flow.component.menubar.testbench.MenuBarElement;
+import com.vaadin.flow.component.menubar.testbench.MenuBarItemElement;
+import com.vaadin.flow.component.menubar.testbench.MenuBarSubMenuElement;
+import com.vaadin.flow.component.upload.testbench.UploadElement;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
@@ -8,75 +14,68 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-/** Access to Details, MenuBar and Upload on Selenium; a bare Tabs bar uses {@link SeleniumTabSheetAccess}. */
+/**
+ * Access to Details, MenuBar and Upload on Selenium, through TestBench's element classes; a bare Tabs bar
+ * uses {@link SeleniumTabSheetAccess}.
+ */
 final class SeleniumCoreSetAccess {
     private SeleniumCoreSetAccess() {}
 
+    private static String text(WebElement element) {
+        return element.getText().replaceAll("\\s+", " ").strip();
+    }
+
+    /** Through TestBench's DetailsElement. */
     record DetailsAccessImpl(SeleniumSession session, WebElement element) implements DetailsAccess {
-        private static final String SUMMARY = "arguments[0].querySelector(':scope > vaadin-details-summary')";
+        private DetailsElement details() {
+            return session.testBench(element).wrap(DetailsElement.class);
+        }
 
         @Override
         public String summaryText() {
-            return (String) session.js("const s = " + SUMMARY + "; return s ? s.textContent.trim() : null;", element);
+            return details().getSummaryText().replaceAll("\\s+", " ").strip();
         }
 
         @Override
         public boolean isOpen() {
-            return Boolean.TRUE.equals(session.js("return !!arguments[0].opened;", element));
+            return details().isOpened();
         }
 
         @Override
         public void toggle() {
-            WebElement summary = (WebElement) session.js("return " + SUMMARY + ";", element);
-            new SeleniumElement(session, summary, SeleniumComponents.DEFAULT).click();
+            details().toggle();
+            session.waitForVaadin();
         }
 
-        /** Everything but the summary: Flow puts the content in a div. */
         @Override
         public UnifiedElement content() {
-            List<WebElement> content = element.findElements(By.xpath("./*[not(self::vaadin-details-summary)]"));
-            return new SeleniumElement(session, element, SeleniumComponents.DEFAULT, content);
+            return new SeleniumElement(session, details().getContent(), SeleniumComponents.DEFAULT);
         }
     }
 
     /**
-     * Top-level items are the menu bar's buttons; a sub-menu is the last visible list box in the menu bar
-     * (each opened sub-menu comes after its parent in the page). The same as the Playwright adapter.
+     * Through TestBench's MenuBarElement: a top-level button opens its sub-menu when clicked, a nested item
+     * when hovered (TestBench's {@code openSubMenu()}).
      */
     record MenuBarAccessImpl(SeleniumSession session, WebElement element) implements MenuBarAccess {
-        private static final String HELPERS = """
-                const bar = arguments[0];
-                const text = e => e.textContent.replace(/\\s+/g, ' ').trim();
-                const visible = e => !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length);
-                const topLevel = () => [...bar.querySelectorAll(':scope > vaadin-menu-bar-button')]
-                    .filter(b => !b.hasAttribute('hidden'));
-                const openMenus = () => [...bar.querySelectorAll('vaadin-menu-bar-list-box')].filter(visible);
-                const items = level => level === 0 ? topLevel()
-                    : [...openMenus().pop().querySelectorAll(':scope > vaadin-menu-bar-item')];
-                """;
-
-        private long openCount() {
-            return (Long) session.js(HELPERS + "return openMenus().length;", element);
+        private MenuBarElement menuBar() {
+            return session.testBench(element).wrap(MenuBarElement.class);
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public List<String> items(List<String> path) {
             if (path.isEmpty()) {
-                return (List<String>) session.js(HELPERS + "return topLevel().map(text);", element);
+                return menuBar().getButtons().stream().map(SeleniumCoreSetAccess::text).toList();
             }
-            open(path);
+            MenuBarSubMenuElement subMenu = open(path);
             try {
-                return (List<String>) session.js(HELPERS + "return items(1).map(text);", element);
+                return subMenu.getMenuItems().stream().map(SeleniumCoreSetAccess::text).toList();
             } finally {
                 session.pressKey("Escape");
-                if (openCount() > 0) {
+                if (menuBar().getAllSubMenus().stream().anyMatch(s -> s.hasAttribute("opened"))) {
                     session.pressKey("Escape");
                 }
             }
@@ -84,52 +83,39 @@ final class SeleniumCoreSetAccess {
 
         @Override
         public void click(List<String> path) {
-            if (path.size() > 1) {
-                open(path.subList(0, path.size() - 1));
+            if (path.size() == 1) {
+                button(path.get(0)).click();
+            } else {
+                item(open(path.subList(0, path.size() - 1)), path, path.size() - 1).click();
             }
-            click(item(path, path.size() - 1));
-        }
-
-        /**
-         * A DOM click on the item: WebDriver's native click on a menu-bar button doesn't open its sub-menu in
-         * headless Chrome, a DOM click does (as the menu bar's own keyboard handling does).
-         */
-        private void click(WebElement item) {
-            session.js("arguments[0].click();", item);
             session.waitForVaadin();
         }
 
-        private void open(List<String> path) {
-            for (int i = 0; i < path.size(); i++) {
-                long before = openCount();
-                WebElement item = item(path, i);
-                if (i == 0) {
-                    click(item);
-                } else {
-                    // a nested item opens its sub-menu on hover; a DOM click doesn't open it
-                    session.js("arguments[0].dispatchEvent(new MouseEvent('mouseover', {bubbles: true, composed: true}));",
-                            item);
-                    session.waitForVaadin();
-                }
-                new WebDriverWait(session.driver(), Duration.ofSeconds(5)).until(d -> openCount() > before);
+        /** Opens the sub-menus along the path; returns the last one. */
+        private MenuBarSubMenuElement open(List<String> path) {
+            MenuBarSubMenuElement subMenu = button(path.get(0)).openSubMenu();
+            for (int i = 1; i < path.size(); i++) {
+                subMenu = item(subMenu, path, i).openSubMenu();
             }
+            return subMenu;
         }
 
-        private WebElement item(List<String> path, int level) {
-            WebElement item = (WebElement) session.js(HELPERS
-                    + "return items(arguments[1]).find(i => text(i) === arguments[2]) || null;",
-                    element, level, path.get(level));
-            if (item == null) {
-                throw new IllegalArgumentException("No menu item \"" + path.get(level) + "\" at "
-                        + path.subList(0, level + 1));
-            }
-            return item;
+        private MenuBarButtonElement button(String text) {
+            return menuBar().getButtons().stream().filter(b -> text.equals(text(b))).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("No menu item \"" + text + "\" at [" + text + "]"));
+        }
+
+        private static MenuBarItemElement item(MenuBarSubMenuElement subMenu, List<String> path, int level) {
+            String text = path.get(level);
+            return subMenu.getMenuItems().stream().filter(i -> text.equals(text(i))).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("No menu item \"" + text + "\" at "
+                            + path.subList(0, level + 1)));
         }
     }
 
     /**
-     * Sends the file to the upload's file input, in its shadow root, then waits until every file has finished
-     * uploading. WebDriver needs a file on disk: the content goes to a temporary file with the given name.
+     * Through TestBench's UploadElement, which feeds the file input and waits until the upload finished.
+     * WebDriver needs a file on disk: the content goes to a temporary file with the given name.
      */
     record UploadAccessImpl(SeleniumSession session, WebElement element) implements UploadAccess {
         @Override
@@ -142,13 +128,8 @@ final class SeleniumCoreSetAccess {
                 throw new UncheckedIOException(e);
             }
             try {
-                // through JavaScript: TestBench's element proxy doesn't support getShadowRoot()
-                WebElement input = (WebElement) session.js(
-                        "return arguments[0].shadowRoot.querySelector('input[type=file]');", element);
-                input.sendKeys(file.toAbsolutePath().toString());
-                new WebDriverWait(session.driver(), session.timeout()).until(d -> Boolean.TRUE.equals(session.js(
-                        "const e = arguments[0]; return (e.files || []).length > 0"
-                                + " && e.files.every(f => f.complete || f.error || f.abort);", element)));
+                session.testBench(element).wrap(UploadElement.class)
+                        .upload(file.toFile(), (int) Math.max(1, session.timeout().toSeconds()));
                 session.waitForVaadin();
             } finally {
                 try {
