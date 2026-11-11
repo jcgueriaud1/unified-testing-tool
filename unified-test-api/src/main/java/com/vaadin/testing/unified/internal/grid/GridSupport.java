@@ -197,6 +197,11 @@ public final class GridSupport {
         }
 
         @Override
+        public String getCellText(int columnIndex) {
+            return access(grid).cellText(index.get(), columnIndex);
+        }
+
+        @Override
         public Scope cell(String columnHeader) {
             return scope(grid, description + ".cell(\"" + columnHeader + "\")",
                     access -> access.cell(index.get(), columnIndex(access, columnHeader)));

@@ -49,6 +49,14 @@ class GridTest {
     }
 
     @Test
+    void readsACellByColumnIndex(UnifiedPage page) {
+        UnifiedGrid users = grid(page, "users");
+
+        assertEquals("User 1", users.row(0).getCellText(0));
+        assertEquals("user110@example.com", users.rows().withCellText("Name", "User 110").single().getCellText(1));
+    }
+
+    @Test
     void combinesCellFilters(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 

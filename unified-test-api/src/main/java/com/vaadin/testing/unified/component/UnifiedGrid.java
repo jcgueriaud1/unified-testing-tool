@@ -55,6 +55,8 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
         UnifiedGrid grid();
         int getIndex();
         String getCellText(String columnHeader);
+        /** By index among the visible columns: for columns without header text; prefer the header. */
+        String getCellText(int columnIndex);
         /** Components inside the cell, e.g. an Edit button. */
         Scope cell(String columnHeader);
         void select();
