@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues are tracked in this repo's GitHub Issues (`jcgueriaud1/unified-testing-tool`). See `docs/agents/issue-tracker.md`.
+Issues are tracked in this repo's GitHub Issues (`parttio/unified-testing-tool`). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
