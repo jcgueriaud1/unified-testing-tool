@@ -12,8 +12,8 @@ import org.openrewrite.test.RewriteTest;
 /** The composite Migration Recipe, one case per rule. */
 class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
-    /** The released Unified API version the recipes add; resolvable from Maven Central. */
-    private static final String UNIFIED_VERSION = "0.1.0-alpha2";
+    /** The Unified API version the recipes add: this build's, installed in the local repository by the reactor. */
+    private static final String UNIFIED_VERSION = System.getProperty("unified.version");
 
     @Override
     public void defaults(RecipeSpec spec) {
@@ -230,7 +230,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     <dependencies>
                         <dependency>
                             <groupId>com.vaadin</groupId>
-                            <artifactId>vaadin-testbench-core-junit5</artifactId>
+                            <artifactId>vaadin-testbench-core-junit6</artifactId>
                             <scope>test</scope>
                         </dependency>
                     </dependencies>
@@ -343,5 +343,36 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             </dependencies>
                         </project>
                         """.formatted(UNIFIED_VERSION)));
+    }
+
+    @Test
+    void aTestGatedOnTheTestingToolSettingRunsOnEveryTestingTool() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+
+                @EnabledIfSystemProperty(named = "vaadin.testing.tool", matches = "selenium")
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void opensProfile() {
+                        getDriver().get("http://localhost:8080/profile");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    @Test
+                    void opensProfile(UnifiedPage page) {
+                        page.navigate("profile");
+                    }
+                }
+                """));
     }
 }

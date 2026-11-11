@@ -10,7 +10,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.ScanningRecipe;
 import org.openrewrite.TreeVisitor;
+import org.openrewrite.java.AnnotationMatcher;
 import org.openrewrite.java.JavaIsoVisitor;
+import org.openrewrite.java.RemoveAnnotationVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.Expression;
@@ -30,6 +32,9 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
     static final String BROWSER_TEST = "com.vaadin.testbench.BrowserTest";
     static final String LOCAL_SERVER_PORT = "org.springframework.boot.test.web.server.LocalServerPort";
     static final String ROUTE = "com.vaadin.flow.router.Route";
+    /** Gated on the Unified API's own setting, a TestBench test ran only on Selenium; migrated, it runs on all. */
+    private static final AnnotationMatcher TESTING_TOOL_GATE = new AnnotationMatcher(
+            "@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = \"vaadin.testing.tool\")");
     static final String UNIFIED_PAGE = "com.vaadin.testing.unified.UnifiedPage";
 
     private static final MethodMatcher DRIVER_GET = new MethodMatcher("org.openqa.selenium.WebDriver get(String)");
@@ -98,6 +103,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
                 }
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
                 c = c.withExtends(null);
+                doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
                 c = c.withBody(c.getBody().withStatements(withoutUnusedPortFields(c)));
                 maybeRemoveImport(BROWSER_TEST_BASE);
                 maybeRemoveImport(LOCAL_SERVER_PORT);
