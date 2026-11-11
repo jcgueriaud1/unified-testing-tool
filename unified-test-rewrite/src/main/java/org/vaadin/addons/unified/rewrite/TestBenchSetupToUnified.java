@@ -1,4 +1,4 @@
-package com.vaadin.testing.unified.rewrite;
+package org.vaadin.addons.unified.rewrite;
 
 import java.util.ArrayList;
 import java.util.HashMap;

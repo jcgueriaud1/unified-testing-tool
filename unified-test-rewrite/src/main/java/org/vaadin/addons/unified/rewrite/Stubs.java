@@ -1,4 +1,4 @@
-package com.vaadin.testing.unified.rewrite;
+package org.vaadin.addons.unified.rewrite;
 
 import static java.util.Collections.emptyList;
 
@@ -23,6 +23,16 @@ final class Stubs {
                 void navigate(String path);
                 void navigate(Class<?> view);
                 Object find(Class<?> type);
+            }
+            """,
+            """
+            package com.vaadin.testing.unified.assertion;
+            public final class UnifiedAssertions {
+                public static Assert assertThat(Object wrapper) { return null; }
+                public interface Assert {
+                    Assert hasValue(Object value);
+                    Assert hasText(String text);
+                }
             }
             """
     };
