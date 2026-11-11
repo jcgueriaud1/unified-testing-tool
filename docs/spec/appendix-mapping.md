@@ -41,7 +41,9 @@ How each Unified API call maps onto the three Testing Tools: Browserless Test 25
 | Unified API | Browserless | Dramafinder | TestBench |
 |---|---|---|---|
 | `rows().withCellText(col, text)` | scan `getCellText(row, col)` | `findRowIndexesWithColumnText` | scan `getCell(row, col).getText()` |
+| `rows().withCellText(text)`, any column | the same, over every column | the same, over every column | `getCell(text)` (first match) |
 | `row.getCellText(col)` | `getCellText(row, col)` | `getCell(..).getText()` | `getCell(row, col).getText()` |
+| `row.getCellText(index)` | `getCellText(row, index)` | `getCell(..).getText()` | `getCell(row, index).getText()` |
 | `row.cell(col).find(..)` | `getCellComponent(row, col)` | cell content locator | cell element `$(..)` |
 | `row.select()` | `select(row)` | row checkbox / click | `select(row)` |
 | `column.sort(dir)` | `sortByColumn(col, dir)` | header sorter click | header sorter click |

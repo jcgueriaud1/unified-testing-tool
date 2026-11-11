@@ -39,8 +39,8 @@ flowchart TD
 | Object | Members |
 |---|---|
 | `UnifiedGrid` | `rows()`, `row(i)`, `getRowCount()`, `column(header)`, `columnWithId(id)`, `column(index)`, `getColumnHeaders()`, `selectAll()`, `deselectAll()` |
-| `RowQuery` | `withCellText(column, text)`, `withCellTextContaining(..)`, `selected()`, `single()`, `all()`, `exists()` |
-| `UnifiedGridRow` | `getIndex()`, `getCellText(column)`, `cell(column)` (Scope), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `isDetailsOpen()`, `details()` (Scope) |
+| `RowQuery` | `withCellText(column, text)`, `withCellText(text)` (any column; reads every column, so slower on large lazy Grids), `withCellTextContaining(..)`, `selected()`, `single()`, `all()`, `exists()` |
+| `UnifiedGridRow` | `getIndex()`, `getCellText(column)`, `getCellText(index)` (columns without header text), `cell(column)` (Scope), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `isDetailsOpen()`, `details()` (Scope) |
 | `UnifiedGridColumn` | `header()` (Scope), `sort(direction)`, `getSortDirection()`, `getCellTexts()` |
 
 | Retrying assertion | On |
