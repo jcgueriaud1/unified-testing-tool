@@ -33,6 +33,7 @@ flowchart TD
 | Case | Use |
 |---|---|
 | Test needs one tool | `@RequiresTestingTool(PLAYWRIGHT)` + `unwrap` |
+| TestBench test base API (`$(..)`, `executeScript`, `waitUntil`) on Selenium, as in a migrated test | `TestBenchEscapeHatch.of(page)` + `@RequiresTestingTool(SELENIUM)` ([ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md)) |
 | Extra check, test runs everywhere | `tryUnwrap`, no annotation |
 | Server-side state (fields, beans) | `unwrap(Component.class)` + `@RequiresTestingTool(BROWSERLESS)` |
 | Disable Auto-Wait, back/forward, network, tracing | the tool's own API |

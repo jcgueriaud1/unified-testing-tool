@@ -13,8 +13,9 @@ TestBench (24.x and later) comes first, then Browserless, then Dramafinder.
 
 ## Rules for the TestBench recipes
 
-- **Partial conversion, never a broken test.** Mappable code is rewritten. Unmappable code (raw `WebElement`, `executeScript`, `getDriver()`, Selenium Grid or `@RunLocally` setup) goes through the Escape Hatch (`page.unwrap(WebDriver.class)`) with a Migration Marker. Every converted test still compiles and passes on its original Testing Tool.
-- **Capabilities:** a test that got a `WebDriver` Escape Hatch gets `@RequiresTestingTool(SELENIUM)`, a test using browser-only behaviour (scripts, screenshots, focus and keyboard) gets `@RequiresBrowser`, and a fully converted test gets none and runs everywhere.
+- **Partial conversion, never a broken test.** Mappable code is rewritten. A lookup is converted only when its Wrapper has every call made on it. Calls to TestBench's test base that no rule converts (`$(GridElement.class)`, `executeScript`, `waitUntil`, ...) go through `TestBenchEscapeHatch.of(page)` (`unified-test-selenium`: TestBench's test base API on the Unified Page's driver), each statement with a Migration Marker. Every converted test still compiles and passes on its original Testing Tool.
+- **`@BeforeEach` and helper methods** that use TestBench get the Unified Page as a parameter; a `@BeforeEach` becomes a call at the start of every test, since a lifecycle method gets a page of its own.
+- **Capabilities:** a test that goes through `TestBenchEscapeHatch`, itself or through a helper, gets `@RequiresTestingTool(SELENIUM)`, and a fully converted test gets none and runs everywhere. `@RequiresBrowser` comes with the first rule that converts a browser-only call (screenshots, focus and keyboard) into Unified code.
 - **`first()` and `waitForFirst()`** become `single()` with a Migration Marker (`was first()`); a converted test that now fails with "several matches" needs a better filter.
 - **Assertions:** recognisable JUnit assertions on `getText`, `getValue`, `isOpen` and `isEnabled` become retrying `UnifiedAssertions`, and the `waitForFirst()`/`waitUntil` they made unnecessary are dropped. Other assertions are left as they are.
 - **Button `withLabel`/`withCaption`** become `withText` or `withAccessibleName` ([ADR 0001](0001-locator-filters-follow-component-type.md)).
