@@ -2,26 +2,21 @@ package org.vaadin.addons.unified.rewrite;
 
 import static java.util.Collections.emptyList;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.openrewrite.Cursor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
-import org.openrewrite.java.tree.Comment;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JRightPadded;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Space;
-import org.openrewrite.java.tree.Statement;
-import org.openrewrite.java.tree.TextComment;
 import org.openrewrite.marker.Markers;
 
 /**
@@ -69,13 +64,14 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                 if (method.getBody() == null || !Pages.hasPageParameter(method)) {
                     return method;
                 }
-                Map<UUID, List<String>> leftovers = new LinkedHashMap<>();
-                getCursor().putMessage(LEFTOVERS, leftovers);
+                Map<UUID, List<String>> markers = MigrationMarkers.collect(getCursor());
+                AtomicBoolean escapes = new AtomicBoolean();
+                getCursor().putMessage(LEFTOVERS, escapes);
                 J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
-                if (leftovers.isEmpty()) {
+                if (!escapes.get()) {
                     return m;
                 }
-                m = m.withBody(m.getBody().withStatements(marked(m.getBody().getStatements(), leftovers)));
+                m = MigrationMarkers.write(m, markers);
                 maybeAddImport(ESCAPE_HATCH);
                 maybeAddImport(REQUIRES_TESTING_TOOL);
                 maybeAddImport(TESTING_TOOL);
@@ -95,31 +91,14 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
-                Map<UUID, List<String>> leftovers = getCursor().getNearestMessage(LEFTOVERS);
-                if (leftovers == null || m.getSelect() != null || !isTestBaseCall(m)) {
+                AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
+                if (escapes == null || m.getSelect() != null || !isTestBaseCall(m)
+                        || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + method.printTrimmed(getCursor()))) {
                     return m;
                 }
-                Cursor statement = statementInMethodBody();
-                if (statement == null) {
-                    return m;
-                }
-                leftovers.computeIfAbsent(((Statement) statement.getValue()).getId(), id -> new ArrayList<>())
-                        .add(method.printTrimmed(getCursor()));
+                escapes.set(true);
                 return m.getPadding().withSelect(JRightPadded.build(new J.Identifier(Tree.randomId(), Space.EMPTY,
                         Markers.EMPTY, emptyList(), VARIABLE, JavaType.ShallowClass.build(ESCAPE_HATCH), null)));
-            }
-
-            /** The statement of the method body this invocation is part of. */
-            private Cursor statementInMethodBody() {
-                Cursor c = getCursor();
-                while (c.getParent() != null) {
-                    Cursor parent = c.getParentTreeCursor();
-                    if (parent.getValue() instanceof J.Block && parent.getParentTreeCursor().getValue() instanceof J.MethodDeclaration) {
-                        return c;
-                    }
-                    c = parent;
-                }
-                return null;
             }
         };
     }
@@ -127,22 +106,5 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
     private static boolean isTestBaseCall(J.MethodInvocation m) {
         JavaType.Method type = m.getMethodType();
         return type != null && TEST_BASE_TYPES.contains(type.getDeclaringType().getFullyQualifiedName());
-    }
-
-    /** The statements, each one with leftovers preceded by a Migration Marker naming them. */
-    private static List<Statement> marked(List<Statement> statements, Map<UUID, List<String>> leftovers) {
-        List<Statement> result = new ArrayList<>();
-        for (Statement s : statements) {
-            List<String> calls = leftovers.get(s.getId());
-            if (calls != null) {
-                String indent = s.getPrefix().getIndent();
-                List<Comment> comments = new ArrayList<>(s.getPrefix().getComments());
-                comments.add(new TextComment(false, " TODO unified: TestBench Escape Hatch: " + String.join(", ", calls),
-                        "\n" + indent, Markers.EMPTY));
-                s = s.withPrefix(s.getPrefix().withComments(comments));
-            }
-            result.add(s);
-        }
-        return result;
     }
 }

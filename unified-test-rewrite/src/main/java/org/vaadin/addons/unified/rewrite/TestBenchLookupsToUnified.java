@@ -2,6 +2,7 @@ package org.vaadin.addons.unified.rewrite;
 
 import static java.util.Collections.emptyList;
 
+import java.util.Set;
 import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
@@ -23,6 +24,8 @@ public class TestBenchLookupsToUnified extends Recipe {
 
     private static final MethodMatcher DOLLAR = new MethodMatcher("com.vaadin.testbench.HasElementQuery $(java.lang.Class)", true);
 
+    private static final Set<String> FIRST = Set.of("first", "waitForFirst");
+
     @Override
     public String getDisplayName() {
         return "Migrate TestBench element lookups to Unified Page lookups";
@@ -36,6 +39,12 @@ public class TestBenchLookupsToUnified extends Recipe {
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
+            @Override
+            public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
+                var markers = MigrationMarkers.collect(getCursor());
+                return MigrationMarkers.write(super.visitMethodDeclaration(method, ctx), markers);
+            }
+
             @Override
             public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext ctx) {
                 J.MethodDeclaration method = getCursor().firstEnclosing(J.MethodDeclaration.class);
@@ -54,6 +63,15 @@ public class TestBenchLookupsToUnified extends Recipe {
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+                if (FIRST.contains(m.getSimpleName()) && hasPageParameter()) {
+                    Wrappers.Wrapper wrapper = Wrappers.ofLookup(method);
+                    if (wrapper != null && onlyUsesWhatTheWrapperHas(getCursor(), true, wrapper)
+                            && MigrationMarkers.add(getCursor(),
+                                    "was " + m.getSimpleName() + "(); single() fails when several components match")) {
+                        return m.withName(m.getName().withSimpleName("single"));
+                    }
+                    return m;
+                }
                 if (!DOLLAR.matches(m) || m.getSelect() != null || !hasPageParameter()
                         || !(m.getArguments().get(0) instanceof J.FieldAccess classLiteral)
                         || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
@@ -78,8 +96,12 @@ public class TestBenchLookupsToUnified extends Recipe {
              * most one of the Wrapper's methods, or ends in a Unified assertion or a statement of its own.
              */
             private boolean onlyUsesWhatTheWrapperHas(Wrappers.Wrapper wrapper) {
-                Cursor c = getCursor();
-                boolean found = false;
+                return onlyUsesWhatTheWrapperHas(getCursor(), false, wrapper);
+            }
+
+            private boolean onlyUsesWhatTheWrapperHas(Cursor start, boolean afterTerminal, Wrappers.Wrapper wrapper) {
+                Cursor c = start;
+                boolean found = afterTerminal;
                 while (true) {
                     Cursor parent = c.getParentTreeCursor();
                     if (!(parent.getValue() instanceof J.MethodInvocation call) || call.getSelect() != c.getValue()) {
@@ -89,7 +111,7 @@ public class TestBenchLookupsToUnified extends Recipe {
                                                 variable) != null);
                     }
                     String name = call.getSimpleName();
-                    if (!found && name.equals("single")) {
+                    if (!found && Wrappers.TERMINALS.contains(name)) {
                         found = true;
                     } else if (!found && wrapper.filters().contains(name)) {
                         // a filter before the terminal

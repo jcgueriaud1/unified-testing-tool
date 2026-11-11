@@ -534,4 +534,42 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void firstBecomesSingleWithAMarker() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void saves() {
+                        $(ButtonElement.class).withText("Save").first().click();
+                        Assertions.assertEquals("Archive", $(ButtonElement.class).withText("Archive").waitForFirst().getText());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class ProfileTest {
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        // TODO unified: was first(); single() fails when several components match
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        // TODO unified: was waitForFirst(); single() fails when several components match
+                        assertThat(page.find(UnifiedButton.class).withText("Archive").single()).hasText("Archive");
+                    }
+                }
+                """));
+    }
 }

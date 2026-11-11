@@ -23,6 +23,9 @@ final class Wrappers {
         }
     }
 
+    /** TestBench query terminals; {@code first()} and {@code waitForFirst()} become {@code single()}. */
+    static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst");
+
     private static final Set<String> COMMON_FILTERS = Set.of("withId", "withClassName", "withTheme");
 
     private static final Map<String, Wrapper> BY_ELEMENT = Map.of(
@@ -46,10 +49,10 @@ final class Wrappers {
 
     /**
      * The Wrapper an element expression converts to, when it is a lookup the Wrapper can express:
-     * {@code $(XElement.class)}, then only the Wrapper's filters, then {@code single()}. Else {@code null}.
+     * {@code $(XElement.class)}, then only the Wrapper's filters, then a terminal. Else {@code null}.
      */
     static Wrapper ofLookup(Expression element) {
-        if (!(element instanceof J.MethodInvocation terminal) || !terminal.getSimpleName().equals("single")) {
+        if (!(element instanceof J.MethodInvocation terminal) || !TERMINALS.contains(terminal.getSimpleName())) {
             return null;
         }
         Expression e = terminal.getSelect();
