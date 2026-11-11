@@ -496,4 +496,42 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void aLocalHoldingAConvertedLookupTakesTheWrapperType() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void savesTheName() {
+                        TextFieldElement name = $(TextFieldElement.class).withLabel("Name").single();
+                        name.setValue("Alice");
+                        Assertions.assertEquals("Alice", name.getValue());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class ProfileTest {
+
+                    @Test
+                    void savesTheName(UnifiedPage page) {
+                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+                        name.setValue("Alice");
+                        assertThat(name).hasValue("Alice");
+                    }
+                }
+                """));
+    }
 }

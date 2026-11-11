@@ -1,9 +1,13 @@
 package org.vaadin.addons.unified.rewrite;
 
+import static java.util.Collections.emptyList;
+
 import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
+import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
+import org.openrewrite.marker.Markers;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
@@ -32,6 +36,21 @@ public class TestBenchLookupsToUnified extends Recipe {
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
+            @Override
+            public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext ctx) {
+                J.MethodDeclaration method = getCursor().firstEnclosing(J.MethodDeclaration.class);
+                Wrappers.Wrapper wrapper = method == null || multiVariable.getVariables().size() != 1
+                        || multiVariable.getTypeExpression() == null || !Pages.hasPageParameter(method)
+                        ? null : Locals.wrapperOf(method, multiVariable.getVariables().get(0));
+                J.VariableDeclarations v = super.visitVariableDeclarations(multiVariable, ctx);
+                if (wrapper == null) {
+                    return v;
+                }
+                maybeAddImport(wrapper.fqn());
+                return v.withTypeExpression(new J.Identifier(Tree.randomId(), v.getTypeExpression().getPrefix(),
+                        Markers.EMPTY, emptyList(), wrapper.simpleName(), JavaType.ShallowClass.build(wrapper.fqn()), null));
+            }
+
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
@@ -64,7 +83,10 @@ public class TestBenchLookupsToUnified extends Recipe {
                 while (true) {
                     Cursor parent = c.getParentTreeCursor();
                     if (!(parent.getValue() instanceof J.MethodInvocation call) || call.getSelect() != c.getValue()) {
-                        return found && (parent.getValue() instanceof J.Block || isUnifiedAssertion(parent.getValue()));
+                        return found && (parent.getValue() instanceof J.Block || TestBenchAssertionsToUnified.isUnifiedAssertion(parent.getValue())
+                                || parent.getValue() instanceof J.VariableDeclarations.NamedVariable variable
+                                        && Locals.wrapperOf(getCursor().firstEnclosing(J.MethodDeclaration.class),
+                                                variable) != null);
                     }
                     String name = call.getSimpleName();
                     if (!found && name.equals("single")) {
@@ -76,13 +98,6 @@ public class TestBenchLookupsToUnified extends Recipe {
                     }
                     c = parent;
                 }
-            }
-
-            private boolean isUnifiedAssertion(Object tree) {
-                return tree instanceof J.MethodInvocation call && call.getSimpleName().equals("assertThat")
-                        && call.getMethodType() != null
-                        && call.getMethodType().getDeclaringType().getFullyQualifiedName()
-                                .equals(TestBenchAssertionsToUnified.UNIFIED_ASSERTIONS);
             }
 
             private boolean hasPageParameter() {

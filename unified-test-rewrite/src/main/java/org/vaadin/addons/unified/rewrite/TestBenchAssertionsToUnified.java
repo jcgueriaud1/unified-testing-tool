@@ -22,6 +22,13 @@ public class TestBenchAssertionsToUnified extends Recipe {
     /** Getter on the element → the Unified assertion that retries it. */
     private static final Map<String, String> ASSERTION_BY_GETTER = Map.of("getValue", "hasValue", "getText", "hasText");
 
+    /** Whether the tree is a {@code UnifiedAssertions.assertThat(..)} call, such as this recipe writes. */
+    static boolean isUnifiedAssertion(Object tree) {
+        return tree instanceof J.MethodInvocation call && call.getSimpleName().equals("assertThat")
+                && call.getMethodType() != null
+                && call.getMethodType().getDeclaringType().getFullyQualifiedName().equals(UNIFIED_ASSERTIONS);
+    }
+
     @Override
     public String getDisplayName() {
         return "Migrate JUnit assertions on TestBench elements to retrying Unified assertions";
@@ -44,7 +51,9 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         || getter.getSelect() == null) {
                     return m;
                 }
-                Wrappers.Wrapper wrapper = Wrappers.ofLookup(getter.getSelect());
+                Wrappers.Wrapper wrapper = getter.getSelect() instanceof J.Identifier local
+                        ? Locals.wrapperOf(getCursor(), local)
+                        : Wrappers.ofLookup(getter.getSelect());
                 if (wrapper == null || !wrapper.methods().contains(getter.getSimpleName())) {
                     return m;
                 }
