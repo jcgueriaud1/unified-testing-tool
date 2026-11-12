@@ -910,4 +910,40 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void radioButtonGroupCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.radiobutton.testbench.RadioButtonGroupElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class OrderTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void picksDelivery() {
+                        $(RadioButtonGroupElement.class).withLabel("Delivery").single().selectByText("Express");
+                        Assertions.assertEquals("Express", $(RadioButtonGroupElement.class).withLabel("Delivery").single().getSelectedText());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class OrderTest {
+
+                    @Test
+                    void picksDelivery(UnifiedPage page) {
+                        page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery").single().selectItem("Express");
+                        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery").single()).hasSelectedItem("Express");
+                    }
+                }
+                """));
+    }
 }

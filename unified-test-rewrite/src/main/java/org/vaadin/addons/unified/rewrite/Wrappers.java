@@ -79,6 +79,11 @@ final class Wrappers {
                     with(COMMON_FILTERS, "withLabel", "withPlaceholder"),
                     Set.of("clear", "getLabel", "getPlaceholder", "isEnabled"),
                     SINGLE_SELECT_RENAMES)),
+            Map.entry("com.vaadin.flow.component.radiobutton.testbench.RadioButtonGroupElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedRadioButtonGroup",
+                    with(COMMON_FILTERS, "withLabel"),
+                    Set.of("getLabel", "isEnabled"),
+                    SINGLE_SELECT_RENAMES)),
             Map.entry("com.vaadin.flow.component.grid.testbench.GridElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedGrid",
                     COMMON_FILTERS,
                     // row and rows are what GridCells writes for getCell(..)
