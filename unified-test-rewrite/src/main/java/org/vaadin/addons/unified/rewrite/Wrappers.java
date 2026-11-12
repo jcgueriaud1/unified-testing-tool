@@ -90,6 +90,11 @@ final class Wrappers {
                     Set.of("getLabel", "getPlaceholder", "isEnabled"),
                     Map.of("selectByText", "selectItems", "deselectByText", "deselectItems", "deselectAll", "clear",
                             "getSelectedTexts", "getSelectedItems", "getOptions", "getItems"))),
+            Map.entry("com.vaadin.flow.component.datepicker.testbench.DatePickerElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedDatePicker",
+                    with(COMMON_FILTERS, "withLabel", "withPlaceholder"),
+                    Set.of("clear", "getLabel", "getPlaceholder", "getHelperText", "getErrorMessage", "isEnabled"),
+                    Map.of("setDate", "setValue", "getDate", "getValue", "setInputValue", "typeText"))),
             Map.entry("com.vaadin.flow.component.grid.testbench.GridElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedGrid",
                     COMMON_FILTERS,
                     // row and rows are what GridCells writes for getCell(..)

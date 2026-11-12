@@ -993,4 +993,47 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void datePickerCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.datepicker.testbench.DatePickerElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Assertions;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void setsTheBirthday() {
+                        DatePickerElement birthday = $(DatePickerElement.class).withLabel("Birthday").single();
+                        birthday.setDate(LocalDate.of(1990, 5, 17));
+                        Assertions.assertEquals(LocalDate.of(1990, 5, 17), birthday.getDate());
+                        birthday.setInputValue("1/2/2000");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedDatePicker;
+                import org.junit.jupiter.api.Test;
+
+                import java.time.LocalDate;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class PreferencesTest {
+
+                    @Test
+                    void setsTheBirthday(UnifiedPage page) {
+                        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday").single();
+                        birthday.setValue(LocalDate.of(1990, 5, 17));
+                        assertThat(birthday).hasValue(LocalDate.of(1990, 5, 17));
+                        birthday.typeText("1/2/2000");
+                    }
+                }
+                """));
+    }
 }
