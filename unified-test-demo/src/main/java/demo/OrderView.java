@@ -10,6 +10,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /** Selection fields; items are objects shown through an item label generator. */
 @AnonymousAllowed
@@ -19,6 +20,8 @@ public class OrderView extends VerticalLayout {
     public record Country(String code, String name) {}
 
     public enum Size { SMALL, MEDIUM, LARGE }
+
+    static final int AIRPORT_COUNT = 120;
 
     public OrderView() {
         ComboBox<Country> country = new ComboBox<>("Country");
@@ -45,6 +48,14 @@ public class OrderView extends VerticalLayout {
                 + ", " + toppings.getValue().stream().sorted().collect(Collectors.joining("+"))
                 + ", coupon " + coupon.getValue()));
 
-        add(country, coupon, size, toppings, order);
+        // lazy: more items than the drop-down loads at once (a page is 50)
+        ComboBox<String> airport = new ComboBox<>("Airport");
+        airport.setItems(query -> IntStream.rangeClosed(1, AIRPORT_COUNT).mapToObj(i -> "Airport " + i)
+                        .filter(a -> a.toLowerCase().contains(query.getFilter().orElse("").toLowerCase()))
+                        .skip(query.getOffset()).limit(query.getLimit()),
+                query -> (int) IntStream.rangeClosed(1, AIRPORT_COUNT).mapToObj(i -> "Airport " + i)
+                        .filter(a -> a.toLowerCase().contains(query.getFilter().orElse("").toLowerCase())).count());
+
+        add(country, coupon, size, toppings, airport, order);
     }
 }

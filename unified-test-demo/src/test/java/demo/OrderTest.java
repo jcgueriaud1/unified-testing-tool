@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.vaadin.testing.unified.RequiresTestingTool;
+import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedComboBox;
@@ -59,6 +61,19 @@ class OrderTest {
                 .hasItems("Small", "Medium", "Large");
         assertEquals(List.of("Cheese", "Ham", "Mushrooms", "Olives"),
                 page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").single().getItems());
+    }
+
+    /** Every item, not only the first page the drop-down loads. */
+    @Test
+    @RequiresTestingTool({ TestingTool.BROWSERLESS, TestingTool.PLAYWRIGHT }) // Selenium: first page only (#127)
+    void listsEveryItemOfALazyComboBox(UnifiedPage page) {
+        page.navigate(OrderView.class);
+
+        List<String> airports = page.find(UnifiedComboBox.class).withLabel("Airport").single().getItems();
+
+        assertEquals(OrderView.AIRPORT_COUNT, airports.size());
+        assertEquals("Airport 1", airports.get(0));
+        assertEquals("Airport 120", airports.get(OrderView.AIRPORT_COUNT - 1));
     }
 
     @Test

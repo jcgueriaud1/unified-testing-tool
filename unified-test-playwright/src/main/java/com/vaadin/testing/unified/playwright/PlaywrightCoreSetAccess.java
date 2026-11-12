@@ -1,10 +1,8 @@
 package com.vaadin.testing.unified.playwright;
 
 import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.FilePayload;
 import com.vaadin.testing.unified.UnifiedElement;
-import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
@@ -12,14 +10,53 @@ import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.util.List;
 import org.vaadin.addons.dramafinder.AutoWait;
+import org.vaadin.addons.dramafinder.element.DateTimePickerElement;
 import org.vaadin.addons.dramafinder.element.DetailsElement;
+import org.vaadin.addons.dramafinder.element.MenuBarElement;
+import org.vaadin.addons.dramafinder.element.MenuElement;
+import org.vaadin.addons.dramafinder.element.MenuItemElement;
+import org.vaadin.addons.dramafinder.element.TabElement;
 import org.vaadin.addons.dramafinder.element.TabsElement;
+import org.vaadin.addons.dramafinder.element.UploadElement;
 
-/** Access to Tabs, Details, MenuBar, Upload and DateTimePicker on Playwright. */
+/**
+ * Access to Tabs, Details, MenuBar, Upload and DateTimePicker on Playwright, through Dramafinder's elements.
+ * Explicit waits after their actions keep Auto-Wait when Dramafinder's own is switched off.
+ */
 final class PlaywrightCoreSetAccess {
     private PlaywrightCoreSetAccess() {}
 
-    /** A bare Tabs bar through Dramafinder's TabsElement: TabSheetAccess without content; tabs by Item Name. */
+    /** Fails at once, listing the names, when no item has this one: a locator matching nothing would wait. */
+    static void requireName(List<String> names, String name, String what) {
+        if (!names.contains(name)) {
+            throw new IllegalArgumentException("No " + what + " \"" + name + "\"; there are " + names);
+        }
+    }
+
+    /**
+     * Tabs of a Tabs bar or a TabSheet by their Item Name: Dramafinder's tab label is the tab's own text, or
+     * its {@code aria-label} when it shows no text.
+     */
+    static final class Tabs {
+        private Tabs() {}
+
+        static String selected(TabsElement bar) {
+            int index = bar.getSelectedIndex();
+            return index < 0 ? null : bar.getTab(index).getLabel();
+        }
+
+        static TabElement tab(TabsElement bar, String label) {
+            requireName(bar.getTabLabels(), label, "tab");
+            return bar.getTab(label);
+        }
+
+        static void select(PlaywrightSession session, TabsElement bar, String label) {
+            tab(bar, label).select();
+            AutoWait.waitForVaadinIdle(session.page());
+        }
+    }
+
+    /** A bare Tabs bar through Dramafinder's TabsElement: TabSheetAccess without content. */
     record TabsAccess(PlaywrightSession session, Locator locator) implements TabSheetAccess {
         private TabsElement bar() {
             return new TabsElement(locator);
@@ -27,22 +64,22 @@ final class PlaywrightCoreSetAccess {
 
         @Override
         public List<String> tabs() {
-            return PlaywrightTabItems.names(bar().getTabs());
+            return bar().getTabLabels();
         }
 
         @Override
         public String selectedTab() {
-            return PlaywrightTabItems.selected(bar().getTabs());
+            return Tabs.selected(bar());
         }
 
         @Override
         public boolean isEnabled(String label) {
-            return PlaywrightTabItems.isEnabled(bar().getTabs(), label);
+            return Tabs.tab(bar(), label).isEnabled();
         }
 
         @Override
         public void select(String label) {
-            PlaywrightTabItems.select(session, bar().getTabs(), label);
+            Tabs.select(session, bar(), label);
         }
 
         @Override
@@ -52,157 +89,113 @@ final class PlaywrightCoreSetAccess {
     }
 
     record DetailsAccessImpl(PlaywrightSession session, Locator locator) implements DetailsAccess {
+        private DetailsElement details() {
+            return new DetailsElement(locator);
+        }
+
         @Override
         public String summaryText() {
-            return new DetailsElement(locator).getSummaryText().strip();
+            return details().getSummaryText().strip();
         }
 
         @Override
         public boolean isOpen() {
-            return new DetailsElement(locator).isOpen();
+            return details().isOpen();
         }
 
         @Override
         public void toggle() {
-            new DetailsElement(locator).getSummaryLocator().click();
+            details().toggle();
             AutoWait.afterAction(session.page());
         }
 
-        /** Everything but the summary: Flow puts the content in a div. */
+        /** Everything but the summary, open or closed. */
         @Override
         public UnifiedElement content() {
-            Locator content = locator.locator("xpath=./*[not(self::vaadin-details-summary)]");
-            return new PlaywrightElement(session, content, null, PlaywrightComponents.DEFAULT);
+            return new PlaywrightElement(session, details().getContentLocator(), null, PlaywrightComponents.DEFAULT);
         }
     }
 
-    /**
-     * Top-level items are the menu bar's buttons; a sub-menu is the last visible list box in the menu bar
-     * (each opened sub-menu comes after its parent in the page).
-     */
+    /** Through Dramafinder's MenuBarElement: items by their Item Name, each sub-menu scoped to its level. */
     record MenuBarAccessImpl(PlaywrightSession session, Locator locator) implements MenuBarAccess {
-        private static final String NAMES = "els => els.map(" + BrowserQueries.ITEM_NAME + ")";
-        private static final String ENABLED = "e => !(e.hasAttribute('disabled') || e.getAttribute('aria-disabled') === 'true')";
-
-        private Locator topLevel() {
-            return locator.locator("xpath=./vaadin-menu-bar-button[not(@hidden)]");
+        private MenuBarElement bar() {
+            return new MenuBarElement(locator);
         }
 
-        private Locator openMenus() {
-            return locator.locator("vaadin-menu-bar-list-box:visible");
-        }
-
-        /** The sub-menu opened last, pinned: opening the next one doesn't change what it points to. */
-        private Locator openMenu() {
-            int open = openMenus().count();
-            if (open == 0) {
-                throw new IllegalStateException("No sub-menu is open");
-            }
-            return openMenus().nth(open - 1);
-        }
-
-        @SuppressWarnings("unchecked")
         @Override
         public List<String> items(List<String> path) {
             if (path.isEmpty()) {
-                return (List<String>) topLevel().evaluateAll(NAMES);
+                return bar().getItemLabels();
             }
-            open(path);
+            MenuElement menu = open(path);
             try {
-                return (List<String>) openMenu().locator("xpath=./vaadin-menu-bar-item").evaluateAll(NAMES);
+                return menu.getItemLabels();
             } finally {
-                close();
+                bar().close();
             }
         }
 
         @Override
         public void click(List<String> path) {
-            if (path.size() > 1) {
-                open(path.subList(0, path.size() - 1));
+            if (path.size() == 1) {
+                topLevel(path.get(0)).click();
+            } else {
+                item(open(path.subList(0, path.size() - 1)), path).click();
             }
-            item(path, path.size() - 1).click();
             AutoWait.afterAction(session.page());
         }
 
         @Override
         public boolean isEnabled(List<String> path) {
             if (path.size() == 1) {
-                return Boolean.TRUE.equals(item(path, 0).evaluate(ENABLED));
+                return topLevel(path.get(0)).isEnabled();
             }
-            open(path.subList(0, path.size() - 1));
+            MenuElement menu = open(path.subList(0, path.size() - 1));
             try {
-                return Boolean.TRUE.equals(item(path, path.size() - 1).evaluate(ENABLED));
+                return item(menu, path).isEnabled();
             } finally {
-                close();
+                bar().close();
             }
         }
 
-        /** Opens the menus of every item of the path: each click opens one more sub-menu. */
-        private void open(List<String> path) {
-            for (int i = 0; i < path.size(); i++) {
-                int before = openMenus().count();
-                item(path, i).click();
-                AutoWait.afterAction(session.page());
-                locator.page().waitForCondition(() -> openMenus().count() > before,
-                        new Page.WaitForConditionOptions().setTimeout(5000));
+        /** Opens the menus of every item of the path; returns the last one opened. */
+        private MenuElement open(List<String> path) {
+            topLevel(path.get(0));
+            MenuElement menu = bar().openSubMenu(path.get(0));
+            for (int i = 1; i < path.size(); i++) {
+                item(menu, path.subList(0, i + 1));
+                menu = menu.openSubMenu(path.get(i));
             }
+            return menu;
         }
 
-        /** The item of this Item Name at this level of the path. */
-        @SuppressWarnings("unchecked")
-        private Locator item(List<String> path, int level) {
-            Locator candidates = level == 0 ? topLevel() : openMenu().locator("xpath=./vaadin-menu-bar-item");
-            String name = path.get(level);
-            List<String> names = (List<String>) candidates.evaluateAll(NAMES);
-            int index = names.indexOf(name);
-            if (index < 0) {
-                throw new IllegalArgumentException("No menu item \"" + name + "\" at " + path.subList(0, level + 1)
-                        + "; there are " + names);
-            }
-            return candidates.nth(index);
+        private MenuItemElement topLevel(String name) {
+            requireName(bar().getItemLabels(), name, "menu item");
+            return bar().getMenuItemElement(name);
         }
 
-        /**
-         * Closes the open menus and waits until they are gone: a closing sub-menu stays visible while it
-         * animates, and opening the menu again would count it as open.
-         */
-        private void close() {
-            locator.page().keyboard().press("Escape");
-            if (locator.locator("vaadin-menu-bar-submenu[opened]:not([closing])").count() > 0) {
-                locator.page().keyboard().press("Escape");
-            }
-            locator.page().waitForCondition(() -> openMenus().count() == 0,
-                    new Page.WaitForConditionOptions().setTimeout(5000));
+        /** The last item of {@code path}, in {@code menu}. */
+        private static MenuItemElement item(MenuElement menu, List<String> path) {
+            String name = path.get(path.size() - 1);
+            requireName(menu.getItemLabels(), name, "menu item at " + path);
+            return menu.getMenuItemElement(name);
         }
     }
 
-    /**
-     * Types into the inputs of the date and time halves, each committed with Enter, then leaves the field as
-     * a user does: the field checks its halves (bad input, incomplete) when focus leaves it.
-     */
+    /** Types into both halves, each committed with Enter, then leaves the field, as a user does. */
     record DateTimePickerAccessImpl(PlaywrightSession session, Locator locator) implements DateTimePickerAccess {
         @Override
         public void typeText(String date, String time) {
-            type(locator.locator("[slot=date-picker] input"), date);
-            Locator timeInput = locator.locator("[slot=time-picker] input");
-            type(timeInput, time);
-            timeInput.blur();
+            new DateTimePickerElement(locator).typeText(date, time);
             AutoWait.afterAction(session.page());
-        }
-
-        private static void type(Locator input, String text) {
-            input.fill(text);
-            input.press("Enter");
         }
     }
 
-    /** Feeds the upload's file input, then waits until every file has finished uploading. */
+    /** Returns once the upload request has finished and the round trip after it is done. */
     record UploadAccessImpl(PlaywrightSession session, Locator locator) implements UploadAccess {
         @Override
         public void upload(String fileName, String mimeType, byte[] content) {
-            locator.locator("input[type=\"file\"]").first().setInputFiles(new FilePayload(fileName, mimeType, content));
-            locator.page().waitForCondition(() -> Boolean.TRUE.equals(locator.evaluate(
-                    "e => (e.files || []).length > 0 && e.files.every(f => f.complete || f.error || f.abort)")));
+            new UploadElement(locator).uploadFiles(new FilePayload(fileName, mimeType, content));
             AutoWait.waitForVaadinIdle(session.page());
         }
     }

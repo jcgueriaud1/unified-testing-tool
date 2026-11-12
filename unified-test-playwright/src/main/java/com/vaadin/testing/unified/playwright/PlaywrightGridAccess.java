@@ -64,11 +64,8 @@ final class PlaywrightGridAccess implements GridAccess {
 
     @Override
     public int columnIndexOfId(String id) {
-        Object domIndex = locator.evaluate(
-                "(g, id) => g._getColumns().filter(c => !c.hidden).sort((a, b) => a._order - b._order)"
-                        + ".findIndex(c => c.id === id)",
-                id);
-        return domColumns().indexOf(((Number) domIndex).intValue());
+        java.util.OptionalInt domIndex = grid.findColumnIndexById(id);
+        return domIndex.isPresent() ? domColumns().indexOf(domIndex.getAsInt()) : -1;
     }
 
     @Override
@@ -85,61 +82,17 @@ final class PlaywrightGridAccess implements GridAccess {
         return grid.findRow(row).orElseThrow(() -> new IllegalStateException("No row " + row));
     }
 
-    /**
-     * Reads a whole column a page at a time: jumps to the first row not read yet, waits for its data, then
-     * reads every rendered row's cell in one script. Far faster than one scroll per row on a lazy grid.
-     */
+    /** A page of rows at a time (Dramafinder), not one scroll per row: fast on a lazy grid. */
     @Override
     public List<String> columnTexts(int column) {
-        int domColumn = dom(column);
-        int count = rowCount();
-        String[] texts = new String[count];
-        int next = 0;
-        while (next < count) {
-            locator.evaluate("(g, i) => g._scrollToFlatIndex(i)", next);
-            grid.waitForGridToStopLoading();
-            @SuppressWarnings("unchecked")
-            List<List<Object>> rendered = (List<List<Object>>) locator.evaluate(RENDERED_CELLS, domColumn);
-            for (List<Object> pair : rendered) {
-                int index = ((Number) pair.get(0)).intValue();
-                if (index >= 0 && index < count && texts[index] == null) {
-                    texts[index] = String.valueOf(pair.get(1)).strip();
-                }
-            }
-            if (texts[next] == null) {
-                texts[next] = cellText(next, column); // not rendered after the jump: read it the slow way
-            }
-            while (next < count && texts[next] != null) {
-                next++;
-            }
-        }
-        return List.of(texts);
+        return grid.getColumnTexts(dom(column)).stream().map(t -> t == null ? null : t.strip()).toList();
     }
-
-    /** [flat row index, cell text] of every rendered body row, for one browser column. */
-    private static final String RENDERED_CELLS = """
-            (g, column) => {
-              const lastHeader = g.shadowRoot.querySelector('thead tr.last-header-row');
-              const headerRows = lastHeader ? parseInt(lastHeader.getAttribute('aria-rowindex') || '0') : 0;
-              return [...g.shadowRoot.querySelectorAll('tbody tr[aria-rowindex]')]
-                .filter(tr => !tr.hidden && !tr.hasAttribute('loading'))
-                .map(tr => {
-                  const cell = tr.querySelectorAll('td')[column];
-                  const slot = cell && cell.querySelector('slot');
-                  const content = slot && g.querySelector(`vaadin-grid-cell-content[slot="${slot.name}"]`);
-                  return [parseInt(tr.getAttribute('aria-rowindex')) - 1 - headerRows, content ? content.innerText : null];
-                })
-                .filter(pair => pair[1] !== null);
-            }""";
 
     // ---------------------------------------------------------------- selection, clicks
 
     @Override
     public void select(int row) {
-        rowOf(row).select();
-        if (!isSelected(row)) {
-            throw new IllegalStateException("Row " + row + " could not be selected");
-        }
+        rowOf(row).select(); // Dramafinder checks that the row is selected after the click
     }
 
     @Override
@@ -164,42 +117,35 @@ final class PlaywrightGridAccess implements GridAccess {
         AutoWait.waitForVaadinIdle(session.page());
     }
 
+    /** Clicks a spot of the row free of interactive content, so a button or link in a cell isn't hit. */
     @Override
     public void clickRow(int row) {
-        firstCell(row).click();
-        AutoWait.waitForVaadinIdle(session.page());
+        rowOf(row).click();
     }
 
     @Override
     public void doubleClickRow(int row) {
-        firstCell(row).getCellContentLocator().dblclick();
-        AutoWait.waitForVaadinIdle(session.page());
-    }
-
-    private GridElement.CellElement firstCell(int row) {
-        return rowOf(row).getCell(dom(0));
+        rowOf(row).doubleClick();
     }
 
     // ---------------------------------------------------------------- sorting
 
+    /** Flow's direction, {@code null} when the column isn't sorted. */
     @Override
     public SortDirection sortDirection(int column) {
-        GridElement.HeaderCellElement header = headerCell(column);
-        if (header.isSortAscending()) {
-            return SortDirection.ASCENDING;
-        }
-        return header.isSortDescending() ? SortDirection.DESCENDING : null;
+        return switch (headerCell(column).getSortDirection()) {
+            case ASCENDING -> SortDirection.ASCENDING;
+            case DESCENDING -> SortDirection.DESCENDING;
+            case NONE -> null;
+        };
     }
 
-    /** Dramafinder only cycles the sorter (none → ascending → descending): click until it matches. */
+    /** {@code null} clears the sort. */
     @Override
     public void sort(int column, SortDirection direction) {
-        for (int clicks = 0; clicks < 3 && sortDirection(column) != direction; clicks++) {
-            headerCell(column).clickSort();
-        }
-        if (sortDirection(column) != direction) {
-            throw new IllegalStateException("Column " + column + " could not be sorted " + direction);
-        }
+        headerCell(column).sort(direction == null ? GridElement.SortDirection.NONE
+                : direction == SortDirection.ASCENDING ? GridElement.SortDirection.ASCENDING
+                : GridElement.SortDirection.DESCENDING);
     }
 
     private GridElement.HeaderCellElement headerCell(int column) {
@@ -214,13 +160,15 @@ final class PlaywrightGridAccess implements GridAccess {
         return rowOf(row).isDetailsOpen();
     }
 
-    /**
-     * What a user does: click the row (details open on click, Flow's default). Not Dramafinder's
-     * openDetails(), which clicks a hard-coded second cell.
-     */
+    /** Clicks the row, as a user does (details open on click, Flow's default). */
     @Override
     public void toggleDetails(int row) {
-        clickRow(row);
+        GridElement.RowElement element = rowOf(row);
+        if (element.isDetailsOpen()) {
+            element.closeDetails();
+        } else {
+            element.openDetails();
+        }
     }
 
     // ---------------------------------------------------------------- parts
@@ -230,18 +178,12 @@ final class PlaywrightGridAccess implements GridAccess {
         return element(cellOf(row, column).getCellContentLocator());
     }
 
+    /** The column's header cells in every header row (a group header above, a filter row below). */
     @Override
     public UnifiedElement header(int column) {
-        @SuppressWarnings("unchecked")
-        List<String> slots = (List<String>) locator.evaluate("""
-                (g, column) => [...g.shadowRoot.querySelectorAll('thead tr')]
-                  .map(tr => tr.querySelectorAll('th, td')[column])
-                  .map(cell => cell && cell.querySelector('slot'))
-                  .filter(slot => slot)
-                  .map(slot => slot.name)""", dom(column));
-        String selector = slots.stream().map(s -> "vaadin-grid-cell-content[slot=\"" + s + "\"]")
-                .collect(Collectors.joining(", "));
-        return element(locator.locator(selector.isEmpty() ? "vaadin-grid-cell-content[slot='__none__']" : selector));
+        return element(grid.getHeaderCells(dom(column)).stream().map(GridElement.CellElement::getCellContentLocator)
+                .reduce(Locator::or)
+                .orElseGet(() -> locator.locator("vaadin-grid-cell-content[slot='__none__']")));
     }
 
     @Override
