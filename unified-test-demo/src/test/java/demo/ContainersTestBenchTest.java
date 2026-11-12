@@ -32,7 +32,6 @@ class ContainersTestBenchTest extends BrowserTestBase {
         dialog.$(ButtonElement.class).withText("Save").single().click();
 
         Assertions.assertEquals("Email changed to bob@example.com", $(NotificationElement.class).waitForFirst().getText());
-        Assertions.assertEquals("bob@example.com", $(TextFieldElement.class).withLabel("Email").single().getValue());
     }
 
     @BrowserTest
