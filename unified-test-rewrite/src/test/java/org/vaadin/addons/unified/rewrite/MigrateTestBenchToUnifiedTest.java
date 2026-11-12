@@ -225,6 +225,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                                 <type>pom</type>
                                 <scope>import</scope>
                             </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>4.1.1</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
                         </dependencies>
                     </dependencyManagement>
                     <dependencies>
@@ -248,6 +255,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                                 <groupId>com.vaadin</groupId>
                                 <artifactId>vaadin-bom</artifactId>
                                 <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>4.1.1</version>
                                 <type>pom</type>
                                 <scope>import</scope>
                             </dependency>
@@ -292,6 +306,24 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             <groupId>com.example</groupId>
                             <artifactId>app</artifactId>
                             <version>1.0</version>
+                            <dependencyManagement>
+                                <dependencies>
+                                    <dependency>
+                                        <groupId>com.vaadin</groupId>
+                                        <artifactId>vaadin-bom</artifactId>
+                                        <version>25.3.5</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.springframework.boot</groupId>
+                                        <artifactId>spring-boot-dependencies</artifactId>
+                                        <version>4.1.1</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
+                                </dependencies>
+                            </dependencyManagement>
                             <dependencies>
                                 <dependency>
                                     <groupId>com.vaadin</groupId>
@@ -310,6 +342,20 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             <version>1.0</version>
                             <dependencyManagement>
                                 <dependencies>
+                                    <dependency>
+                                        <groupId>com.vaadin</groupId>
+                                        <artifactId>vaadin-bom</artifactId>
+                                        <version>25.3.5</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.springframework.boot</groupId>
+                                        <artifactId>spring-boot-dependencies</artifactId>
+                                        <version>4.1.1</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
                                     <dependency>
                                         <groupId>org.vaadin.addons</groupId>
                                         <artifactId>unified-test-bom</artifactId>
@@ -779,6 +825,46 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         UnifiedGrid.UnifiedGridRow alan = people.rows().withCellText("Alan Turing").single();
                         int row = alan.getIndex();
                         alan.click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void checkboxLookupsAndCheckedAssertions() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void togglesNewsletter() {
+                        CheckboxElement newsletter = $(CheckboxElement.class).withLabel("Newsletter").single();
+                        newsletter.setChecked(true);
+                        Assertions.assertTrue(newsletter.isChecked());
+                        Assertions.assertFalse($(CheckboxElement.class).withLabel("Dark mode").single().isChecked());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class PreferencesTest {
+
+                    @Test
+                    void togglesNewsletter(UnifiedPage page) {
+                        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Newsletter").single();
+                        newsletter.setChecked(true);
+                        assertThat(newsletter).isChecked();
+                        assertThat(page.find(UnifiedCheckbox.class).withLabel("Dark mode").single()).isNotChecked();
                     }
                 }
                 """));

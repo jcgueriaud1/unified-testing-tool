@@ -19,6 +19,12 @@ public class TestBenchAssertionsToUnified extends Recipe {
     static final String UNIFIED_ASSERTIONS = "com.vaadin.testing.unified.assertion.UnifiedAssertions";
     private static final MethodMatcher ASSERT_EQUALS =
             new MethodMatcher("org.junit.jupiter.api.Assertions assertEquals(Object, Object)");
+    private static final MethodMatcher ASSERT_TRUE = new MethodMatcher("org.junit.jupiter.api.Assertions assertTrue(boolean)");
+    private static final MethodMatcher ASSERT_FALSE = new MethodMatcher("org.junit.jupiter.api.Assertions assertFalse(boolean)");
+    /** Boolean getter on the element → the Unified assertions for true and for false. */
+    private static final Map<String, String[]> ASSERTIONS_BY_CHECK = Map.of(
+            "isChecked", new String[] {"isChecked", "isNotChecked"},
+            "isEnabled", new String[] {"isEnabled", "isDisabled"});
     /** Getter on the element → the Unified assertion that retries it. */
     private static final Map<String, String> ASSERTION_BY_GETTER = Map.of("getValue", "hasValue", "getText", "hasText");
 
@@ -46,14 +52,28 @@ public class TestBenchAssertionsToUnified extends Recipe {
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+                boolean asserted = ASSERT_TRUE.matches(m);
+                if ((asserted || ASSERT_FALSE.matches(m)) && m.getArguments().get(0) instanceof J.MethodInvocation check
+                        && ASSERTIONS_BY_CHECK.containsKey(check.getSimpleName()) && check.getSelect() != null
+                        && check.getArguments().stream().allMatch(a -> a instanceof J.Empty)) {
+                    Wrappers.Wrapper wrapper = wrapperOf(check.getSelect());
+                    if (wrapper == null || !wrapper.methods().contains(check.getSimpleName())) {
+                        return m;
+                    }
+                    String assertion = ASSERTIONS_BY_CHECK.get(check.getSimpleName())[asserted ? 0 : 1];
+                    imports();
+                    return JavaTemplate.builder("assertThat(#{any(java.lang.Object)})." + assertion + "()")
+                            .staticImports(UNIFIED_ASSERTIONS + ".assertThat")
+                            .javaParser(Stubs.parser())
+                            .build()
+                            .apply(getCursor(), m.getCoordinates().replace(), check.getSelect());
+                }
                 if (!ASSERT_EQUALS.matches(m) || !(m.getArguments().get(1) instanceof J.MethodInvocation getter)
                         || !getter.getArguments().stream().allMatch(a -> a instanceof J.Empty)
                         || getter.getSelect() == null) {
                     return m;
                 }
-                Wrappers.Wrapper wrapper = getter.getSelect() instanceof J.Identifier local
-                        ? Locals.wrapperOf(getCursor(), local)
-                        : Wrappers.ofLookup(getter.getSelect());
+                Wrappers.Wrapper wrapper = wrapperOf(getter.getSelect());
                 if (wrapper == null || !wrapper.methods().contains(getter.getSimpleName())) {
                     return m;
                 }
@@ -61,14 +81,26 @@ public class TestBenchAssertionsToUnified extends Recipe {
                 if (assertion == null) {
                     return m;
                 }
-                maybeRemoveImport("org.junit.jupiter.api.Assertions");
-                maybeRemoveImport("org.junit.jupiter.api.Assertions.assertEquals");
-                maybeAddImport(UNIFIED_ASSERTIONS, "assertThat", false);
+                imports();
                 return JavaTemplate.builder("assertThat(#{any(java.lang.Object)})." + assertion + "(#{any(java.lang.String)})")
                         .staticImports(UNIFIED_ASSERTIONS + ".assertThat")
                         .javaParser(Stubs.parser())
                         .build()
                         .apply(getCursor(), m.getCoordinates().replace(), getter.getSelect(), m.getArguments().get(0));
+            }
+
+            private Wrappers.Wrapper wrapperOf(org.openrewrite.java.tree.Expression element) {
+                return element instanceof J.Identifier local
+                        ? Locals.wrapperOf(getCursor(), local)
+                        : Wrappers.ofLookup(element);
+            }
+
+            private void imports() {
+                maybeRemoveImport("org.junit.jupiter.api.Assertions");
+                maybeRemoveImport("org.junit.jupiter.api.Assertions.assertEquals");
+                maybeRemoveImport("org.junit.jupiter.api.Assertions.assertTrue");
+                maybeRemoveImport("org.junit.jupiter.api.Assertions.assertFalse");
+                maybeAddImport(UNIFIED_ASSERTIONS, "assertThat", false);
             }
         };
     }
