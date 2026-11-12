@@ -5,9 +5,14 @@ import static org.openrewrite.java.Assertions.java;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.openrewrite.Tree;
 import org.openrewrite.config.Environment;
 import org.openrewrite.java.JavaParser;
+import org.openrewrite.java.style.ImportLayoutStyle;
+import org.openrewrite.style.NamedStyles;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
@@ -24,7 +29,19 @@ class GoldenMigrationTest implements RewriteTest {
     public void defaults(RecipeSpec spec) {
         spec.recipe(Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite").build()
                         .activateRecipes("org.vaadin.addons.unified.rewrite.MigrateTestBenchToUnified"))
-                .parser(JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath()));
+                .parser(JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath())
+                        // the demo never folds imports into a wildcard; a rewrite plugin run detects that from the project
+                        .styles(List.of(new NamedStyles(Tree.randomId(), "demo", "demo", "demo", Set.of(),
+                                List.of(ImportLayoutStyle.builder()
+                                        .classCountToUseStarImport(999)
+                                        .nameCountToUseStarImport(999)
+                                        .importAllOthers()
+                                        .blankLine()
+                                        .importPackage("javax.*")
+                                        .importPackage("java.*")
+                                        .blankLine()
+                                        .importStaticAllOthers()
+                                        .build())))));
     }
 
     @Test
@@ -40,6 +57,11 @@ class GoldenMigrationTest implements RewriteTest {
     @Test
     void editPersonTestBenchTestBecomesEditPersonMigratedTest() throws IOException {
         assertMigrates("EditPersonTestBenchTest", "EditPersonMigratedTest");
+    }
+
+    @Test
+    void fieldsTestBenchTestBecomesFieldsMigratedTest() throws IOException {
+        assertMigrates("FieldsTestBenchTest", "FieldsMigratedTest");
     }
 
     private static org.openrewrite.test.SourceSpecs view(String name, String route) {
@@ -62,6 +84,8 @@ class GoldenMigrationTest implements RewriteTest {
                 // the demo's views, reduced to their routes: the real ones need the whole application on the classpath
                 view("ProfileView", "profile"),
                 view("PeopleView", "people"),
+                view("PreferencesView", "preferences"),
+                view("OrderView", "order"),
                 java(before, after));
     }
 }
