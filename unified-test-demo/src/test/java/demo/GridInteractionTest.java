@@ -98,6 +98,17 @@ class GridInteractionTest {
         assertNotification(page, "Opened User 5");
     }
 
+    /** A row click lands beside the button the first cell holds, as a user clicking the row would. */
+    @Test
+    void clicksARowWithoutClickingTheButtonInItsFirstCell(UnifiedPage page) {
+        UnifiedGrid tasks = grid(page, "tasks");
+
+        tasks.row(0).click();
+
+        assertNotification(page, "Clicked Task 1");
+        assertEquals(0, page.find(UnifiedNotification.class).withText("Done Task 1").all().size());
+    }
+
     @Test
     void togglesRowDetails(UnifiedPage page) {
         UnifiedGrid.UnifiedGridRow row = grid(page, "users").row(2);

@@ -136,10 +136,24 @@ class ExpenseTest {
     void uploadsAFile(UnifiedPage page) {
         page.navigate(ExpenseView.class);
 
-        page.find(UnifiedUpload.class).single().upload("receipt.txt", "text/plain",
+        page.find(UnifiedUpload.class).withId("receipt").single().upload("receipt.txt", "text/plain",
                 "Taxi 54.20".getBytes(StandardCharsets.UTF_8));
 
         assertStatus(page, "Received receipt.txt: Taxi 54.20");
+    }
+
+    /** Returns once the upload is handled, even when the app clears the file list right after (#122). */
+    @Test
+    void uploadsRepeatedlyWhenTheAppClearsTheFileList(UnifiedPage page) {
+        page.navigate(ExpenseView.class);
+
+        for (int i = 1; i <= 3; i++) {
+            page.find(UnifiedUpload.class).withId("attachment").single().upload("receipt-" + i + ".txt", "text/plain",
+                    "Taxi".getBytes(StandardCharsets.UTF_8));
+        }
+
+        assertThat(page.findComponent(Span.class).withId("attachments").single())
+                .hasText("receipt-1.txt, receipt-2.txt, receipt-3.txt");
     }
 
     @Test

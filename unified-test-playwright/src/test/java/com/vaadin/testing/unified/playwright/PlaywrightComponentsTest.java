@@ -22,8 +22,9 @@ class PlaywrightComponentsTest {
         assertEquals(ButtonElement.class, PlaywrightComponents.of(Button.class).dramafinderElement());
         assertEquals(org.vaadin.addons.dramafinder.element.DialogElement.class,
                 PlaywrightComponents.of(com.vaadin.flow.component.dialog.Dialog.class).dramafinderElement());
-        assertEquals("vaadin-notification-card[slot]",
-                PlaywrightComponents.of(Notification.class).selector("vaadin-notification"));
+        // Dramafinder's query finds the open notification cards
+        assertEquals(org.vaadin.addons.dramafinder.element.NotificationElement.class,
+                PlaywrightComponents.of(Notification.class).dramafinderElement());
     }
 
     @Test

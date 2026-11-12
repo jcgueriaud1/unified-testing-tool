@@ -5,6 +5,7 @@ import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import java.util.List;
 import org.vaadin.addons.dramafinder.element.TabSheetElement;
+import org.vaadin.addons.dramafinder.element.TabsElement;
 
 /** TabSheet on Playwright through Dramafinder's TabSheetElement; tabs by their Item Name. */
 final class PlaywrightTabSheetAccess implements TabSheetAccess {
@@ -17,34 +18,33 @@ final class PlaywrightTabSheetAccess implements TabSheetAccess {
         this.tabSheet = new TabSheetElement(locator);
     }
 
-    private Locator tabLocators() {
-        return tabSheet.getTabsElement().getTabs();
+    private TabsElement bar() {
+        return tabSheet.getTabsElement();
     }
 
     @Override
     public List<String> tabs() {
-        return PlaywrightTabItems.names(tabLocators());
+        return bar().getTabLabels();
     }
 
     @Override
     public String selectedTab() {
-        return PlaywrightTabItems.selected(tabLocators());
+        return PlaywrightCoreSetAccess.Tabs.selected(bar());
     }
 
     @Override
     public boolean isEnabled(String label) {
-        return PlaywrightTabItems.isEnabled(tabLocators(), label);
+        return PlaywrightCoreSetAccess.Tabs.tab(bar(), label).isEnabled();
     }
 
     @Override
     public void select(String label) {
-        PlaywrightTabItems.select(session, tabLocators(), label);
+        PlaywrightCoreSetAccess.Tabs.select(session, bar(), label);
     }
 
-    /** The visible panel: Flow keeps the content of the other tabs out of the page or hidden. */
+    /** The selected tab's panel, not the panels of a TabSheet nested in it. */
     @Override
     public UnifiedElement content() {
-        Locator panel = tabSheet.getLocator().locator(":scope > [tab]:not([hidden])");
-        return new PlaywrightElement(session, panel, null, PlaywrightComponents.DEFAULT);
+        return new PlaywrightElement(session, tabSheet.getContentLocator(), null, PlaywrightComponents.DEFAULT);
     }
 }

@@ -101,12 +101,9 @@ final class PlaywrightComponents {
 
             @Override
             public boolean setValue(Locator locator, Object value) {
-                // typed in the input in the page's locale format, then committed
                 DatePickerElement picker = new DatePickerElement(locator);
-                if (value instanceof String text) { // UnifiedDatePicker.typeText: as it is, unparsed
-                    Locator input = picker.getFocusLocator();
-                    input.fill(text);
-                    input.press("Enter");
+                if (value instanceof String text) { // UnifiedDatePicker.typeText: typed as it is, then Enter
+                    picker.setValue(text);
                     return true;
                 }
                 if (value == null) {
@@ -130,20 +127,15 @@ final class PlaywrightComponents {
             }
         });
         register(Notification.class, new Support() {
+            /** Dramafinder's query finds the open notification cards, what the user sees. */
             @Override
-            public String selector(String componentTag) {
-                // the visible part is the open card, not <vaadin-notification>
-                return "vaadin-notification-card[slot]";
-            }
-
-            @Override
-            public Optional<String> text(Locator locator) {
-                return Optional.of(new NotificationElement(locator).getText());
+            public Class<? extends VaadinElement> dramafinderElement() {
+                return NotificationElement.class;
             }
 
             @Override
             public Optional<Boolean> booleanProperty(Locator locator, String name) {
-                return "opened".equals(name) ? Optional.of(locator.isVisible()) : Optional.empty();
+                return "opened".equals(name) ? Optional.of(new NotificationElement(locator).isOpen()) : Optional.empty();
             }
         });
     }
@@ -153,12 +145,6 @@ final class PlaywrightComponents {
             @Override
             public Class<? extends VaadinElement> dramafinderElement() {
                 return DialogElement.class;
-            }
-
-            /** Open dialogs only: closed ones (the app's or the dev tools') are not part of the page. */
-            @Override
-            public boolean include(Locator locator) {
-                return Boolean.TRUE.equals(locator.evaluate("e => !!e.opened"));
             }
 
             @Override
@@ -250,7 +236,7 @@ final class PlaywrightComponents {
                 org.vaadin.addons.dramafinder.element.DateTimePickerElement picker =
                         new org.vaadin.addons.dramafinder.element.DateTimePickerElement(locator);
                 if (value == null) {
-                    picker.setValue("");
+                    picker.clear(); // both halves
                 } else {
                     picker.setValue((java.time.LocalDateTime) value);
                 }

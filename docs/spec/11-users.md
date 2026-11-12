@@ -21,7 +21,7 @@ class AdminViewTest {
 | Testing Tool | How the adapter logs in |
 |---|---|
 | Browserless | `SpringBrowserlessApplicationContext.createSecured(..)`, then `newUser(username, roles…)` |
-| Playwright, Selenium | Opens a **test-only login endpoint** once before the test; it puts the user into the HTTP session. The endpoint is the Unified API's own (`unified-test-spring`, `TestLogin`): Dramafinder 2.0.1's login is only usable by extending `SpringPlaywrightIT` ([parttio/dramafinder#236](https://github.com/parttio/dramafinder/issues/236)) and Selenium needs it too |
+| Playwright, Selenium | Opens a **test-only login endpoint** once before the test; it puts the user into the HTTP session. The endpoint is the Unified API's own (`unified-test-spring`, `TestLogin`), shared by both browser tools. Dramafinder 2.0.2 has a public sign-in too ([parttio/dramafinder#236](https://github.com/parttio/dramafinder/issues/236)), but using it would make `unified-test-spring`, and so Browserless and Selenium projects, depend on Dramafinder |
 
 ```mermaid
 sequenceDiagram

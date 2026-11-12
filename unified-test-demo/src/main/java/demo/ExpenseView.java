@@ -54,6 +54,18 @@ public class ExpenseView extends VerticalLayout {
 
         Upload receipt = new Upload(UploadHandler.inMemory((metadata, bytes) -> status.setText(
                 "Received " + metadata.fileName() + ": " + new String(bytes, StandardCharsets.UTF_8))));
+        receipt.setId("receipt");
+
+        // a single-shot "attach a file" upload: the list is cleared once the file has been handled
+        Span attachments = new Span();
+        attachments.setId("attachments");
+        Upload attachment = new Upload();
+        attachment.setId("attachment");
+        attachment.setUploadHandler(UploadHandler.inMemory((metadata, bytes) -> {
+            attachments.setText((attachments.getText().isEmpty() ? "" : attachments.getText() + ", ")
+                    + metadata.fileName());
+            attachment.clearFileList();
+        }));
 
         Div summary = new Div(new Span("Total"), new Span("120.50"));
         summary.addClassName("summary");
@@ -62,7 +74,7 @@ public class ExpenseView extends VerticalLayout {
         Button save = new Button("Save", e -> Notification.show("Saved: " + notes.getValue() + " / "
                 + nights.getValue() + " nights / " + amount.getValue() + " / " + departure.getValue() + " / "
                 + returnDate.getValue() + " / " + costCenter.getValue()));
-        add(menu, filter, status, notes, nights, amount, departure, returnDate, advanced, receipt, summary, help,
-                save);
+        add(menu, filter, status, notes, nights, amount, departure, returnDate, advanced, receipt, attachment,
+                attachments, summary, help, save);
     }
 }

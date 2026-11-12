@@ -73,7 +73,17 @@ public class UsersView extends VerticalLayout {
         archived.addColumn(User::name).setHeader("Name");
         archived.setItems(List.of());
 
-        add(users, roles, archived);
+        // the first column is a button: clicking the row must not click it
+        Grid<User> tasks = new Grid<>();
+        tasks.setTestId("tasks");
+        tasks.addComponentColumn(u -> new Button("Done", e -> Notification.show("Done " + u.name())))
+                .setHeader("Action");
+        tasks.addColumn(User::name).setHeader("Task");
+        tasks.setItems(List.of(new User("Task 1", "", ""), new User("Task 2", "", "")));
+        tasks.setAllRowsVisible(true);
+        tasks.addItemClickListener(e -> Notification.show("Clicked " + e.getItem().name()));
+
+        add(users, roles, archived, tasks);
     }
 
     private java.util.stream.Stream<User> filtered() {
