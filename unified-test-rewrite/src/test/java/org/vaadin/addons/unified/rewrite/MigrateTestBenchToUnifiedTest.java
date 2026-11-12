@@ -1334,4 +1334,59 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         }
                         """));
     }
+
+    @Test
+    void anInheritedBeforeEachIsCalledFirstInEachSubclassTest() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import org.junit.jupiter.api.BeforeEach;
+
+                        abstract class AbstractIT extends BrowserTestBase {
+
+                            @BeforeEach
+                            void openProfile() {
+                                getDriver().get("http://localhost:8080/profile");
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+
+                        abstract class AbstractIT {
+
+                            void openProfile(UnifiedPage page) {
+                                page.navigate("profile");
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @BrowserTest
+                            void saves() {
+                                $(ButtonElement.class).withText("Save").single().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @Test
+                            void saves(UnifiedPage page) {
+                                openProfile(page);
+                                page.find(UnifiedButton.class).withText("Save").single().click();
+                            }
+                        }
+                        """));
+    }
 }

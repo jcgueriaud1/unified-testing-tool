@@ -80,6 +80,11 @@ final class Helpers {
             return c.getBody().getStatements();
         }
         Map<String, JavaType.Method> types = new HashMap<>();
+        for (JavaType.FullyQualified t = c.getType() == null ? null : c.getType().getSupertype(); t != null; t = t.getSupertype()) {
+            for (JavaType.Method inherited : t.getMethods()) {
+                types.putIfAbsent(inherited.getName(), inherited);
+            }
+        }
         for (Statement s : c.getBody().getStatements()) {
             if (s instanceof J.MethodDeclaration m) {
                 types.put(m.getSimpleName(), m.getMethodType());

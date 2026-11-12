@@ -56,12 +56,13 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     }
 
     /** Views by route path, and the TestBench helpers of each TestBench test class (and base class). */
-    public record Scanned(Map<String, Set<String>> routes, Map<String, Set<String>> helpersByClass) {
+    public record Scanned(Map<String, Set<String>> routes, Map<String, Set<String>> helpersByClass,
+            Map<String, List<String>> beforeEachByClass) {
     }
 
     @Override
     public Scanned getInitialValue(ExecutionContext ctx) {
-        return new Scanned(new HashMap<>(), new HashMap<>());
+        return new Scanned(new HashMap<>(), new HashMap<>(), new HashMap<>());
     }
 
     /** Collects the views by route path, to navigate by class when exactly one view has the path. */
@@ -72,7 +73,9 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
                 if (isTestBenchClass(classDecl)) {
-                    scanned.helpersByClass().put(classDecl.getType().getFullyQualifiedName(), Helpers.usingTestBench(classDecl));
+                    Set<String> helpers = Helpers.usingTestBench(classDecl);
+                    scanned.helpersByClass().put(classDecl.getType().getFullyQualifiedName(), helpers);
+                    scanned.beforeEachByClass().put(classDecl.getType().getFullyQualifiedName(), beforeEachOf(classDecl, helpers));
                 }
                 if (classDecl.getType() != null) {
                     for (J.Annotation a : classDecl.getLeadingAnnotations()) {
@@ -119,7 +122,11 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                 getCursor().putMessage(HELPERS, helpers);
                 if (classDecl.getExtends() == null
                         || !TypeUtils.isOfClassType(classDecl.getExtends().getType(), BROWSER_TEST_BASE)) {
-                    return super.visitClassDeclaration(classDecl, ctx); // a subclass of a TestBench base class
+                    // a subclass of a TestBench base class: its tests call the inherited @BeforeEach helpers first
+                    J.ClassDeclaration sub = super.visitClassDeclaration(classDecl, ctx);
+                    List<String> beforeEach = new ArrayList<>(inheritedBeforeEach(classDecl.getType(), scanned.beforeEachByClass()));
+                    beforeEach.addAll(beforeEachOf(classDecl, helpers));
+                    return sub.withBody(sub.getBody().withStatements(Helpers.callBeforeEachFirst(sub, beforeEach)));
                 }
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
                 c = c.withBody(c.getBody().withStatements(Helpers.callBeforeEachFirst(c, beforeEachOf(classDecl, helpers))));
@@ -206,6 +213,15 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     /** A class that is, or extends, TestBench's {@code BrowserTestBase}. */
     static boolean isTestBenchClass(J.ClassDeclaration c) {
         return c.getType() != null && TypeUtils.isAssignableTo(BROWSER_TEST_BASE, c.getType());
+    }
+
+    /** The {@code @BeforeEach} helpers the class's superclasses declare, the farthest ancestor's first. */
+    private static List<String> inheritedBeforeEach(JavaType.FullyQualified type, Map<String, List<String>> byClass) {
+        List<String> inherited = new ArrayList<>();
+        for (JavaType.FullyQualified s = type.getSupertype(); s != null; s = s.getSupertype()) {
+            inherited.addAll(0, byClass.getOrDefault(s.getFullyQualifiedName(), List.of()));
+        }
+        return inherited;
     }
 
     /** The TestBench helpers the class's superclasses declare. */
