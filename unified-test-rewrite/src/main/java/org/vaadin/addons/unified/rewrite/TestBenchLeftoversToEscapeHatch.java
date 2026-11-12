@@ -140,7 +140,8 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
                 if (escapes == null || m.getSelect() != null || !isTestBaseCall(m)
-                        || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + method.printTrimmed(getCursor()))) {
+                        || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + method.printTrimmed(getCursor())
+                                + (isCustomElementLookup(method) ? ", a custom element: write a Wrapper for it (ADR 0003)" : ""))) {
                     return m;
                 }
                 escapes.set(true);
@@ -148,6 +149,17 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                         Markers.EMPTY, emptyList(), VARIABLE, JavaType.ShallowClass.build(ESCAPE_HATCH), null)));
             }
         };
+    }
+
+    /** A {@code $(X.class)} of an application's own {@code @Element} class, not one TestBench ships. */
+    private static boolean isCustomElementLookup(J.MethodInvocation m) {
+        if (!m.getSimpleName().equals("$") || m.getArguments().size() != 1
+                || !(m.getArguments().get(0) instanceof J.FieldAccess classLiteral)
+                || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
+            return false;
+        }
+        return !element.getFullyQualifiedName().startsWith("com.vaadin.") && element.getAnnotations().stream()
+                .anyMatch(a -> a.getFullyQualifiedName().equals("com.vaadin.testbench.elementsbase.Element"));
     }
 
     static boolean isTestBaseCall(J.MethodInvocation m) {

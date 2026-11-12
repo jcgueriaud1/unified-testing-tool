@@ -1531,4 +1531,51 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         }
                         """));
     }
+
+    @Test
+    void aCustomElementGetsAMarkerPointingToWrappers() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("main-view")
+                        public class MainViewElement extends TestBenchElement {
+                            public void logout() {
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class MainTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void logsOut() {
+                                $(MainViewElement.class).single().logout();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        class MainTest {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void logsOut(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: $(MainViewElement.class), a custom element: write a Wrapper for it (ADR 0003)
+                                testBench.$(MainViewElement.class).single().logout();
+                            }
+                        }
+                        """));
+    }
 }
