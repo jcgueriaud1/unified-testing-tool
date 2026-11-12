@@ -869,4 +869,45 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void comboBoxCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.combobox.testbench.ComboBoxElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class OrderTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void picksAProduct() {
+                        ComboBoxElement product = $(ComboBoxElement.class).withLabel("Product").single();
+                        product.selectByText("Tea");
+                        Assertions.assertEquals("Tea", product.getSelectedText());
+                        Assertions.assertEquals(3, product.getOptions().size());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedComboBox;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class OrderTest {
+
+                    @Test
+                    void picksAProduct(UnifiedPage page) {
+                        UnifiedComboBox product = page.find(UnifiedComboBox.class).withLabel("Product").single();
+                        product.selectItem("Tea");
+                        assertThat(product).hasSelectedItem("Tea");
+                        Assertions.assertEquals(3, product.getItems().size());
+                    }
+                }
+                """));
+    }
 }

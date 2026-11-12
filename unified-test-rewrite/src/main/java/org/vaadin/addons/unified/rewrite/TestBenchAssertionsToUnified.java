@@ -26,7 +26,8 @@ public class TestBenchAssertionsToUnified extends Recipe {
             "isChecked", new String[] {"isChecked", "isNotChecked"},
             "isEnabled", new String[] {"isEnabled", "isDisabled"});
     /** Getter on the element → the Unified assertion that retries it. */
-    private static final Map<String, String> ASSERTION_BY_GETTER = Map.of("getValue", "hasValue", "getText", "hasText");
+    private static final Map<String, String> ASSERTION_BY_GETTER = Map.of("getValue", "hasValue", "getText", "hasText",
+            "getSelectedText", "hasSelectedItem", "getDate", "hasValue");
 
     /** Whether the tree is a {@code UnifiedAssertions.assertThat(..)} call, such as this recipe writes. */
     static boolean isUnifiedAssertion(Object tree) {
@@ -57,7 +58,7 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         && ASSERTIONS_BY_CHECK.containsKey(check.getSimpleName()) && check.getSelect() != null
                         && check.getArguments().stream().allMatch(a -> a instanceof J.Empty)) {
                     Wrappers.Wrapper wrapper = wrapperOf(check.getSelect());
-                    if (wrapper == null || !wrapper.methods().contains(check.getSimpleName())) {
+                    if (wrapper == null || !wrapper.has(check.getSimpleName())) {
                         return m;
                     }
                     String assertion = ASSERTIONS_BY_CHECK.get(check.getSimpleName())[asserted ? 0 : 1];
@@ -74,7 +75,7 @@ public class TestBenchAssertionsToUnified extends Recipe {
                     return m;
                 }
                 Wrappers.Wrapper wrapper = wrapperOf(getter.getSelect());
-                if (wrapper == null || !wrapper.methods().contains(getter.getSimpleName())) {
+                if (wrapper == null || !wrapper.has(getter.getSimpleName())) {
                     return m;
                 }
                 String assertion = ASSERTION_BY_GETTER.get(getter.getSimpleName());
