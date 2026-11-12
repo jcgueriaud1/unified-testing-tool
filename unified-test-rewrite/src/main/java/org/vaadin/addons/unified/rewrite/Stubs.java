@@ -64,6 +64,11 @@ final class Stubs {
                 public interface Assert {
                     Assert hasValue(Object value);
                     Assert hasText(String text);
+                    Assert isOpen();
+                    Assert isClosed();
+                    Assert hasHeaderTitle(String title);
+                    Assert hasSelectedTab(String tab);
+                    Assert hasTabs(String... tabs);
                     Assert isChecked();
                     Assert isNotChecked();
                     Assert isEnabled();

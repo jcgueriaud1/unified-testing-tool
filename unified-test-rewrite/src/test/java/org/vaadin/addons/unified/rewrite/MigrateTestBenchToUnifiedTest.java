@@ -1148,4 +1148,44 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void dialogLookupsAndAssertions() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.dialog.testbench.DialogElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void opensTheDialog() {
+                        DialogElement dialog = $(DialogElement.class).single();
+                        Assertions.assertTrue(dialog.isOpen());
+                        Assertions.assertEquals("Change email", dialog.getHeaderTitle());
+                        Assertions.assertFalse($(DialogElement.class).withId("help").single().isOpen());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedDialog;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class ProfileTest {
+
+                    @Test
+                    void opensTheDialog(UnifiedPage page) {
+                        UnifiedDialog dialog = page.find(UnifiedDialog.class).single();
+                        assertThat(dialog).isOpen();
+                        assertThat(dialog).hasHeaderTitle("Change email");
+                        assertThat(page.find(UnifiedDialog.class).withId("help").single()).isClosed();
+                    }
+                }
+                """));
+    }
 }

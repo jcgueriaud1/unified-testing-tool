@@ -27,7 +27,11 @@ public class TestBenchAssertionsToUnified extends Recipe {
     /** Boolean getter on the element → the Unified assertions for true and for false. */
     private static final Map<String, String[]> ASSERTIONS_BY_CHECK = Map.of(
             "isChecked", new String[] {"isChecked", "isNotChecked"},
-            "isEnabled", new String[] {"isEnabled", "isDisabled"});
+            "isEnabled", new String[] {"isEnabled", "isDisabled"},
+            "isOpen", new String[] {"isOpen", "isClosed"});
+    /** Wrappers whose assertion has no negative form for a check, e.g. no notification {@code isClosed()}. */
+    private static final Map<String, String> NO_NEGATIVE = Map.of(
+            "isOpen", "com.vaadin.testing.unified.component.UnifiedNotification");
     /** List getter on the element → the Unified assertion that retries it, for an expected {@code List.of(..)}. */
     private static final Map<String, String> ASSERTION_BY_LIST_GETTER = Map.of(
             "getSelectedTexts", "hasSelectedItems", "getOptions", "hasItems");
@@ -35,7 +39,7 @@ public class TestBenchAssertionsToUnified extends Recipe {
     private static final MethodMatcher ARRAYS_AS_LIST = new MethodMatcher("java.util.Arrays asList(..)");
     /** Getter on the element → the Unified assertion that retries it. */
     private static final Map<String, String> ASSERTION_BY_GETTER = Map.of("getValue", "hasValue", "getText", "hasText",
-            "getSelectedText", "hasSelectedItem", "getDate", "hasValue");
+            "getSelectedText", "hasSelectedItem", "getDate", "hasValue", "getHeaderTitle", "hasHeaderTitle");
 
     /** Whether the tree is a {@code UnifiedAssertions.assertThat(..)} call, such as this recipe writes. */
     static boolean isUnifiedAssertion(Object tree) {
@@ -67,6 +71,9 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         && check.getArguments().stream().allMatch(a -> a instanceof J.Empty)) {
                     Wrappers.Wrapper wrapper = wrapperOf(check.getSelect());
                     if (wrapper == null || !wrapper.has(check.getSimpleName())) {
+                        return m;
+                    }
+                    if (!asserted && wrapper.fqn().equals(NO_NEGATIVE.get(check.getSimpleName()))) {
                         return m;
                     }
                     String assertion = ASSERTIONS_BY_CHECK.get(check.getSimpleName())[asserted ? 0 : 1];

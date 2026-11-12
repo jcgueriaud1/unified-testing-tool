@@ -105,6 +105,10 @@ final class Wrappers {
                     with(COMMON_FILTERS, "withLabel", "withPlaceholder"),
                     Set.of("clear", "getLabel", "getPlaceholder", "getHelperText", "getErrorMessage", "isEnabled"),
                     NumberFields::converts)),
+            Map.entry("com.vaadin.flow.component.dialog.testbench.DialogElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedDialog",
+                    COMMON_FILTERS,
+                    Set.of("isOpen", "getHeaderTitle"))),
             Map.entry("com.vaadin.flow.component.grid.testbench.GridElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedGrid",
                     COMMON_FILTERS,
                     // row and rows are what GridCells writes for getCell(..)
