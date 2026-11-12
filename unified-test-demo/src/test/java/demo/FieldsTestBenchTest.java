@@ -49,7 +49,7 @@ class FieldsTestBenchTest extends BrowserTestBase {
         getDriver().get("http://localhost:" + port + "/order");
 
         $(ComboBoxElement.class).withLabel("Country").single().selectByText("Germany");
-        RadioButtonGroupElement size = $(RadioButtonGroupElement.class).withLabel("Size").single();
+        RadioButtonGroupElement size = $(RadioButtonGroupElement.class).single();
         size.selectByText("Large");
         MultiSelectComboBoxElement toppings = $(MultiSelectComboBoxElement.class).withLabel("Toppings").single();
         toppings.selectByText("Ham");
