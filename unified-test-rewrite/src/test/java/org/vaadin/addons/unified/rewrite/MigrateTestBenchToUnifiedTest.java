@@ -1227,4 +1227,49 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void tabSheetLabelFormsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.flow.component.tabs.testbench.TabSheetElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import java.util.List;
+                import org.junit.jupiter.api.Assertions;
+
+                class AccountTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void changesThePassword() {
+                        TabSheetElement tabs = $(TabSheetElement.class).single();
+                        Assertions.assertEquals(List.of("Profile", "Security", "Billing"), tabs.getTabLabels());
+                        tabs.setSelectedTabIndex(tabs.getTab("Security"));
+                        Assertions.assertEquals("Security", tabs.getSelectedTabElement().getLabel());
+                        tabs.getContent().$(ButtonElement.class).withText("Change password").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedTabSheet;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class AccountTest {
+
+                    @Test
+                    void changesThePassword(UnifiedPage page) {
+                        UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class).single();
+                        assertThat(tabs).hasTabs("Profile", "Security", "Billing");
+                        tabs.selectTab("Security");
+                        assertThat(tabs).hasSelectedTab("Security");
+                        tabs.content().find(UnifiedButton.class).withText("Change password").single().click();
+                    }
+                }
+                """));
+    }
 }

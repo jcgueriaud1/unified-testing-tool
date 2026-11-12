@@ -81,7 +81,11 @@ public class TestBenchLookupsToUnified extends Recipe {
                 // $(..) on the page, or on a container that becomes a Unified Scope
                 String scope = TestBenchSetupToUnified.UNIFIED_PAGE;
                 Object receiver = Stubs.page();
-                if (method.getSelect() != null) {
+                if (method.getSelect() instanceof J.MethodInvocation content && content.getSimpleName().equals("content")
+                        && content.getSelect() != null && isTabSheet(content.getSelect())) {
+                    scope = "com.vaadin.testing.unified.Scope"; // a TabSheet's content()
+                    receiver = m.getSelect();
+                } else if (method.getSelect() != null) {
                     Wrappers.Wrapper container = method.getSelect() instanceof J.Identifier local
                             ? Locals.wrapperOf(getCursor(), local)
                             : Wrappers.ofLookup(method.getSelect());
@@ -100,6 +104,13 @@ public class TestBenchLookupsToUnified extends Recipe {
                         .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
                         .build()
                         .apply(getCursor(), m.getCoordinates().replace(), receiver);
+            }
+
+            private boolean isTabSheet(org.openrewrite.java.tree.Expression tabSheet) {
+                Wrappers.Wrapper w = tabSheet instanceof J.Identifier local
+                        ? Locals.wrapperOf(getCursor(), local)
+                        : Wrappers.ofLookup(tabSheet);
+                return w != null && w.fqn().equals(TabSheets.TAB_SHEET);
             }
 
             private boolean hasPageParameter() {

@@ -111,6 +111,13 @@ final class Wrappers {
                     // find is what a $(..) inside the dialog becomes
                     Set.of("isOpen", "getHeaderTitle", "find"),
                     Chains::scopedLookupConverts)),
+            Map.entry("com.vaadin.flow.component.tabs.testbench.TabSheetElement", new Wrapper(
+                    TabSheets.TAB_SHEET,
+                    COMMON_FILTERS,
+                    // the Unified names TabSheets and the renames write
+                    Set.of("selectTab", "getSelectedTab", "isEnabled"),
+                    Map.of("getTabLabels", "getTabs", "getContent", "content"),
+                    TabSheets::converts)),
             Map.entry("com.vaadin.flow.component.grid.testbench.GridElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedGrid",
                     COMMON_FILTERS,
                     // row and rows are what GridCells writes for getCell(..)

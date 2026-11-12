@@ -34,7 +34,7 @@ public class TestBenchAssertionsToUnified extends Recipe {
             "isOpen", "com.vaadin.testing.unified.component.UnifiedNotification");
     /** List getter on the element → the Unified assertion that retries it, for an expected {@code List.of(..)}. */
     private static final Map<String, String> ASSERTION_BY_LIST_GETTER = Map.of(
-            "getSelectedTexts", "hasSelectedItems", "getOptions", "hasItems");
+            "getSelectedTexts", "hasSelectedItems", "getOptions", "hasItems", "getTabLabels", "hasTabs");
     private static final MethodMatcher LIST_OF = new MethodMatcher("java.util.List of(..)");
     private static final MethodMatcher ARRAYS_AS_LIST = new MethodMatcher("java.util.Arrays asList(..)");
     /** Getter on the element → the Unified assertion that retries it. */
@@ -88,6 +88,18 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         || !getter.getArguments().stream().allMatch(a -> a instanceof J.Empty)
                         || getter.getSelect() == null) {
                     return m;
+                }
+                // assertEquals(label, t.getSelectedTabElement().getLabel()) → assertThat(t).hasSelectedTab(label)
+                if (getter.getSimpleName().equals("getLabel") && getter.getSelect() instanceof J.MethodInvocation selected
+                        && selected.getSimpleName().equals("getSelectedTabElement") && selected.getSelect() != null
+                        && wrapperOf(selected.getSelect()) != null
+                        && wrapperOf(selected.getSelect()).fqn().equals(TabSheets.TAB_SHEET)) {
+                    imports();
+                    return JavaTemplate.builder("assertThat(#{any(java.lang.Object)}).hasSelectedTab(#{any(java.lang.String)})")
+                            .staticImports(UNIFIED_ASSERTIONS + ".assertThat")
+                            .javaParser(Stubs.parser())
+                            .build()
+                            .apply(getCursor(), m.getCoordinates().replace(), selected.getSelect(), m.getArguments().get(0));
                 }
                 Wrappers.Wrapper wrapper = wrapperOf(getter.getSelect());
                 if (wrapper == null || !wrapper.supports(getter, new org.openrewrite.Cursor(getCursor(), getter))) {
