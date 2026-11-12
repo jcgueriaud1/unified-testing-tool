@@ -47,13 +47,13 @@ final class Locals {
                 if (identifier.getSimpleName().equals(name)
                         && !(parent instanceof J.VariableDeclarations.NamedVariable)
                         && !(parent instanceof J.MethodInvocation call && call.getSelect() == identifier
-                                && wrapper.methods().contains(call.getSimpleName()))
+                                && wrapper.supports(call, getCursor().getParentTreeCursor()))
                         && !TestBenchAssertionsToUnified.isUnifiedAssertion(parent)) {
                     found.set(true);
                 }
                 return identifier;
             }
-        }.visit(method.getBody(), other);
+        }.visit(method, other); // the whole method, so a Conversion can find it from its cursor
         return !other.get();
     }
 }

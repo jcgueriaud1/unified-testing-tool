@@ -37,21 +37,31 @@ class GoldenMigrationTest implements RewriteTest {
         assertMigrates("ProfileEscapeHatchTestBenchTest", "ProfileEscapeHatchMigratedTest");
     }
 
+    @Test
+    void editPersonTestBenchTestBecomesEditPersonMigratedTest() throws IOException {
+        assertMigrates("EditPersonTestBenchTest", "EditPersonMigratedTest");
+    }
+
+    private static org.openrewrite.test.SourceSpecs view(String name, String route) {
+        return java("""
+                package demo;
+
+                import com.vaadin.flow.component.Component;
+                import com.vaadin.flow.router.Route;
+
+                @Route("%s")
+                public class %s extends Component {
+                }
+                """.formatted(route, name));
+    }
+
     private void assertMigrates(String input, String twin) throws IOException {
         String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
         String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
         rewriteRun(
-                // the demo's view, reduced to its route: the real one needs the whole application on the classpath
-                java("""
-                        package demo;
-
-                        import com.vaadin.flow.component.Component;
-                        import com.vaadin.flow.router.Route;
-
-                        @Route("profile")
-                        public class ProfileView extends Component {
-                        }
-                        """),
+                // the demo's views, reduced to their routes: the real ones need the whole application on the classpath
+                view("ProfileView", "profile"),
+                view("PeopleView", "people"),
                 java(before, after));
     }
 }

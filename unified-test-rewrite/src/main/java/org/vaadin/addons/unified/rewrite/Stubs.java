@@ -26,6 +26,22 @@ final class Stubs {
             }
             """,
             """
+            package com.vaadin.testing.unified.component;
+            public interface UnifiedGrid {
+                UnifiedGridRow row(int index);
+                RowQuery rows();
+                interface RowQuery {
+                    RowQuery withCellText(String text);
+                    UnifiedGridRow single();
+                }
+                interface UnifiedGridRow {
+                    int getIndex();
+                    String getCellText(int columnIndex);
+                    void click();
+                }
+            }
+            """,
+            """
             package com.vaadin.testing.unified.selenium;
             public final class TestBenchEscapeHatch {
                 public static TestBenchEscapeHatch of(com.vaadin.testing.unified.UnifiedPage page) { return null; }
@@ -70,10 +86,13 @@ final class Stubs {
         return pkg + "public class " + fqn.substring(dot + 1) + " {}";
     }
 
-    /** An empty interface stub, for a Wrapper a template names. */
-    static String interfaceStub(String fqn) {
+    /** An empty interface stub, for a Wrapper a template names; none for Wrappers already stubbed above. */
+    static String[] interfaceStub(String fqn) {
+        if (Arrays.stream(SOURCES).anyMatch(source -> source.contains("public interface " + fqn.substring(fqn.lastIndexOf('.') + 1) + " "))) {
+            return new String[0];
+        }
         int dot = fqn.lastIndexOf('.');
-        return "package " + fqn.substring(0, dot) + ";\npublic interface " + fqn.substring(dot + 1) + " {}";
+        return new String[] {"package " + fqn.substring(0, dot) + ";\npublic interface " + fqn.substring(dot + 1) + " {}"};
     }
 
     /** The {@code page} parameter the setup recipe adds to every test method. */

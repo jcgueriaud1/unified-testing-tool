@@ -42,6 +42,8 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
 
     interface RowQuery {
         RowQuery withCellText(String columnHeader, String text);
+        /** Rows with a cell showing exactly this text, in any column. */
+        RowQuery withCellText(String text);
         RowQuery withCellTextContaining(String columnHeader, String part);
         RowQuery selected();
         UnifiedGridRow single();
@@ -53,6 +55,8 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
         UnifiedGrid grid();
         int getIndex();
         String getCellText(String columnHeader);
+        /** By index among the visible columns: for columns without header text; prefer the header. */
+        String getCellText(int columnIndex);
         /** Components inside the cell, e.g. an Edit button. */
         Scope cell(String columnHeader);
         void select();
