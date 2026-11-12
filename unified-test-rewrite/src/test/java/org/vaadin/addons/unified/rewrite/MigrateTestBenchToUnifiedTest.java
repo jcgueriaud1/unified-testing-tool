@@ -1188,4 +1188,43 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void lookupsInsideADialogFindInTheDialog() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.flow.component.dialog.testbench.DialogElement;
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void changesTheEmail() {
+                        DialogElement dialog = $(DialogElement.class).single();
+                        dialog.$(TextFieldElement.class).withLabel("Email").single().setValue("bob@example.com");
+                        dialog.$(ButtonElement.class).withText("Save").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedDialog;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    @Test
+                    void changesTheEmail(UnifiedPage page) {
+                        UnifiedDialog dialog = page.find(UnifiedDialog.class).single();
+                        dialog.find(UnifiedTextField.class).withLabel("Email").single().setValue("bob@example.com");
+                        dialog.find(UnifiedButton.class).withText("Save").single().click();
+                    }
+                }
+                """));
+    }
 }

@@ -108,7 +108,9 @@ final class Wrappers {
             Map.entry("com.vaadin.flow.component.dialog.testbench.DialogElement", new Wrapper(
                     "com.vaadin.testing.unified.component.UnifiedDialog",
                     COMMON_FILTERS,
-                    Set.of("isOpen", "getHeaderTitle"))),
+                    // find is what a $(..) inside the dialog becomes
+                    Set.of("isOpen", "getHeaderTitle", "find"),
+                    Chains::scopedLookupConverts)),
             Map.entry("com.vaadin.flow.component.grid.testbench.GridElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedGrid",
                     COMMON_FILTERS,
                     // row and rows are what GridCells writes for getCell(..)

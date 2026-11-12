@@ -42,6 +42,12 @@ final class Stubs {
             }
             """,
             """
+            package com.vaadin.testing.unified.component;
+            public interface UnifiedDialog {
+                Object find(Class<?> type);
+            }
+            """,
+            """
             package com.vaadin.testing.unified.selenium;
             public final class TestBenchEscapeHatch {
                 public static TestBenchEscapeHatch of(com.vaadin.testing.unified.UnifiedPage page) { return null; }

@@ -3,7 +3,6 @@ package org.vaadin.addons.unified.rewrite;
 import static java.util.Collections.emptyList;
 
 import java.util.Set;
-import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.Tree;
@@ -65,61 +64,42 @@ public class TestBenchLookupsToUnified extends Recipe {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 if (FIRST.contains(m.getSimpleName()) && hasPageParameter()) {
                     Wrappers.Wrapper wrapper = Wrappers.ofLookup(method);
-                    if (wrapper != null && onlyUsesWhatTheWrapperHas(getCursor(), true, wrapper)
+                    if (wrapper != null && Chains.supported(getCursor(), true, wrapper)
                             && MigrationMarkers.add(getCursor(),
                                     "was " + m.getSimpleName() + "(); single() fails when several components match")) {
                         return m.withName(m.getName().withSimpleName("single"));
                     }
                     return m;
                 }
-                if (!DOLLAR.matches(m) || m.getSelect() != null || !hasPageParameter()
-                        || !(m.getArguments().get(0) instanceof J.FieldAccess classLiteral)
-                        || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
+                if (!DOLLAR.matches(method) || !hasPageParameter()) {
                     return m;
                 }
-                Wrappers.Wrapper wrapper = Wrappers.forElement(element.getFullyQualifiedName());
-                if (wrapper == null || !onlyUsesWhatTheWrapperHas(wrapper)) {
+                Wrappers.Wrapper wrapper = Chains.ofDollar(method);
+                if (wrapper == null || !Chains.supported(getCursor(), false, wrapper)) {
                     return m;
                 }
+                // $(..) on the page, or on a container that becomes a Unified Scope
+                String scope = TestBenchSetupToUnified.UNIFIED_PAGE;
+                Object receiver = Stubs.page();
+                if (method.getSelect() != null) {
+                    Wrappers.Wrapper container = method.getSelect() instanceof J.Identifier local
+                            ? Locals.wrapperOf(getCursor(), local)
+                            : Wrappers.ofLookup(method.getSelect());
+                    if (container == null || !Chains.SCOPES.contains(container.fqn())) {
+                        return m;
+                    }
+                    scope = container.fqn();
+                    receiver = m.getSelect();
+                }
+                String element = ((J.FieldAccess) method.getArguments().get(0)).getTarget().getType() instanceof JavaType.FullyQualified t
+                        ? t.getFullyQualifiedName() : null;
                 maybeAddImport(wrapper.fqn());
-                maybeRemoveImport(element.getFullyQualifiedName());
-                return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.find("
-                                + wrapper.simpleName() + ".class)")
+                maybeRemoveImport(element);
+                return JavaTemplate.builder("#{any(" + scope + ")}.find(" + wrapper.simpleName() + ".class)")
                         .imports(wrapper.fqn())
                         .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
                         .build()
-                        .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
-            }
-
-            /**
-             * Whether the chain on this {@code $(..)} only uses the Wrapper's filters, then {@code single()}, then at
-             * most one of the Wrapper's methods, or ends in a Unified assertion or a statement of its own.
-             */
-            private boolean onlyUsesWhatTheWrapperHas(Wrappers.Wrapper wrapper) {
-                return onlyUsesWhatTheWrapperHas(getCursor(), false, wrapper);
-            }
-
-            private boolean onlyUsesWhatTheWrapperHas(Cursor start, boolean afterTerminal, Wrappers.Wrapper wrapper) {
-                Cursor c = start;
-                boolean found = afterTerminal;
-                while (true) {
-                    Cursor parent = c.getParentTreeCursor();
-                    if (!(parent.getValue() instanceof J.MethodInvocation call) || call.getSelect() != c.getValue()) {
-                        return found && (parent.getValue() instanceof J.Block || TestBenchAssertionsToUnified.isUnifiedAssertion(parent.getValue())
-                                || parent.getValue() instanceof J.VariableDeclarations.NamedVariable variable
-                                        && Locals.wrapperOf(getCursor().firstEnclosing(J.MethodDeclaration.class),
-                                                variable) != null);
-                    }
-                    String name = call.getSimpleName();
-                    if (!found && Wrappers.TERMINALS.contains(name)) {
-                        found = true;
-                    } else if (!found && wrapper.filters().contains(name)) {
-                        // a filter before the terminal
-                    } else {
-                        return found && wrapper.supports(call, parent);
-                    }
-                    c = parent;
-                }
+                        .apply(getCursor(), m.getCoordinates().replace(), receiver);
             }
 
             private boolean hasPageParameter() {
