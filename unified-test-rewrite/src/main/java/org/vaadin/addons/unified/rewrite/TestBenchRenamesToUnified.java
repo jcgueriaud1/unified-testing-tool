@@ -34,6 +34,10 @@ public class TestBenchRenamesToUnified extends Recipe {
                     return m;
                 }
                 Wrappers.Wrapper wrapper = wrapperOf(method.getSelect());
+                if (wrapper != null && !wrapper.has(m.getSimpleName()) && m.getSimpleName().equals("setValue")
+                        && NumberFields.number(m.getArguments().get(0)) != null) {
+                    return m.withArguments(java.util.List.of(NumberFields.doubleLiteral(m.getArguments().get(0))));
+                }
                 String renamed = wrapper == null ? null : wrapper.renames().get(m.getSimpleName());
                 return renamed == null ? m : m.withName(m.getName().withSimpleName(renamed));
             }

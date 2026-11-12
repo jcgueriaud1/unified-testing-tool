@@ -1036,4 +1036,81 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void numberFieldStringLiteralsBecomeNumbers() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.NumberFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void setsTheAge() {
+                        NumberFieldElement age = $(NumberFieldElement.class).withLabel("Age").single();
+                        age.setValue("42");
+                        Assertions.assertEquals("42", age.getValue());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedNumberField;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class PreferencesTest {
+
+                    @Test
+                    void setsTheAge(UnifiedPage page) {
+                        UnifiedNumberField age = page.find(UnifiedNumberField.class).withLabel("Age").single();
+                        age.setValue(42.0);
+                        assertThat(age).hasValue(42.0);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aNumberFieldValueThatIsNotALiteralStaysTestBench() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.NumberFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void setsTheAge() {
+                        String age = "42";
+                        $(NumberFieldElement.class).withLabel("Age").single().setValue(age);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.textfield.testbench.NumberFieldElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                class PreferencesTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void setsTheAge(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        String age = "42";
+                        // TODO unified: TestBench Escape Hatch: $(NumberFieldElement.class)
+                        testBench.$(NumberFieldElement.class).withLabel("Age").single().setValue(age);
+                    }
+                }
+                """));
+    }
 }

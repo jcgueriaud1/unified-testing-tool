@@ -83,8 +83,12 @@ public class TestBenchAssertionsToUnified extends Recipe {
                     return m;
                 }
                 Wrappers.Wrapper wrapper = wrapperOf(getter.getSelect());
-                if (wrapper == null || !wrapper.has(getter.getSimpleName())) {
+                if (wrapper == null || !wrapper.supports(getter, new org.openrewrite.Cursor(getCursor(), getter))) {
                     return m;
+                }
+                Expression expected = m.getArguments().get(0);
+                if (NumberFields.number(expected) != null && !wrapper.has(getter.getSimpleName())) {
+                    expected = NumberFields.doubleLiteral(expected); // a NumberField: TestBench's String value is a Double
                 }
                 String listAssertion = ASSERTION_BY_LIST_GETTER.get(getter.getSimpleName());
                 if (listAssertion != null && m.getArguments().get(0) instanceof J.MethodInvocation list
@@ -112,7 +116,7 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         .staticImports(UNIFIED_ASSERTIONS + ".assertThat")
                         .javaParser(Stubs.parser())
                         .build()
-                        .apply(getCursor(), m.getCoordinates().replace(), getter.getSelect(), m.getArguments().get(0));
+                        .apply(getCursor(), m.getCoordinates().replace(), getter.getSelect(), expected);
             }
 
             private Wrappers.Wrapper wrapperOf(Expression element) {
