@@ -12,6 +12,19 @@ final class Urls {
     private Urls() {
     }
 
+    /**
+     * The path expression in {@code base + "/" + path}, for a path only known at run time, else {@code null}.
+     */
+    static Expression pathExpression(Expression url) {
+        if (url instanceof J.Binary b && b.getOperator() == J.Binary.Type.Addition
+                && !(b.getRight() instanceof J.Literal)
+                && b.getLeft() instanceof J.Binary left && left.getRight() instanceof J.Literal slash
+                && "/".equals(slash.getValue())) {
+            return b.getRight().withPrefix(org.openrewrite.java.tree.Space.EMPTY);
+        }
+        return null;
+    }
+
     /** The path after the host and port, without its leading slash, or {@code null} when it can't be read. */
     static String pathOf(Expression url) {
         if (url instanceof J.Binary b && b.getOperator() == J.Binary.Type.Addition

@@ -1272,4 +1272,310 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void aBaseClassAndItsSubclassesMigrateTogether() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.springframework.boot.test.web.server.LocalServerPort;
+
+                        @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+                        abstract class AbstractIT extends BrowserTestBase {
+
+                            @LocalServerPort
+                            int port;
+
+                            protected void open(String path) {
+                                getDriver().get("http://localhost:" + port + "/" + path);
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+
+                        @UnifiedSpringBootTest
+                        abstract class AbstractIT {
+
+                            protected void open(UnifiedPage page, String path) {
+                                page.navigate(path);
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @BrowserTest
+                            void saves() {
+                                open("profile");
+                                $(ButtonElement.class).withText("Save").single().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @Test
+                            void saves(UnifiedPage page) {
+                                open(page, "profile");
+                                page.find(UnifiedButton.class).withText("Save").single().click();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void anInheritedBeforeEachIsCalledFirstInEachSubclassTest() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import org.junit.jupiter.api.BeforeEach;
+
+                        abstract class AbstractIT extends BrowserTestBase {
+
+                            @BeforeEach
+                            void openProfile() {
+                                getDriver().get("http://localhost:8080/profile");
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+
+                        abstract class AbstractIT {
+
+                            void openProfile(UnifiedPage page) {
+                                page.navigate("profile");
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @BrowserTest
+                            void saves() {
+                                $(ButtonElement.class).withText("Save").single().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @Test
+                            void saves(UnifiedPage page) {
+                                openProfile(page);
+                                page.find(UnifiedButton.class).withText("Save").single().click();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void pageObjectsMigrateWithIncludePageObjects() {
+        rewriteRun(
+                spec -> spec.recipe(new MigrateTestBenchToUnified(null, true)),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                        import com.vaadin.testbench.HasElementQuery;
+
+                        class ProfilePage {
+
+                            private final HasElementQuery test;
+
+                            ProfilePage(HasElementQuery test) {
+                                this.test = test;
+                            }
+
+                            void setName(String name) {
+                                test.$(TextFieldElement.class).withLabel("Name").single().setValue(name);
+                            }
+
+                            ButtonElement save() {
+                                return test.$(ButtonElement.class).withText("Save").single();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.component.UnifiedTextField;
+
+                        class ProfilePage {
+
+                            private final UnifiedPage test;
+
+                            ProfilePage(UnifiedPage test) {
+                                this.test = test;
+                            }
+
+                            void setName(String name) {
+                                test.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
+                            }
+
+                            UnifiedButton save() {
+                                return test.find(UnifiedButton.class).withText("Save").single();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class ProfileTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void saves() {
+                                ProfilePage profile = new ProfilePage(this);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileTest {
+
+                            @Test
+                            void saves(UnifiedPage page) {
+                                ProfilePage profile = new ProfilePage(page);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void withoutIncludePageObjectsAPageObjectStaysTestBench() {
+        rewriteRun(
+                java("""
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                        import com.vaadin.testbench.HasElementQuery;
+
+                        class ProfilePage {
+
+                            private final HasElementQuery test;
+
+                            ProfilePage(HasElementQuery test) {
+                                this.test = test;
+                            }
+
+                            void setName(String name) {
+                                test.$(TextFieldElement.class).withLabel("Name").single().setValue(name);
+                            }
+
+                            ButtonElement save() {
+                                return test.$(ButtonElement.class).withText("Save").single();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class ProfileTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void saves() {
+                                ProfilePage profile = new ProfilePage(this);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileTest {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void saves(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench page object: new ProfilePage(this)
+                                ProfilePage profile = new ProfilePage(testBench);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void aCustomElementGetsAMarkerPointingToWrappers() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("main-view")
+                        public class MainViewElement extends TestBenchElement {
+                            public void logout() {
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class MainTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void logsOut() {
+                                $(MainViewElement.class).single().logout();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        class MainTest {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void logsOut(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: $(MainViewElement.class), a custom element: write a Wrapper for it (ADR 0003)
+                                testBench.$(MainViewElement.class).single().logout();
+                            }
+                        }
+                        """));
+    }
 }
