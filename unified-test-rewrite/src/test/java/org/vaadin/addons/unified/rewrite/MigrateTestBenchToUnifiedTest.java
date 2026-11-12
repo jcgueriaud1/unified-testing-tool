@@ -1113,4 +1113,39 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void buttonLabelAndCaptionFiltersBecomeTextWithAMarker() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void saves() {
+                        $(ButtonElement.class).withCaption("Save").single().click();
+                        $(ButtonElement.class).withLabel("Cancel").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        // TODO unified: was withCaption("Save"); use withAccessibleName(..) for a button without text
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        // TODO unified: was withLabel("Cancel"); use withAccessibleName(..) for a button without text
+                        page.find(UnifiedButton.class).withText("Cancel").single().click();
+                    }
+                }
+                """));
+    }
 }

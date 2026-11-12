@@ -52,6 +52,10 @@ final class Wrappers {
         boolean converts(J.MethodInvocation call, Cursor callCursor);
     }
 
+    /** Button filters TestBench has and the Unified API spells withText (ADR 0001). */
+    static final Map<String, String> BUTTON_FILTER_RENAMES = Map.of("withLabel", "withText", "withCaption", "withText");
+    static final String BUTTON_ELEMENT = "com.vaadin.flow.component.button.testbench.ButtonElement";
+
     /** TestBench query terminals; {@code first()} and {@code waitForFirst()} become {@code single()}. */
     static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst");
 
@@ -66,7 +70,8 @@ final class Wrappers {
                     Set.of("setValue", "getValue", "clear", "getLabel", "getPlaceholder", "getHelperText",
                             "getErrorMessage", "isEnabled"))),
             Map.entry("com.vaadin.flow.component.button.testbench.ButtonElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedButton",
-                    with(COMMON_FILTERS, "withText"),
+                    // withLabel and withCaption become withText (ADR 0001), see FILTER_RENAMES
+                    with(COMMON_FILTERS, "withText", "withLabel", "withCaption"),
                     Set.of("click", "getText", "isEnabled"))),
             Map.entry("com.vaadin.flow.component.notification.testbench.NotificationElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedNotification",
                     with(COMMON_FILTERS, "withText"),

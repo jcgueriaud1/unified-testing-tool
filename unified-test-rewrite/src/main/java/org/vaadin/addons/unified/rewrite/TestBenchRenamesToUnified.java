@@ -27,8 +27,20 @@ public class TestBenchRenamesToUnified extends Recipe {
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
             @Override
+            public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
+                var markers = MigrationMarkers.collect(getCursor());
+                return MigrationMarkers.write(super.visitMethodDeclaration(method, ctx), markers);
+            }
+
+            @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+                String filter = Wrappers.BUTTON_FILTER_RENAMES.get(m.getSimpleName());
+                if (filter != null && m.getArguments().size() == 1 && onButtonLookupThatConverts()
+                        && MigrationMarkers.add(getCursor(), "was " + method.printTrimmed(getCursor()).replaceFirst("^.*\\.(?=with)", "")
+                                + "; use withAccessibleName(..) for a button without text")) {
+                    return m.withName(m.getName().withSimpleName(filter));
+                }
                 if (method.getSelect() == null || getCursor().firstEnclosing(J.MethodDeclaration.class) == null
                         || !Pages.hasPageParameter(getCursor().firstEnclosing(J.MethodDeclaration.class))) {
                     return m;
@@ -40,6 +52,21 @@ public class TestBenchRenamesToUnified extends Recipe {
                 }
                 String renamed = wrapper == null ? null : wrapper.renames().get(m.getSimpleName());
                 return renamed == null ? m : m.withName(m.getName().withSimpleName(renamed));
+            }
+
+            /** Whether this filter call is in a {@code $(ButtonElement.class)} lookup the Button Wrapper can express. */
+            private boolean onButtonLookupThatConverts() {
+                org.openrewrite.Cursor c = getCursor();
+                while (c.getParentTreeCursor().getValue() instanceof J.MethodInvocation parent && parent.getSelect() == c.getValue()
+                        && !Wrappers.TERMINALS.contains(parent.getSimpleName())) {
+                    c = c.getParentTreeCursor();
+                }
+                Object parent = c.getParentTreeCursor().getValue();
+                if (!(parent instanceof J.MethodInvocation terminal) || terminal.getSelect() != c.getValue()) {
+                    return false;
+                }
+                Wrappers.Wrapper wrapper = Wrappers.ofLookup(terminal);
+                return wrapper != null && wrapper == Wrappers.forElement(Wrappers.BUTTON_ELEMENT);
             }
 
             private Wrappers.Wrapper wrapperOf(Expression element) {
