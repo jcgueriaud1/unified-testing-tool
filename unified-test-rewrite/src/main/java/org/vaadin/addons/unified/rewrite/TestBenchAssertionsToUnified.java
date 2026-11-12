@@ -1,5 +1,7 @@
 package org.vaadin.addons.unified.rewrite;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
@@ -7,6 +9,7 @@ import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
+import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 
 /**
@@ -25,6 +28,11 @@ public class TestBenchAssertionsToUnified extends Recipe {
     private static final Map<String, String[]> ASSERTIONS_BY_CHECK = Map.of(
             "isChecked", new String[] {"isChecked", "isNotChecked"},
             "isEnabled", new String[] {"isEnabled", "isDisabled"});
+    /** List getter on the element → the Unified assertion that retries it, for an expected {@code List.of(..)}. */
+    private static final Map<String, String> ASSERTION_BY_LIST_GETTER = Map.of(
+            "getSelectedTexts", "hasSelectedItems", "getOptions", "hasItems");
+    private static final MethodMatcher LIST_OF = new MethodMatcher("java.util.List of(..)");
+    private static final MethodMatcher ARRAYS_AS_LIST = new MethodMatcher("java.util.Arrays asList(..)");
     /** Getter on the element → the Unified assertion that retries it. */
     private static final Map<String, String> ASSERTION_BY_GETTER = Map.of("getValue", "hasValue", "getText", "hasText",
             "getSelectedText", "hasSelectedItem", "getDate", "hasValue");
@@ -78,6 +86,23 @@ public class TestBenchAssertionsToUnified extends Recipe {
                 if (wrapper == null || !wrapper.has(getter.getSimpleName())) {
                     return m;
                 }
+                String listAssertion = ASSERTION_BY_LIST_GETTER.get(getter.getSimpleName());
+                if (listAssertion != null && m.getArguments().get(0) instanceof J.MethodInvocation list
+                        && (LIST_OF.matches(list) || ARRAYS_AS_LIST.matches(list))) {
+                    List<Expression> items = list.getArguments().stream().filter(a -> !(a instanceof J.Empty)).toList();
+                    String parameters = String.join(", ", java.util.Collections.nCopies(items.size(), "#{any(java.lang.String)}"));
+                    List<Object> values = new ArrayList<>();
+                    values.add(getter.getSelect());
+                    values.addAll(items);
+                    imports();
+                    maybeRemoveImport("java.util.List");
+                    maybeRemoveImport("java.util.Arrays");
+                    return JavaTemplate.builder("assertThat(#{any(java.lang.Object)})." + listAssertion + "(" + parameters + ")")
+                            .staticImports(UNIFIED_ASSERTIONS + ".assertThat")
+                            .javaParser(Stubs.parser())
+                            .build()
+                            .apply(getCursor(), m.getCoordinates().replace(), values.toArray());
+                }
                 String assertion = ASSERTION_BY_GETTER.get(getter.getSimpleName());
                 if (assertion == null) {
                     return m;
@@ -90,7 +115,7 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         .apply(getCursor(), m.getCoordinates().replace(), getter.getSelect(), m.getArguments().get(0));
             }
 
-            private Wrappers.Wrapper wrapperOf(org.openrewrite.java.tree.Expression element) {
+            private Wrappers.Wrapper wrapperOf(Expression element) {
                 return element instanceof J.Identifier local
                         ? Locals.wrapperOf(getCursor(), local)
                         : Wrappers.ofLookup(element);

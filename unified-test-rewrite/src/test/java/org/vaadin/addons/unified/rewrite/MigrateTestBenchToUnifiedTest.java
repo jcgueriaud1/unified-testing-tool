@@ -946,4 +946,51 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void multiSelectComboBoxCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import java.util.List;
+                import org.junit.jupiter.api.Assertions;
+
+                class OrderTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void picksExtras() {
+                        MultiSelectComboBoxElement extras = $(MultiSelectComboBoxElement.class).withLabel("Extras").single();
+                        extras.selectByText("Milk");
+                        extras.selectByText("Sugar");
+                        extras.deselectByText("Milk");
+                        Assertions.assertEquals(List.of("Sugar"), extras.getSelectedTexts());
+                        Assertions.assertEquals(List.of("Milk", "Sugar", "Honey"), extras.getOptions());
+                        extras.deselectAll();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class OrderTest {
+
+                    @Test
+                    void picksExtras(UnifiedPage page) {
+                        UnifiedMultiSelectComboBox extras = page.find(UnifiedMultiSelectComboBox.class).withLabel("Extras").single();
+                        extras.selectItems("Milk");
+                        extras.selectItems("Sugar");
+                        extras.deselectItems("Milk");
+                        assertThat(extras).hasSelectedItems("Sugar");
+                        assertThat(extras).hasItems("Milk", "Sugar", "Honey");
+                        extras.clear();
+                    }
+                }
+                """));
+    }
 }
