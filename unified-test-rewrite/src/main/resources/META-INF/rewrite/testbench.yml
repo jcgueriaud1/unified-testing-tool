@@ -41,8 +41,7 @@ name: org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode
 displayName: Migrate TestBench test code to the Unified API
 description: Rewrites the source of TestBench tests; only touches files that use TestBench.
 preconditions:
-  - org.openrewrite.java.search.FindTypes:
-      fullyQualifiedTypeName: com.vaadin.testbench.BrowserTestBase
+  - org.vaadin.addons.unified.rewrite.FindTestBenchTests
 recipeList:
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified

@@ -1272,4 +1272,66 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void aBaseClassAndItsSubclassesMigrateTogether() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.springframework.boot.test.web.server.LocalServerPort;
+
+                        @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+                        abstract class AbstractIT extends BrowserTestBase {
+
+                            @LocalServerPort
+                            int port;
+
+                            protected void open(String path) {
+                                getDriver().get("http://localhost:" + port + "/" + path);
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+
+                        @UnifiedSpringBootTest
+                        abstract class AbstractIT {
+
+                            protected void open(UnifiedPage page, String path) {
+                                page.navigate(path);
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @BrowserTest
+                            void saves() {
+                                open("profile");
+                                $(ButtonElement.class).withText("Save").single().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileIT extends AbstractIT {
+
+                            @Test
+                            void saves(UnifiedPage page) {
+                                open(page, "profile");
+                                page.find(UnifiedButton.class).withText("Save").single().click();
+                            }
+                        }
+                        """));
+    }
 }
