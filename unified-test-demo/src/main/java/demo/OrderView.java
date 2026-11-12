@@ -34,6 +34,7 @@ public class OrderView extends VerticalLayout {
         size.setItems(Size.values());
         size.setItemLabelGenerator(s -> s.name().charAt(0) + s.name().substring(1).toLowerCase());
         size.setValue(Size.MEDIUM);
+        size.setId("size");
 
         MultiSelectComboBox<String> toppings = new MultiSelectComboBox<>("Toppings");
         toppings.setItems("Cheese", "Ham", "Mushrooms", "Olives");

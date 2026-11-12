@@ -45,7 +45,7 @@ class FieldsMigratedTest {
         page.navigate(OrderView.class);
 
         page.find(UnifiedComboBox.class).withLabel("Country").single().selectItem("Germany");
-        UnifiedRadioButtonGroup size = page.find(UnifiedRadioButtonGroup.class).single();
+        UnifiedRadioButtonGroup size = page.find(UnifiedRadioButtonGroup.class).withId("size").single();
         size.selectItem("Large");
         UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").single();
         toppings.selectItems("Ham");
