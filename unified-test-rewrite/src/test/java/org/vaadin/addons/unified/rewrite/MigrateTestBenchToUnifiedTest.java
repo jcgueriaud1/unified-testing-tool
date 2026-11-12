@@ -225,6 +225,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                                 <type>pom</type>
                                 <scope>import</scope>
                             </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>4.1.1</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
                         </dependencies>
                     </dependencyManagement>
                     <dependencies>
@@ -248,6 +255,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                                 <groupId>com.vaadin</groupId>
                                 <artifactId>vaadin-bom</artifactId>
                                 <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>4.1.1</version>
                                 <type>pom</type>
                                 <scope>import</scope>
                             </dependency>
@@ -292,6 +306,24 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             <groupId>com.example</groupId>
                             <artifactId>app</artifactId>
                             <version>1.0</version>
+                            <dependencyManagement>
+                                <dependencies>
+                                    <dependency>
+                                        <groupId>com.vaadin</groupId>
+                                        <artifactId>vaadin-bom</artifactId>
+                                        <version>25.3.5</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.springframework.boot</groupId>
+                                        <artifactId>spring-boot-dependencies</artifactId>
+                                        <version>4.1.1</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
+                                </dependencies>
+                            </dependencyManagement>
                             <dependencies>
                                 <dependency>
                                     <groupId>com.vaadin</groupId>
@@ -310,6 +342,20 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             <version>1.0</version>
                             <dependencyManagement>
                                 <dependencies>
+                                    <dependency>
+                                        <groupId>com.vaadin</groupId>
+                                        <artifactId>vaadin-bom</artifactId>
+                                        <version>25.3.5</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.springframework.boot</groupId>
+                                        <artifactId>spring-boot-dependencies</artifactId>
+                                        <version>4.1.1</version>
+                                        <type>pom</type>
+                                        <scope>import</scope>
+                                    </dependency>
                                     <dependency>
                                         <groupId>org.vaadin.addons</groupId>
                                         <artifactId>unified-test-bom</artifactId>
@@ -779,6 +825,325 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         UnifiedGrid.UnifiedGridRow alan = people.rows().withCellText("Alan Turing").single();
                         int row = alan.getIndex();
                         alan.click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void checkboxLookupsAndCheckedAssertions() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void togglesNewsletter() {
+                        CheckboxElement newsletter = $(CheckboxElement.class).withLabel("Newsletter").single();
+                        newsletter.setChecked(true);
+                        Assertions.assertTrue(newsletter.isChecked());
+                        Assertions.assertFalse($(CheckboxElement.class).withLabel("Dark mode").single().isChecked());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class PreferencesTest {
+
+                    @Test
+                    void togglesNewsletter(UnifiedPage page) {
+                        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Newsletter").single();
+                        newsletter.setChecked(true);
+                        assertThat(newsletter).isChecked();
+                        assertThat(page.find(UnifiedCheckbox.class).withLabel("Dark mode").single()).isNotChecked();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void comboBoxCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.combobox.testbench.ComboBoxElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class OrderTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void picksAProduct() {
+                        ComboBoxElement product = $(ComboBoxElement.class).withLabel("Product").single();
+                        product.selectByText("Tea");
+                        Assertions.assertEquals("Tea", product.getSelectedText());
+                        Assertions.assertEquals(3, product.getOptions().size());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedComboBox;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class OrderTest {
+
+                    @Test
+                    void picksAProduct(UnifiedPage page) {
+                        UnifiedComboBox product = page.find(UnifiedComboBox.class).withLabel("Product").single();
+                        product.selectItem("Tea");
+                        assertThat(product).hasSelectedItem("Tea");
+                        Assertions.assertEquals(3, product.getItems().size());
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void radioButtonGroupCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.radiobutton.testbench.RadioButtonGroupElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class OrderTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void picksDelivery() {
+                        $(RadioButtonGroupElement.class).withLabel("Delivery").single().selectByText("Express");
+                        Assertions.assertEquals("Express", $(RadioButtonGroupElement.class).withLabel("Delivery").single().getSelectedText());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class OrderTest {
+
+                    @Test
+                    void picksDelivery(UnifiedPage page) {
+                        page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery").single().selectItem("Express");
+                        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery").single()).hasSelectedItem("Express");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void multiSelectComboBoxCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import java.util.List;
+                import org.junit.jupiter.api.Assertions;
+
+                class OrderTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void picksExtras() {
+                        MultiSelectComboBoxElement extras = $(MultiSelectComboBoxElement.class).withLabel("Extras").single();
+                        extras.selectByText("Milk");
+                        extras.selectByText("Sugar");
+                        extras.deselectByText("Milk");
+                        Assertions.assertEquals(List.of("Sugar"), extras.getSelectedTexts());
+                        Assertions.assertEquals(List.of("Milk", "Sugar", "Honey"), extras.getOptions());
+                        extras.deselectAll();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class OrderTest {
+
+                    @Test
+                    void picksExtras(UnifiedPage page) {
+                        UnifiedMultiSelectComboBox extras = page.find(UnifiedMultiSelectComboBox.class).withLabel("Extras").single();
+                        extras.selectItems("Milk");
+                        extras.selectItems("Sugar");
+                        extras.deselectItems("Milk");
+                        assertThat(extras).hasSelectedItems("Sugar");
+                        assertThat(extras).hasItems("Milk", "Sugar", "Honey");
+                        extras.clear();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void datePickerCallsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.datepicker.testbench.DatePickerElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Assertions;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void setsTheBirthday() {
+                        DatePickerElement birthday = $(DatePickerElement.class).withLabel("Birthday").single();
+                        birthday.setDate(LocalDate.of(1990, 5, 17));
+                        Assertions.assertEquals(LocalDate.of(1990, 5, 17), birthday.getDate());
+                        birthday.setInputValue("1/2/2000");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedDatePicker;
+                import org.junit.jupiter.api.Test;
+
+                import java.time.LocalDate;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class PreferencesTest {
+
+                    @Test
+                    void setsTheBirthday(UnifiedPage page) {
+                        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday").single();
+                        birthday.setValue(LocalDate.of(1990, 5, 17));
+                        assertThat(birthday).hasValue(LocalDate.of(1990, 5, 17));
+                        birthday.typeText("1/2/2000");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void numberFieldStringLiteralsBecomeNumbers() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.NumberFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void setsTheAge() {
+                        NumberFieldElement age = $(NumberFieldElement.class).withLabel("Age").single();
+                        age.setValue("42");
+                        Assertions.assertEquals("42", age.getValue());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedNumberField;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class PreferencesTest {
+
+                    @Test
+                    void setsTheAge(UnifiedPage page) {
+                        UnifiedNumberField age = page.find(UnifiedNumberField.class).withLabel("Age").single();
+                        age.setValue(42.0);
+                        assertThat(age).hasValue(42.0);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aNumberFieldValueThatIsNotALiteralStaysTestBench() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.NumberFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PreferencesTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void setsTheAge() {
+                        String age = "42";
+                        $(NumberFieldElement.class).withLabel("Age").single().setValue(age);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.textfield.testbench.NumberFieldElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                class PreferencesTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void setsTheAge(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        String age = "42";
+                        // TODO unified: TestBench Escape Hatch: $(NumberFieldElement.class)
+                        testBench.$(NumberFieldElement.class).withLabel("Age").single().setValue(age);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void buttonLabelAndCaptionFiltersBecomeTextWithAMarker() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void saves() {
+                        $(ButtonElement.class).withCaption("Save").single().click();
+                        $(ButtonElement.class).withLabel("Cancel").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        // TODO unified: was withCaption("Save"); use withAccessibleName(..) for a button without text
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        // TODO unified: was withLabel("Cancel"); use withAccessibleName(..) for a button without text
+                        page.find(UnifiedButton.class).withText("Cancel").single().click();
                     }
                 }
                 """));

@@ -46,6 +46,7 @@ preconditions:
 recipeList:
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified
+  - org.vaadin.addons.unified.rewrite.TestBenchRenamesToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchGridCellsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchLookupsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchLeftoversToEscapeHatch
