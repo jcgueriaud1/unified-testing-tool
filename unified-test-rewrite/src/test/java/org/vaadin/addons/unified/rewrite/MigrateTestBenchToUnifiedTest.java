@@ -1389,4 +1389,146 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         }
                         """));
     }
+
+    @Test
+    void pageObjectsMigrateWithIncludePageObjects() {
+        rewriteRun(
+                spec -> spec.recipe(new MigrateTestBenchToUnified(null, true)),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                        import com.vaadin.testbench.HasElementQuery;
+
+                        class ProfilePage {
+
+                            private final HasElementQuery test;
+
+                            ProfilePage(HasElementQuery test) {
+                                this.test = test;
+                            }
+
+                            void setName(String name) {
+                                test.$(TextFieldElement.class).withLabel("Name").single().setValue(name);
+                            }
+
+                            ButtonElement save() {
+                                return test.$(ButtonElement.class).withText("Save").single();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.component.UnifiedTextField;
+
+                        class ProfilePage {
+
+                            private final UnifiedPage test;
+
+                            ProfilePage(UnifiedPage test) {
+                                this.test = test;
+                            }
+
+                            void setName(String name) {
+                                test.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
+                            }
+
+                            UnifiedButton save() {
+                                return test.find(UnifiedButton.class).withText("Save").single();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class ProfileTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void saves() {
+                                ProfilePage profile = new ProfilePage(this);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileTest {
+
+                            @Test
+                            void saves(UnifiedPage page) {
+                                ProfilePage profile = new ProfilePage(page);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void withoutIncludePageObjectsAPageObjectStaysTestBench() {
+        rewriteRun(
+                java("""
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                        import com.vaadin.testbench.HasElementQuery;
+
+                        class ProfilePage {
+
+                            private final HasElementQuery test;
+
+                            ProfilePage(HasElementQuery test) {
+                                this.test = test;
+                            }
+
+                            void setName(String name) {
+                                test.$(TextFieldElement.class).withLabel("Name").single().setValue(name);
+                            }
+
+                            ButtonElement save() {
+                                return test.$(ButtonElement.class).withText("Save").single();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class ProfileTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void saves() {
+                                ProfilePage profile = new ProfilePage(this);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        class ProfileTest {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void saves(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench page object: new ProfilePage(this)
+                                ProfilePage profile = new ProfilePage(testBench);
+                                profile.setName("Alice");
+                                profile.save().click();
+                            }
+                        }
+                        """));
+    }
 }

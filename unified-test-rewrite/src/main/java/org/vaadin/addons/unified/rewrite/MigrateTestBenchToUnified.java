@@ -31,13 +31,28 @@ public class MigrateTestBenchToUnified extends Recipe {
             required = false)
     private final @Nullable Boolean addPlaywright;
 
+    @Option(displayName = "Include page objects",
+            description = "Also migrate page objects: classes that look components up through the TestBench test.",
+            required = false)
+    private final @Nullable Boolean includePageObjects;
+
     public MigrateTestBenchToUnified() {
-        this(null);
+        this(null, null);
+    }
+
+    public MigrateTestBenchToUnified(@Nullable Boolean addPlaywright) {
+        this(addPlaywright, null);
     }
 
     @JsonCreator
-    public MigrateTestBenchToUnified(@JsonProperty("addPlaywright") @Nullable Boolean addPlaywright) {
+    public MigrateTestBenchToUnified(@JsonProperty("addPlaywright") @Nullable Boolean addPlaywright,
+            @JsonProperty("includePageObjects") @Nullable Boolean includePageObjects) {
         this.addPlaywright = addPlaywright;
+        this.includePageObjects = includePageObjects;
+    }
+
+    public @Nullable Boolean getIncludePageObjects() {
+        return includePageObjects;
     }
 
     public @Nullable Boolean getAddPlaywright() {
@@ -63,7 +78,11 @@ public class MigrateTestBenchToUnified extends Recipe {
         }
         names.add("org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode");
         Environment recipes = Environment.builder().load(declaredRecipes()).build();
-        return names.stream().map(name -> recipes.activateRecipes(name)).map(Recipe.class::cast).toList();
+        List<Recipe> list = new ArrayList<>(names.stream().map(name -> recipes.activateRecipes(name)).map(Recipe.class::cast).toList());
+        if (Boolean.TRUE.equals(includePageObjects)) {
+            list.add(1, new TestBenchPageObjectsToUnified()); // before the test code, which then passes page for this
+        }
+        return list;
     }
 
     private YamlResourceLoader declaredRecipes() {
@@ -79,11 +98,12 @@ public class MigrateTestBenchToUnified extends Recipe {
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof MigrateTestBenchToUnified other && Objects.equals(addPlaywright, other.addPlaywright);
+        return o instanceof MigrateTestBenchToUnified other && Objects.equals(addPlaywright, other.addPlaywright)
+                && Objects.equals(includePageObjects, other.includePageObjects);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(addPlaywright);
+        return Objects.hash(addPlaywright, includePageObjects);
     }
 }

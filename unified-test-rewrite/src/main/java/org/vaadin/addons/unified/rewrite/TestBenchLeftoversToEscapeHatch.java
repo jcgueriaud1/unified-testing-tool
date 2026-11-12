@@ -115,6 +115,26 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                         .apply(updateCursor(m), m.getCoordinates().addAnnotation((a, b) -> 1));
             }
 
+            /** {@code this} handed to a page object or helper as the TestBench test: it gets the Escape Hatch instead. */
+            @Override
+            public J.Identifier visitIdentifier(J.Identifier identifier, ExecutionContext ctx) {
+                J.Identifier id = super.visitIdentifier(identifier, ctx);
+                AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
+                Object parent = getCursor().getParentTreeCursor().getValue();
+                J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                boolean argument = parent instanceof J.NewClass n && n.getArguments().contains(identifier)
+                        || parent instanceof J.MethodInvocation call && call.getArguments().contains(identifier);
+                if (escapes == null || !id.getSimpleName().equals("this") || !argument || c == null
+                        || !TestBenchSetupToUnified.isTestBenchClass(c)
+                        || !MigrationMarkers.add(getCursor(), "TestBench page object: "
+                                + ((J) parent).printTrimmed(getCursor().getParentTreeCursor()))) {
+                    return id;
+                }
+                escapes.set(true);
+                return new J.Identifier(Tree.randomId(), id.getPrefix(), Markers.EMPTY, emptyList(), VARIABLE,
+                        JavaType.ShallowClass.build(ESCAPE_HATCH), null);
+            }
+
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
