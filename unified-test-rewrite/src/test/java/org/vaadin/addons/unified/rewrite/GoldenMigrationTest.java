@@ -64,6 +64,11 @@ class GoldenMigrationTest implements RewriteTest {
         assertMigrates("FieldsTestBenchTest", "FieldsMigratedTest");
     }
 
+    @Test
+    void containersTestBenchTestBecomesContainersMigratedTest() throws IOException {
+        assertMigrates("ContainersTestBenchTest", "ContainersMigratedTest");
+    }
+
     private static org.openrewrite.test.SourceSpecs view(String name, String route) {
         return java("""
                 package demo;
@@ -86,6 +91,7 @@ class GoldenMigrationTest implements RewriteTest {
                 view("PeopleView", "people"),
                 view("PreferencesView", "preferences"),
                 view("OrderView", "order"),
+                view("AccountView", "account"),
                 java(before, after));
     }
 }

@@ -27,15 +27,19 @@ public class TestBenchAssertionsToUnified extends Recipe {
     /** Boolean getter on the element → the Unified assertions for true and for false. */
     private static final Map<String, String[]> ASSERTIONS_BY_CHECK = Map.of(
             "isChecked", new String[] {"isChecked", "isNotChecked"},
-            "isEnabled", new String[] {"isEnabled", "isDisabled"});
+            "isEnabled", new String[] {"isEnabled", "isDisabled"},
+            "isOpen", new String[] {"isOpen", "isClosed"});
+    /** Wrappers whose assertion has no negative form for a check, e.g. no notification {@code isClosed()}. */
+    private static final Map<String, String> NO_NEGATIVE = Map.of(
+            "isOpen", "com.vaadin.testing.unified.component.UnifiedNotification");
     /** List getter on the element → the Unified assertion that retries it, for an expected {@code List.of(..)}. */
     private static final Map<String, String> ASSERTION_BY_LIST_GETTER = Map.of(
-            "getSelectedTexts", "hasSelectedItems", "getOptions", "hasItems");
+            "getSelectedTexts", "hasSelectedItems", "getOptions", "hasItems", "getTabLabels", "hasTabs");
     private static final MethodMatcher LIST_OF = new MethodMatcher("java.util.List of(..)");
     private static final MethodMatcher ARRAYS_AS_LIST = new MethodMatcher("java.util.Arrays asList(..)");
     /** Getter on the element → the Unified assertion that retries it. */
     private static final Map<String, String> ASSERTION_BY_GETTER = Map.of("getValue", "hasValue", "getText", "hasText",
-            "getSelectedText", "hasSelectedItem", "getDate", "hasValue");
+            "getSelectedText", "hasSelectedItem", "getDate", "hasValue", "getHeaderTitle", "hasHeaderTitle");
 
     /** Whether the tree is a {@code UnifiedAssertions.assertThat(..)} call, such as this recipe writes. */
     static boolean isUnifiedAssertion(Object tree) {
@@ -69,6 +73,9 @@ public class TestBenchAssertionsToUnified extends Recipe {
                     if (wrapper == null || !wrapper.has(check.getSimpleName())) {
                         return m;
                     }
+                    if (!asserted && wrapper.fqn().equals(NO_NEGATIVE.get(check.getSimpleName()))) {
+                        return m;
+                    }
                     String assertion = ASSERTIONS_BY_CHECK.get(check.getSimpleName())[asserted ? 0 : 1];
                     imports();
                     return JavaTemplate.builder("assertThat(#{any(java.lang.Object)})." + assertion + "()")
@@ -81,6 +88,18 @@ public class TestBenchAssertionsToUnified extends Recipe {
                         || !getter.getArguments().stream().allMatch(a -> a instanceof J.Empty)
                         || getter.getSelect() == null) {
                     return m;
+                }
+                // assertEquals(label, t.getSelectedTabElement().getLabel()) → assertThat(t).hasSelectedTab(label)
+                if (getter.getSimpleName().equals("getLabel") && getter.getSelect() instanceof J.MethodInvocation selected
+                        && selected.getSimpleName().equals("getSelectedTabElement") && selected.getSelect() != null
+                        && wrapperOf(selected.getSelect()) != null
+                        && wrapperOf(selected.getSelect()).fqn().equals(TabSheets.TAB_SHEET)) {
+                    imports();
+                    return JavaTemplate.builder("assertThat(#{any(java.lang.Object)}).hasSelectedTab(#{any(java.lang.String)})")
+                            .staticImports(UNIFIED_ASSERTIONS + ".assertThat")
+                            .javaParser(Stubs.parser())
+                            .build()
+                            .apply(getCursor(), m.getCoordinates().replace(), selected.getSelect(), m.getArguments().get(0));
                 }
                 Wrappers.Wrapper wrapper = wrapperOf(getter.getSelect());
                 if (wrapper == null || !wrapper.supports(getter, new org.openrewrite.Cursor(getCursor(), getter))) {

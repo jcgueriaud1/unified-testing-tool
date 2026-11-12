@@ -1148,4 +1148,128 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void dialogLookupsAndAssertions() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.dialog.testbench.DialogElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void opensTheDialog() {
+                        DialogElement dialog = $(DialogElement.class).single();
+                        Assertions.assertTrue(dialog.isOpen());
+                        Assertions.assertEquals("Change email", dialog.getHeaderTitle());
+                        Assertions.assertFalse($(DialogElement.class).withId("help").single().isOpen());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedDialog;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class ProfileTest {
+
+                    @Test
+                    void opensTheDialog(UnifiedPage page) {
+                        UnifiedDialog dialog = page.find(UnifiedDialog.class).single();
+                        assertThat(dialog).isOpen();
+                        assertThat(dialog).hasHeaderTitle("Change email");
+                        assertThat(page.find(UnifiedDialog.class).withId("help").single()).isClosed();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void lookupsInsideADialogFindInTheDialog() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.flow.component.dialog.testbench.DialogElement;
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void changesTheEmail() {
+                        DialogElement dialog = $(DialogElement.class).single();
+                        dialog.$(TextFieldElement.class).withLabel("Email").single().setValue("bob@example.com");
+                        dialog.$(ButtonElement.class).withText("Save").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedDialog;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+
+                    @Test
+                    void changesTheEmail(UnifiedPage page) {
+                        UnifiedDialog dialog = page.find(UnifiedDialog.class).single();
+                        dialog.find(UnifiedTextField.class).withLabel("Email").single().setValue("bob@example.com");
+                        dialog.find(UnifiedButton.class).withText("Save").single().click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void tabSheetLabelFormsTakeTheirUnifiedNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.flow.component.tabs.testbench.TabSheetElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import java.util.List;
+                import org.junit.jupiter.api.Assertions;
+
+                class AccountTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void changesThePassword() {
+                        TabSheetElement tabs = $(TabSheetElement.class).single();
+                        Assertions.assertEquals(List.of("Profile", "Security", "Billing"), tabs.getTabLabels());
+                        tabs.setSelectedTabIndex(tabs.getTab("Security"));
+                        Assertions.assertEquals("Security", tabs.getSelectedTabElement().getLabel());
+                        tabs.getContent().$(ButtonElement.class).withText("Change password").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedTabSheet;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                class AccountTest {
+
+                    @Test
+                    void changesThePassword(UnifiedPage page) {
+                        UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class).single();
+                        assertThat(tabs).hasTabs("Profile", "Security", "Billing");
+                        tabs.selectTab("Security");
+                        assertThat(tabs).hasSelectedTab("Security");
+                        tabs.content().find(UnifiedButton.class).withText("Change password").single().click();
+                    }
+                }
+                """));
+    }
 }

@@ -45,7 +45,20 @@ public class TestBenchRenamesToUnified extends Recipe {
                         || !Pages.hasPageParameter(getCursor().firstEnclosing(J.MethodDeclaration.class))) {
                     return m;
                 }
+                // t.getSelectedTabElement().getLabel() → t.getSelectedTab()
+                if (m.getSimpleName().equals("getLabel") && m.getSelect() instanceof J.MethodInvocation selected
+                        && selected.getSimpleName().equals("getSelectedTabElement")
+                        && method.getSelect() instanceof J.MethodInvocation original && original.getSelect() != null
+                        && isTabSheet(wrapperOf(original.getSelect()))) {
+                    return selected.withName(selected.getName().withSimpleName("getSelectedTab")).withPrefix(m.getPrefix());
+                }
                 Wrappers.Wrapper wrapper = wrapperOf(method.getSelect());
+                // t.setSelectedTabIndex(t.getTab(label)) → t.selectTab(label)
+                if (isTabSheet(wrapper) && m.getSimpleName().equals("setSelectedTabIndex") && TabSheets.tabLabel(method) != null) {
+                    J label = TabSheets.tabLabel(method);
+                    return m.withName(m.getName().withSimpleName("selectTab"))
+                            .withArguments(java.util.List.of(((Expression) label).withPrefix(org.openrewrite.java.tree.Space.EMPTY)));
+                }
                 if (wrapper != null && !wrapper.has(m.getSimpleName()) && m.getSimpleName().equals("setValue")
                         && NumberFields.number(m.getArguments().get(0)) != null) {
                     return m.withArguments(java.util.List.of(NumberFields.doubleLiteral(m.getArguments().get(0))));
@@ -67,6 +80,10 @@ public class TestBenchRenamesToUnified extends Recipe {
                 }
                 Wrappers.Wrapper wrapper = Wrappers.ofLookup(terminal);
                 return wrapper != null && wrapper == Wrappers.forElement(Wrappers.BUTTON_ELEMENT);
+            }
+
+            private boolean isTabSheet(Wrappers.Wrapper wrapper) {
+                return wrapper != null && wrapper.fqn().equals(TabSheets.TAB_SHEET);
             }
 
             private Wrappers.Wrapper wrapperOf(Expression element) {
