@@ -69,6 +69,32 @@ class GoldenMigrationTest implements RewriteTest {
         assertMigrates("ContainersTestBenchTest", "ContainersMigratedTest");
     }
 
+    @Test
+    void aBaseClassASubclassAndAPageObjectMigrateTogether() throws IOException {
+        // twin names in the after files are the input names, as the recipe can't rename classes
+        java.util.Map<String, String> twins = java.util.Map.of(
+                "AbstractProfileTestBench", "AbstractProfileMigrated",
+                "ProfileTestBenchPage", "ProfileMigratedPage",
+                "ProfileSubclassTestBenchTest", "ProfileSubclassMigratedTest");
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        for (var pair : twins.entrySet()) {
+            String after = Files.readString(DEMO_TESTS.resolve(pair.getValue() + ".java"));
+            for (var name : twins.entrySet()) {
+                after = after.replace(name.getValue(), name.getKey());
+            }
+            String before = Files.readString(DEMO_TESTS.resolve(pair.getKey() + ".java"));
+            sources.add(java(before, after));
+        }
+        rewriteRun(spec -> spec.recipe(new MigrateTestBenchToUnified(null, true)),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    /** The demo's views, reduced to their routes: the real ones need the whole application on the classpath. */
+    private static List<org.openrewrite.test.SourceSpecs> views() {
+        return List.of(view("ProfileView", "profile"), view("PeopleView", "people"),
+                view("PreferencesView", "preferences"), view("OrderView", "order"), view("AccountView", "account"));
+    }
+
     private static org.openrewrite.test.SourceSpecs view(String name, String route) {
         return java("""
                 package demo;

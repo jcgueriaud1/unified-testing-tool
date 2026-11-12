@@ -124,6 +124,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                         || !TypeUtils.isOfClassType(classDecl.getExtends().getType(), BROWSER_TEST_BASE)) {
                     // a subclass of a TestBench base class: its tests call the inherited @BeforeEach helpers first
                     J.ClassDeclaration sub = super.visitClassDeclaration(classDecl, ctx);
+                    doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
                     List<String> beforeEach = new ArrayList<>(inheritedBeforeEach(classDecl.getType(), scanned.beforeEachByClass()));
                     beforeEach.addAll(beforeEachOf(classDecl, helpers));
                     return sub.withBody(sub.getBody().withStatements(Helpers.callBeforeEachFirst(sub, beforeEach)));
