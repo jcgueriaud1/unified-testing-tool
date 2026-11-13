@@ -19,6 +19,7 @@ class MockedServiceTest {
     @MockitoBean
     ProfileService service;
 
+    // --8<-- [start:usesTheMock]
     @Test
     void usesTheMock(UnifiedPage page) {
         when(service.save(anyString(), anyString())).thenReturn("Saved by the mock");
@@ -29,4 +30,5 @@ class MockedServiceTest {
 
         assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved by the mock");
     }
+    // --8<-- [end:usesTheMock]
 }

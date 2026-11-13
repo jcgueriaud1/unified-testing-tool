@@ -13,10 +13,12 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class GridTest {
 
+    // --8<-- [start:helpers]
     private static UnifiedGrid grid(UnifiedPage page, String testId) {
         page.navigate(UsersView.class);
         return page.find(UnifiedGrid.class).withTestId(testId).single();
     }
+    // --8<-- [end:helpers]
 
     @Test
     void readsCountHeadersAndCells(UnifiedPage page) {
@@ -27,6 +29,7 @@ class GridTest {
         assertThat(users.row(0)).hasCellText("Name", "User 1").hasCellText("Email", "user1@example.com");
     }
 
+    // --8<-- [start:findsARowByWhatItShows]
     @Test
     void findsARowByWhatItShows(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
@@ -37,6 +40,7 @@ class GridTest {
         assertEquals(109, row.getIndex());
         assertThat(row).hasCellText("Email", "user110@example.com").hasCellText("Role", "Admin");
     }
+    // --8<-- [end:findsARowByWhatItShows]
 
     @Test
     void findsARowByCellTextInAnyColumn(UnifiedPage page) {
@@ -56,6 +60,7 @@ class GridTest {
         assertEquals("user110@example.com", users.rows().withCellText("Name", "User 110").single().getCellText(1));
     }
 
+    // --8<-- [start:combinesCellFilters]
     @Test
     void combinesCellFilters(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
@@ -67,6 +72,7 @@ class GridTest {
         assertEquals(1, users.rows().withCellTextContaining("Email", "user11").withCellText("Role", "Admin").all().size());
         assertFalse(users.rows().withCellText("Name", "Nobody").exists());
     }
+    // --8<-- [end:combinesCellFilters]
 
     @Test
     void readsColumnsByHeaderIdAndIndex(UnifiedPage page) {

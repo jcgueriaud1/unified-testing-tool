@@ -10,7 +10,7 @@ src=target/docs-src
 
 rm -rf "$src"
 mkdir -p "$src"
-cp -r docs/spec docs/adr "$src"/
+cp -r docs/spec docs/adr docs/guide "$src"/
 cp docs/comparison.md "$src"/comparison.md
 cp docs/migrating-from-testbench.md "$src"/migrating-from-testbench.md
 cp GLOSSARY.md "$src"/GLOSSARY.md
@@ -18,9 +18,9 @@ cp README.md "$src"/index.md
 
 # README.md sits at the site root: docs/x -> x
 sed -i -E 's#\]\(docs/#](#g' "$src"/index.md
-# Pages under spec/ and adr/: ../../README.md -> ../index.md, ../../GLOSSARY.md -> ../GLOSSARY.md,
+# Pages under spec/, adr/ and guide/: ../../README.md -> ../index.md, ../../GLOSSARY.md -> ../GLOSSARY.md,
 # other ../../ links (source code) -> GitHub
-find "$src"/spec "$src"/adr -name '*.md' -exec sed -i -E \
+find "$src"/spec "$src"/adr "$src"/guide -name '*.md' -exec sed -i -E \
   -e 's#\]\(\.\./\.\./README\.md#](../index.md#g' \
   -e 's#\]\(\.\./\.\./GLOSSARY\.md#](../GLOSSARY.md#g' \
   -e "s#\]\(\.\./\.\./#](${repo_url}/#g" \

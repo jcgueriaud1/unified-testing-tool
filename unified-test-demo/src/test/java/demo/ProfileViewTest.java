@@ -25,6 +25,7 @@ import org.openqa.selenium.WebDriver;
 @UnifiedSpringBootTest
 class ProfileViewTest {
 
+    // --8<-- [start:savesName]
     @Test
     void savesName(UnifiedPage page) {
         page.navigate(ProfileView.class);
@@ -37,6 +38,7 @@ class ProfileViewTest {
         assertThat(page.find(UnifiedNotification.class).single()).isOpen().hasText("Saved Alice");
         assertThat(name).hasValue("Alice").isValid();
     }
+    // --8<-- [end:savesName]
 
     @Test
     void requiresEmail(UnifiedPage page) {
@@ -49,6 +51,7 @@ class ProfileViewTest {
                 .hasErrorMessage("Email is required");
     }
 
+    // --8<-- [start:findsIconButtonByAccessibleName]
     @Test
     void findsIconButtonByAccessibleName(UnifiedPage page) {
         page.navigate(ProfileView.class);
@@ -57,6 +60,7 @@ class ProfileViewTest {
 
         assertThat(page.find(UnifiedNotification.class).withText("Account deleted").single()).isOpen();
     }
+    // --8<-- [end:findsIconButtonByAccessibleName]
 
     @Test
     void findsByTestIdAndPlaceholder(UnifiedPage page) {
@@ -75,6 +79,7 @@ class ProfileViewTest {
         assertThat(page.find(UnifiedButton.class).withText("Save").single()).isEnabled().hasText("Save");
     }
 
+    // --8<-- [start:escapeHatchIsOptional]
     @Test
     void escapeHatchIsOptional(UnifiedPage page) {
         page.navigate(ProfileView.class);
@@ -85,6 +90,7 @@ class ProfileViewTest {
         assertTrue(page.find(UnifiedButton.class).withText("Save").exists());
         assertFalse(page.find(UnifiedButton.class).withText("No such button").exists());
     }
+    // --8<-- [end:escapeHatchIsOptional]
 
     @Test
     void unwrapNamesTheMissingAnnotation(UnifiedPage page) {
@@ -110,6 +116,7 @@ class ProfileViewTest {
         assertTrue(page.unwrap(WebDriver.class).getCurrentUrl().endsWith("/profile"));
     }
 
+    // --8<-- [start:readsServerSideState]
     @Test
     @RequiresTestingTool(TestingTool.BROWSERLESS)
     void readsServerSideState(UnifiedPage page) {
@@ -119,6 +126,7 @@ class ProfileViewTest {
         TextField field = page.find(UnifiedTextField.class).withLabel("Name").single().unwrap(TextField.class);
         assertEquals("Bob", field.getValue());
     }
+    // --8<-- [end:readsServerSideState]
 
     @Test
     @RequiresBrowser
@@ -127,6 +135,7 @@ class ProfileViewTest {
         assertThat(page.find(UnifiedButton.class).withText("Save").single()).hasCssValue("cursor", "pointer");
     }
 
+    // --8<-- [start:screenshotOnlyWithARealBrowser]
     @Test
     void screenshotOnlyWithARealBrowser(UnifiedPage page) throws Exception {
         page.navigate(ProfileView.class);
@@ -140,4 +149,5 @@ class ProfileViewTest {
 
         assertEquals(page.hasRealBrowser(), Files.isRegularFile(file));
     }
+    // --8<-- [end:screenshotOnlyWithARealBrowser]
 }

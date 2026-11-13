@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class AddonTest {
 
+    // --8<-- [start:wrapperWithoutOverride]
     @Test
     void wrapperWithoutOverride(UnifiedPage page) {
         page.navigate(AddonView.class);
@@ -27,7 +28,9 @@ class AddonTest {
         page.waitUntil(() -> food.getValue() == 3);
         assertEquals(4, page.find(UnifiedRating.class).withLabel("Service").single().getValue());
     }
+    // --8<-- [end:wrapperWithoutOverride]
 
+    // --8<-- [start:customFilters]
     @Test
     void customFilters(UnifiedPage page) {
         page.navigate(AddonView.class);
@@ -38,6 +41,7 @@ class AddonTest {
         assertEquals(1, page.find(UnifiedRating.class).withProperty("label", "Service").all().size());
         assertEquals(2, page.find(UnifiedRating.class).all().size());
     }
+    // --8<-- [end:customFilters]
 
     @Test
     void wrapperWithToolOverride(UnifiedPage page) {
@@ -53,6 +57,7 @@ class AddonTest {
         assertEquals(browserless, inbox instanceof UnifiedBadgeBrowserless);
     }
 
+    // --8<-- [start:anyComponentWithoutAWrapper]
     @Test
     void anyComponentWithoutAWrapper(UnifiedPage page) {
         page.navigate(AddonView.class);
@@ -62,4 +67,5 @@ class AddonTest {
         assertEquals(4, service.element().getPropertyInteger("value"));
         assertTrue(service.isVisible());
     }
+    // --8<-- [end:anyComponentWithoutAWrapper]
 }

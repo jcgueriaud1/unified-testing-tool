@@ -21,12 +21,14 @@ class NavigationTest {
         assertThat(page).isAt(ProfileView.class).hasPath("profile");
     }
 
+    // --8<-- [start:navigatesByPathWithQuery]
     @Test
     void navigatesByPathWithQuery(UnifiedPage page) {
         page.navigate("profile?tab=2");
 
         assertThat(page).isAt(ProfileView.class).hasPath("profile").hasQueryParameter("tab", "2");
     }
+    // --8<-- [end:navigatesByPathWithQuery]
 
     /** A RouterLink navigates on the client only; isAt still sees the new location. */
     @Test

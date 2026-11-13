@@ -46,6 +46,7 @@ class TripTest {
         assertEquals(null, total.getInlineStyle("height"));
     }
 
+    // --8<-- [start:filtersByClassName]
     /** A class filter on the any-tag container: one selector query, not a check per element of the page. */
     @Test
     void filtersByClassName(UnifiedPage page) {
@@ -55,4 +56,5 @@ class TripTest {
         assertThat(page.find(UnifiedContainer.class).withClassName("selected").single()).hasText("Trip 42");
         assertEquals(1, page.findComponent(Div.class).withClassName("trip-card").withText("Trip 7").all().size());
     }
+    // --8<-- [end:filtersByClassName]
 }

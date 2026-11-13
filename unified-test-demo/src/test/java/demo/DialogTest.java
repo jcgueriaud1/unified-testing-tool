@@ -13,11 +13,13 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class DialogTest {
 
+    // --8<-- [start:helpers]
     private UnifiedDialog openDialog(UnifiedPage page) {
         page.navigate(ProfileView.class);
         page.find(UnifiedButton.class).withText("Change email").single().click();
         return page.find(UnifiedDialog.class).withHeaderTitle("Change email").single();
     }
+    // --8<-- [end:helpers]
 
     @Test
     void opensWithHeaderTitle(UnifiedPage page) {
@@ -26,6 +28,7 @@ class DialogTest {
         assertThat(dialog).isOpen().isVisible().hasHeaderTitle("Change email");
     }
 
+    // --8<-- [start:searchesInsideTheDialog]
     @Test
     void searchesInsideTheDialog(UnifiedPage page) {
         UnifiedDialog dialog = openDialog(page);
@@ -38,6 +41,7 @@ class DialogTest {
         assertThat(page.find(UnifiedNotification.class).single()).hasText("Email changed to new@example.com");
         assertThat(page.find(UnifiedTextField.class).withLabel("Email").single()).hasValue("new@example.com");
     }
+    // --8<-- [end:searchesInsideTheDialog]
 
     @Test
     void closesWithCancel(UnifiedPage page) {

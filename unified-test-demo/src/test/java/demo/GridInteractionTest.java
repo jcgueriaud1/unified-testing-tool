@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class GridInteractionTest {
 
+    // --8<-- [start:helpers]
     private static UnifiedGrid grid(UnifiedPage page, String testId) {
         page.navigate(UsersView.class);
         return page.find(UnifiedGrid.class).withTestId(testId).single();
@@ -24,7 +25,9 @@ class GridInteractionTest {
     private static void assertNotification(UnifiedPage page, String text) {
         assertThat(page.find(UnifiedNotification.class).withText(text).single()).isOpen();
     }
+    // --8<-- [end:helpers]
 
+    // --8<-- [start:clicksAComponentInACell]
     @Test
     void clicksAComponentInACell(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
@@ -34,6 +37,7 @@ class GridInteractionTest {
 
         assertNotification(page, "Editing User 3");
     }
+    // --8<-- [end:clicksAComponentInACell]
 
     /** A page-wide find reaches components rendered in grid cells, as in a browser. */
     @Test
@@ -45,6 +49,7 @@ class GridInteractionTest {
         assertNotification(page, "Editing User 3");
     }
 
+    // --8<-- [start:filtersThroughAHeaderField]
     @Test
     void filtersThroughAHeaderField(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
@@ -56,6 +61,7 @@ class GridInteractionTest {
         assertThat(users).hasRowCount(11);
         assertThat(users.row(0)).hasCellText("Name", "User 11");
     }
+    // --8<-- [end:filtersThroughAHeaderField]
 
     @Test
     void sortsAColumn(UnifiedPage page) {
@@ -68,6 +74,7 @@ class GridInteractionTest {
         assertThat(roles.column("Role")).isSortedAscending().hasCellTexts("Admin", "Editor", "Viewer");
     }
 
+    // --8<-- [start:selectsRows]
     @Test
     void selectsRows(UnifiedPage page) {
         UnifiedGrid roles = grid(page, "roles");
@@ -86,6 +93,7 @@ class GridInteractionTest {
         roles.deselectAll();
         assertThat(bob).isNotSelected();
     }
+    // --8<-- [end:selectsRows]
 
     @Test
     void clicksAndDoubleClicksRows(UnifiedPage page) {

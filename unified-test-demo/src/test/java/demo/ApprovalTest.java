@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class ApprovalTest {
 
+    // --8<-- [start:aHiddenButtonIsStillFoundButNotVisible]
     @Test
     void aHiddenButtonIsStillFoundButNotVisible(UnifiedPage page) {
         page.navigate(ApprovalView.class);
@@ -26,4 +27,5 @@ class ApprovalTest {
         assertTrue(page.find(UnifiedButton.class).withText("Approve").exists());
         assertFalse(page.find(UnifiedButton.class).withText("Approve").visible().exists());
     }
+    // --8<-- [end:aHiddenButtonIsStillFoundButNotVisible]
 }

@@ -20,6 +20,7 @@ class PreferencesTest {
 
     private static final LocalDate BIRTHDAY = LocalDate.of(1990, 5, 17);
 
+    // --8<-- [start:savesTypedValues]
     @Test
     void savesTypedValues(UnifiedPage page) {
         page.navigate(PreferencesView.class);
@@ -41,6 +42,7 @@ class PreferencesTest {
         assertEquals(180.5, height.getValue());
         assertEquals(BIRTHDAY, birthday.getValue());
     }
+    // --8<-- [end:savesTypedValues]
 
     @Test
     void wholeNumbers(UnifiedPage page) {

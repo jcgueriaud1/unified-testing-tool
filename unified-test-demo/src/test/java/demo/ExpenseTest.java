@@ -37,6 +37,7 @@ class ExpenseTest {
         assertThat(page.findComponent(Span.class).withId("status").single()).hasText(text);
     }
 
+    // --8<-- [start:fillsTheValueFields]
     @Test
     void fillsTheValueFields(UnifiedPage page) {
         page.navigate(ExpenseView.class);
@@ -55,6 +56,7 @@ class ExpenseTest {
         assertThat(page.find(UnifiedBigDecimalField.class).withLabel("Amount").single()).hasValue(new BigDecimal("54.2"));
         assertThat(page.find(UnifiedDateTimePicker.class).withLabel("Departure").single()).hasValue(departure);
     }
+    // --8<-- [end:fillsTheValueFields]
 
     @Test
     void typesTextADatePickerCantParse(UnifiedPage page) {
@@ -106,6 +108,7 @@ class ExpenseTest {
         assertStatus(page, "Showing Rejected");
     }
 
+    // --8<-- [start:opensDetails]
     @Test
     void opensDetails(UnifiedPage page) {
         page.navigate(ExpenseView.class);
@@ -118,7 +121,9 @@ class ExpenseTest {
         page.find(UnifiedButton.class).withText("Save").single().click();
         assertThat(page.find(UnifiedNotification.class).single()).hasTextContaining("/ CC-7");
     }
+    // --8<-- [end:opensDetails]
 
+    // --8<-- [start:clicksNestedMenuItems]
     @Test
     void clicksNestedMenuItems(UnifiedPage page) {
         page.navigate(ExpenseView.class);
@@ -131,7 +136,9 @@ class ExpenseTest {
         menu.clickItem("Help");
         assertStatus(page, "Help opened");
     }
+    // --8<-- [end:clicksNestedMenuItems]
 
+    // --8<-- [start:uploadsAFile]
     @Test
     void uploadsAFile(UnifiedPage page) {
         page.navigate(ExpenseView.class);
@@ -141,6 +148,7 @@ class ExpenseTest {
 
         assertStatus(page, "Received receipt.txt: Taxi 54.20");
     }
+    // --8<-- [end:uploadsAFile]
 
     /** Returns once the upload is handled, even when the app clears the file list right after (#122). */
     @Test
@@ -156,6 +164,7 @@ class ExpenseTest {
                 .hasText("receipt-1.txt, receipt-2.txt, receipt-3.txt");
     }
 
+    // --8<-- [start:searchesInPlainHtmlContainers]
     @Test
     void searchesInPlainHtmlContainers(UnifiedPage page) {
         page.navigate(ExpenseView.class);
@@ -168,4 +177,5 @@ class ExpenseTest {
         assertEquals(1, page.findComponent(VerticalLayout.class).single()
                 .find(UnifiedSection.class).all().size());
     }
+    // --8<-- [end:searchesInPlainHtmlContainers]
 }

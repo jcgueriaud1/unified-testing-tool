@@ -33,6 +33,7 @@ class AccountTest {
         assertThat(page.find(UnifiedNotification.class).withText("Password changed").single()).isOpen();
     }
 
+    // --8<-- [start:contentFollowsTheSelectedTab]
     @Test
     void contentFollowsTheSelectedTab(UnifiedPage page) {
         page.navigate(AccountView.class);
@@ -49,6 +50,7 @@ class AccountTest {
         assertEquals(0, content.find(UnifiedTextField.class).withLabel("Name").all().size());
         assertEquals("Security", tabs.getSelectedTab());
     }
+    // --8<-- [end:contentFollowsTheSelectedTab]
 
     @Test
     void unknownTabFailsWithTheTabs(UnifiedPage page) {

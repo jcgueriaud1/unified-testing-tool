@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class OrderTest {
 
+    // --8<-- [start:selectsByVisibleLabel]
     @Test
     void selectsByVisibleLabel(UnifiedPage page) {
         page.navigate(OrderView.class);
@@ -39,6 +40,7 @@ class OrderTest {
         assertThat(size).hasSelectedItem("Large");
         assertThat(toppings).hasSelectedItems("Cheese", "Olives");
     }
+    // --8<-- [end:selectsByVisibleLabel]
 
     @Test
     void readsInitialSelection(UnifiedPage page) {

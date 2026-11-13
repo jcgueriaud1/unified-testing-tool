@@ -50,6 +50,15 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Developer guide:
+      - Overview: guide/index.md
+      - Finding components: guide/finding-components.md
+      - Working with components: guide/components.md
+      - Grid: guide/grid.md
+      - Assertions and waiting: guide/assertions-and-waiting.md
+      - Navigation, users and windows: guide/navigation-and-users.md
+      - When a test needs one Testing Tool: guide/tool-specific.md
+      - Wrappers for your own components: guide/custom-wrappers.md
   - One test, four ways: comparison.md
   - Migrating from TestBench: migrating-from-testbench.md
   - Specification:
