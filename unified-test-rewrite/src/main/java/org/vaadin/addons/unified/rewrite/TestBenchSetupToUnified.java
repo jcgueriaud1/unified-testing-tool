@@ -31,6 +31,11 @@ import org.openrewrite.java.tree.TypeUtils;
 public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnified.Scanned> {
 
     static final String BROWSER_TEST_BASE = "com.vaadin.testbench.BrowserTestBase";
+    static final String TEST_BENCH_TEST_CASE = "com.vaadin.testbench.TestBenchTestCase";
+    static final String PARALLEL_TEST = "com.vaadin.testbench.parallel.ParallelTest";
+    static final String UNIFIED_UI_TEST = "com.vaadin.testing.unified.UnifiedUITest";
+    private static final Set<String> TEST_ANNOTATIONS = Set.of("org.springframework.boot.test.context.SpringBootTest",
+            "com.vaadin.testing.unified.spring.UnifiedSpringBootTest", UNIFIED_UI_TEST);
     static final String BROWSER_TEST = "com.vaadin.testbench.BrowserTest";
     static final String LOCAL_SERVER_PORT = "org.springframework.boot.test.web.server.LocalServerPort";
     static final String BEFORE_EACH = "org.junit.jupiter.api.BeforeEach";
@@ -120,8 +125,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                 Set<String> helpers = new java.util.HashSet<>(Helpers.usingTestBench(classDecl, inherited));
                 helpers.addAll(inherited);
                 getCursor().putMessage(HELPERS, helpers);
-                if (classDecl.getExtends() == null
-                        || !TypeUtils.isOfClassType(classDecl.getExtends().getType(), BROWSER_TEST_BASE)) {
+                if (classDecl.getExtends() == null || !isTestBenchBase(classDecl.getExtends().getType())) {
                     // a subclass of a TestBench base class: its tests call the inherited @BeforeEach helpers first
                     J.ClassDeclaration sub = super.visitClassDeclaration(classDecl, ctx);
                     doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
@@ -135,6 +139,18 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                 doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
                 c = c.withBody(c.getBody().withStatements(withoutUnusedPortFields(c)));
                 maybeRemoveImport(BROWSER_TEST_BASE);
+                maybeRemoveImport(TEST_BENCH_TEST_CASE);
+                maybeRemoveImport(PARALLEL_TEST);
+                if (c.getLeadingAnnotations().stream().noneMatch(a -> TEST_ANNOTATIONS.stream()
+                        .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)))) {
+                    // no Spring test: a test against a running application
+                    maybeAddImport(UNIFIED_UI_TEST);
+                    c = JavaTemplate.builder("@UnifiedUITest")
+                            .imports(UNIFIED_UI_TEST)
+                            .javaParser(Stubs.parser("package com.vaadin.testing.unified; public @interface UnifiedUITest {}"))
+                            .build()
+                            .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
+                }
                 maybeRemoveImport(LOCAL_SERVER_PORT);
                 return c;
             }
@@ -143,8 +159,9 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
                 Set<String> helpers = getCursor().getNearestMessage(HELPERS, Set.of());
-                boolean browserTest = m.getLeadingAnnotations().stream()
-                        .anyMatch(a -> TypeUtils.isOfClassType(a.getType(), BROWSER_TEST));
+                boolean browserTest = Helpers.isBrowserTest(m)
+                        && getCursor().firstEnclosing(J.ClassDeclaration.class) != null
+                        && isTestBenchClass(getCursor().firstEnclosing(J.ClassDeclaration.class));
                 if (!browserTest && !helpers.contains(m.getSimpleName()) || Pages.hasPageParameter(m)) {
                     return m;
                 }
@@ -213,7 +230,14 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
 
     /** A class that is, or extends, TestBench's {@code BrowserTestBase}. */
     static boolean isTestBenchClass(J.ClassDeclaration c) {
-        return c.getType() != null && TypeUtils.isAssignableTo(BROWSER_TEST_BASE, c.getType());
+        return c.getType() != null && (TypeUtils.isAssignableTo(BROWSER_TEST_BASE, c.getType())
+                || TypeUtils.isAssignableTo(TEST_BENCH_TEST_CASE, c.getType()));
+    }
+
+    /** TestBench's own test base classes: JUnit 5/6 {@code BrowserTestBase}, JUnit 4 {@code TestBenchTestCase}. */
+    static boolean isTestBenchBase(JavaType type) {
+        return TypeUtils.isOfClassType(type, BROWSER_TEST_BASE) || TypeUtils.isOfClassType(type, TEST_BENCH_TEST_CASE)
+                || TypeUtils.isOfClassType(type, PARALLEL_TEST);
     }
 
     /** The {@code @BeforeEach} helpers the class's superclasses declare, the farthest ancestor's first. */

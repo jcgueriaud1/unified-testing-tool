@@ -114,8 +114,10 @@ final class Helpers {
                 type);
     }
 
+    /** A test method: TestBench's {@code @BrowserTest}, or JUnit's {@code @Test} (Jupiter, or JUnit 4). */
     static boolean isBrowserTest(J.MethodDeclaration m) {
-        return m.getLeadingAnnotations().stream()
-                .anyMatch(a -> TypeUtils.isOfClassType(a.getType(), TestBenchSetupToUnified.BROWSER_TEST));
+        return m.getLeadingAnnotations().stream().anyMatch(a -> TypeUtils.isOfClassType(a.getType(), TestBenchSetupToUnified.BROWSER_TEST)
+                || TypeUtils.isOfClassType(a.getType(), "org.junit.jupiter.api.Test")
+                || TypeUtils.isOfClassType(a.getType(), "org.junit.Test"));
     }
 }

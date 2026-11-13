@@ -79,6 +79,7 @@ public class MigrateTestBenchToUnified extends Recipe {
         names.add("org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode");
         Environment recipes = Environment.builder().load(declaredRecipes()).build();
         List<Recipe> list = new ArrayList<>(names.stream().map(name -> recipes.activateRecipes(name)).map(Recipe.class::cast).toList());
+        list.add(new RemoveJUnit4WhenUnused()); // scans every source, so outside the build and test-code preconditions
         if (Boolean.TRUE.equals(includePageObjects)) {
             list.add(1, new TestBenchPageObjectsToUnified()); // before the test code, which then passes page for this
         }

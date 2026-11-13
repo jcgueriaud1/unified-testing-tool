@@ -93,8 +93,10 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         package demo;
 
                         import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
                         import org.junit.jupiter.api.Test;
 
+                        @UnifiedUITest
                         class ProfileTest {
 
                             @Test
@@ -124,9 +126,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedTextField;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -156,9 +160,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedButton;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -190,12 +196,14 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedButton;
                 import com.vaadin.testing.unified.component.UnifiedTextField;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -410,8 +418,10 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -445,9 +455,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class PeopleTest {
 
                     @Test
@@ -486,10 +498,12 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedTextField;
                 import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -526,10 +540,12 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
                 import org.junit.jupiter.api.Assertions;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -564,11 +580,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedTextField;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -601,11 +619,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedButton;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -649,10 +669,12 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedButton;
                 import com.vaadin.testing.unified.component.UnifiedTextField;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     void open(UnifiedPage page) {
@@ -698,9 +720,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class PeopleTest {
 
                     @Test
@@ -737,11 +761,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedNotification;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -774,10 +800,12 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedGrid;
                 import org.junit.jupiter.api.Assertions;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class PeopleTest {
 
                     @Test
@@ -813,9 +841,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedGrid;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class PeopleTest {
 
                     @Test
@@ -852,11 +882,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedCheckbox;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class PreferencesTest {
 
                     @Test
@@ -892,12 +924,14 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedComboBox;
                 import org.junit.jupiter.api.Assertions;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class OrderTest {
 
                     @Test
@@ -931,11 +965,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class OrderTest {
 
                     @Test
@@ -973,11 +1009,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class OrderTest {
 
                     @Test
@@ -1017,6 +1055,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedDatePicker;
                 import org.junit.jupiter.api.Test;
 
@@ -1024,6 +1063,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class PreferencesTest {
 
                     @Test
@@ -1058,11 +1098,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedNumberField;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class PreferencesTest {
 
                     @Test
@@ -1097,9 +1139,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class PreferencesTest {
 
                     @Test
@@ -1133,9 +1177,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedButton;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -1171,11 +1217,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedDialog;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -1211,11 +1259,13 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedButton;
                 import com.vaadin.testing.unified.component.UnifiedDialog;
                 import com.vaadin.testing.unified.component.UnifiedTextField;
                 import org.junit.jupiter.api.Test;
 
+                @UnifiedUITest
                 class ProfileTest {
 
                     @Test
@@ -1253,12 +1303,14 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """,
                 """
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
                 import com.vaadin.testing.unified.component.UnifiedButton;
                 import com.vaadin.testing.unified.component.UnifiedTabSheet;
                 import org.junit.jupiter.api.Test;
 
                 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
+                @UnifiedUITest
                 class AccountTest {
 
                     @Test
@@ -1353,7 +1405,9 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         """,
                         """
                         import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
 
+                        @UnifiedUITest
                         abstract class AbstractIT {
 
                             void openProfile(UnifiedPage page) {
@@ -1456,8 +1510,10 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         """,
                         """
                         import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
                         import org.junit.jupiter.api.Test;
 
+                        @UnifiedUITest
                         class ProfileTest {
 
                             @Test
@@ -1514,9 +1570,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         import com.vaadin.testing.unified.RequiresTestingTool;
                         import com.vaadin.testing.unified.TestingTool;
                         import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
                         import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
                         import org.junit.jupiter.api.Test;
 
+                        @UnifiedUITest
                         class ProfileTest {
 
                             @Test
@@ -1563,9 +1621,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         import com.vaadin.testing.unified.RequiresTestingTool;
                         import com.vaadin.testing.unified.TestingTool;
                         import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
                         import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
                         import org.junit.jupiter.api.Test;
 
+                        @UnifiedUITest
                         class MainTest {
 
                             @Test
@@ -1577,5 +1637,362 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             }
                         }
                         """));
+    }
+
+    @Test
+    void aJUnit4TestBenchTestCaseMigratesToJUnit6() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.ScreenshotOnFailureRule;
+                import com.vaadin.testbench.TestBenchTestCase;
+                import org.junit.After;
+                import org.junit.Assert;
+                import org.junit.Before;
+                import org.junit.Rule;
+                import org.junit.Test;
+                import org.openqa.selenium.chrome.ChromeDriver;
+
+                public class ProfileIT extends TestBenchTestCase {
+
+                    @Rule
+                    public ScreenshotOnFailureRule screenshots = new ScreenshotOnFailureRule(this, true);
+
+                    @Before
+                    public void setUp() {
+                        setDriver(new ChromeDriver());
+                        getDriver().get("http://localhost:8080/profile");
+                    }
+
+                    @Test
+                    public void saves() {
+                        $(ButtonElement.class).withText("Save").single().click();
+                        Assert.assertEquals("Save", $(ButtonElement.class).withText("Save").single().getText());
+                    }
+
+                    @After
+                    public void tearDown() {
+                        getDriver().quit();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedUITest
+                public class ProfileIT {
+
+                    public void setUp(UnifiedPage page) {
+                        page.navigate("profile");
+                    }
+
+                    @Test
+                    public void saves(UnifiedPage page) {
+                        setUp(page);
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        assertThat(page.find(UnifiedButton.class).withText("Save").single()).hasText("Save");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void runnersAndBrowserSetupGoWithAMarker() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.annotations.BrowserConfiguration;
+                import com.vaadin.testbench.annotations.RunLocally;
+                import com.vaadin.testbench.parallel.Browser;
+                import com.vaadin.testbench.parallel.ParallelTest;
+                import java.util.List;
+                import org.junit.Test;
+                import org.junit.runner.RunWith;
+                import org.openqa.selenium.remote.DesiredCapabilities;
+                import org.springframework.boot.test.context.SpringBootTest;
+                import org.springframework.test.context.junit4.SpringRunner;
+
+                @RunWith(SpringRunner.class)
+                @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+                @RunLocally(Browser.CHROME)
+                public class OrderIT extends ParallelTest {
+
+                    @BrowserConfiguration
+                    public List<DesiredCapabilities> browsers() {
+                        return List.of(Browser.FIREFOX.getDesiredCapabilities());
+                    }
+
+                    @Test
+                    public void opens() {
+                        getDriver().get("http://localhost:8080/order");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                // TODO unified: browser setup removed (@RunLocally, @BrowserConfiguration): configure the Unified Selenium adapter (vaadin.testing.* settings)
+                @UnifiedSpringBootTest
+                public class OrderIT {
+
+                    @Test
+                    public void opens(UnifiedPage page) {
+                        page.navigate("order");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void junit4AndTheVintageEngineGoWhenOnlyTestBenchTestsUsedJUnit4() {
+        rewriteRun(
+                pomXml(
+                        """
+                    <project>
+                        <modelVersion>4.0.0</modelVersion>
+                        <groupId>com.example</groupId>
+                        <artifactId>app</artifactId>
+                        <version>1.0</version>
+                        <dependencyManagement>
+                            <dependencies>
+                                <dependency>
+                                    <groupId>com.vaadin</groupId>
+                                    <artifactId>vaadin-bom</artifactId>
+                                    <version>25.3.5</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-dependencies</artifactId>
+                                    <version>4.1.1</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                            </dependencies>
+                        </dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-testbench-core</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>junit</groupId>
+                                <artifactId>junit</artifactId>
+                                <version>4.13.2</version>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.junit.vintage</groupId>
+                                <artifactId>junit-vintage-engine</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                        </dependencies>
+                    </project>
+                    """,
+                        """
+                    <project>
+                        <modelVersion>4.0.0</modelVersion>
+                        <groupId>com.example</groupId>
+                        <artifactId>app</artifactId>
+                        <version>1.0</version>
+                        <dependencyManagement>
+                            <dependencies>
+                                <dependency>
+                                    <groupId>com.vaadin</groupId>
+                                    <artifactId>vaadin-bom</artifactId>
+                                    <version>25.3.5</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-dependencies</artifactId>
+                                    <version>4.1.1</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.vaadin.addons</groupId>
+                                    <artifactId>unified-test-bom</artifactId>
+                                    <version>%s</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                            </dependencies>
+                        </dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-browserless</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-selenium</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-spring</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                        </dependencies>
+                    </project>
+                    """.formatted(UNIFIED_VERSION)),
+                java("""
+                    import com.vaadin.testbench.TestBenchTestCase;
+                    import org.junit.Test;
+
+                    public class ProfileIT extends TestBenchTestCase {
+
+                        @Test
+                        public void opens() {
+                            getDriver().get("http://localhost:8080/profile");
+                        }
+                    }
+                    """, spec -> spec.after(after -> after)));
+    }
+
+    @Test
+    void junit4AndTheVintageEngineStayWhileOtherJUnit4TestsRemain() {
+        rewriteRun(
+                pomXml(
+                        """
+                    <project>
+                        <modelVersion>4.0.0</modelVersion>
+                        <groupId>com.example</groupId>
+                        <artifactId>app</artifactId>
+                        <version>1.0</version>
+                        <dependencyManagement>
+                            <dependencies>
+                                <dependency>
+                                    <groupId>com.vaadin</groupId>
+                                    <artifactId>vaadin-bom</artifactId>
+                                    <version>25.3.5</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-dependencies</artifactId>
+                                    <version>4.1.1</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                            </dependencies>
+                        </dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-testbench-core</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>junit</groupId>
+                                <artifactId>junit</artifactId>
+                                <version>4.13.2</version>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.junit.vintage</groupId>
+                                <artifactId>junit-vintage-engine</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                        </dependencies>
+                    </project>
+                    """,
+                        """
+                    <project>
+                        <modelVersion>4.0.0</modelVersion>
+                        <groupId>com.example</groupId>
+                        <artifactId>app</artifactId>
+                        <version>1.0</version>
+                        <dependencyManagement>
+                            <dependencies>
+                                <dependency>
+                                    <groupId>com.vaadin</groupId>
+                                    <artifactId>vaadin-bom</artifactId>
+                                    <version>25.3.5</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.springframework.boot</groupId>
+                                    <artifactId>spring-boot-dependencies</artifactId>
+                                    <version>4.1.1</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                                <dependency>
+                                    <groupId>org.vaadin.addons</groupId>
+                                    <artifactId>unified-test-bom</artifactId>
+                                    <version>%s</version>
+                                    <type>pom</type>
+                                    <scope>import</scope>
+                                </dependency>
+                            </dependencies>
+                        </dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>junit</groupId>
+                                <artifactId>junit</artifactId>
+                                <version>4.13.2</version>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.junit.vintage</groupId>
+                                <artifactId>junit-vintage-engine</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-browserless</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-selenium</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-spring</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                        </dependencies>
+                    </project>
+                    """.formatted(UNIFIED_VERSION)),
+                java("""
+                    import com.vaadin.testbench.TestBenchTestCase;
+                    import org.junit.Test;
+
+                    public class ProfileIT extends TestBenchTestCase {
+
+                        @Test
+                        public void opens() {
+                            getDriver().get("http://localhost:8080/profile");
+                        }
+                    }
+                    """, spec -> spec.after(after -> after)),
+                java("""
+                    import org.junit.Assert;
+                    import org.junit.Test;
+
+                    public class MathTest {
+
+                        @Test
+                        public void adds() {
+                            Assert.assertEquals(2, 1 + 1);
+                        }
+                    }
+                    """));
     }
 }

@@ -43,6 +43,13 @@ description: Rewrites the source of TestBench tests; only touches files that use
 preconditions:
   - org.vaadin.addons.unified.rewrite.FindTestBenchTests
 recipeList:
+  - org.vaadin.addons.unified.rewrite.TestBenchDriverLifecycleRemoved
+  # JUnit 4 TestBench tests: OpenRewrite's JUnit 4 test-code recipes, on TestBench test files only
+  - org.openrewrite.java.testing.junit5.UpdateBeforeAfterAnnotations
+  - org.openrewrite.java.testing.junit5.UpdateTestAnnotation
+  - org.openrewrite.java.testing.junit5.AssertToAssertions
+  - org.openrewrite.java.testing.junit5.IgnoreToDisabled
+  - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchRenamesToUnified

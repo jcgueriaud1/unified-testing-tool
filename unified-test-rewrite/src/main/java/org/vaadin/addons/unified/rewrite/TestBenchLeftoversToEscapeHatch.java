@@ -35,6 +35,8 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
     /** The types whose methods a {@code BrowserTestBase} test calls without a receiver. */
     private static final Set<String> TEST_BASE_TYPES = Set.of(
             "com.vaadin.testbench.BrowserTestBase",
+            "com.vaadin.testbench.TestBenchTestCase",
+            "com.vaadin.testbench.parallel.ParallelTest",
             "com.vaadin.testbench.AbstractBrowserDriverTestBase",
             "com.vaadin.testbench.AbstractBrowserTestBase",
             "com.vaadin.testbench.HasElementQuery",
