@@ -55,3 +55,7 @@ _Avoid_: Converter, codemod, migration script
 **Migration Marker**:
 The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch.
 _Avoid_: TODO, FIXME, warning
+
+**Component Reference**:
+A test's direct handle on a component's Java object, such as a field of the view, which only Browserless has; a Unified UI Test locates components instead.
+_Avoid_: Field access, component instance

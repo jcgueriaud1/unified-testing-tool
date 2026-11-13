@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Browserless test migration: the same recipes-then-skill path as TestBench
@@ -10,7 +10,7 @@ Browserless tests are converted to Unified UI Tests the way [ADR 0004](0004-test
 
 - **Sources, in this order:** Browserless Test 25.x base classes and extension (`BrowserlessTest`, `SpringBrowserlessTest`, `BrowserlessExtension`); TestBench UI Unit 24.x (`UIUnitTest`, `SpringUIUnitTest`) through a package-rename step before it; then the context API (`BrowserlessApplicationContext`, `BrowserlessUIContext`).
 - **One module, one skill.** A composite recipe `org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified` in `unified-test-rewrite`, sharing the Migration Marker and skill-writing code with the TestBench recipe. `resolve-migration-markers` stays one skill, with marker kinds per Testing Tool, since a project can have both suites.
-- **Component references stay behind the Escape Hatch.** Code that reaches into a view's Java fields (`test(view.nameField)`, `$view(View.class).saveButton`) is not converted by the recipe: guessing a locator from how the view builds the field could produce a test that finds the wrong component. The agent skill, which can read the view and run the test, replaces it with a locator.
+- **Component References stay behind the Escape Hatch.** Code that reaches into a view's Java fields (`test(view.nameField)`, `$view(View.class).saveButton`) is not converted by the recipe: guessing a locator from how the view builds the field could produce a test that finds the wrong component. The agent skill, which can read the view and run the test, replaces it with a locator.
 - **The Escape Hatch:** `BrowserlessEscapeHatch.of(page)` (`unified-test-browserless`: the base-class API on the page's `BrowserlessUIContext`) for base-class sources, `page.unwrap(BrowserlessUIContext.class)` for context-API sources. Either comes with `@RequiresTestingTool(BROWSERLESS)` and a Migration Marker.
 - **Capabilities:** a fully converted test gets no annotation and runs everywhere, as in ADR 0004, except where the recipe sees a Browserless-only pattern ([02-test-setup.md](../spec/02-test-setup.md): `@Transactional` rollback, a narrow Spring context without a web server). Such a test gets `@RequiresTestingTool(BROWSERLESS)` and a Migration Marker naming the pattern.
 - **Build:** import `unified-test-bom`, add `unified-test-browserless` (and `unified-test-spring` for Spring projects), keep `browserless-test-spring`, remove direct `browserless-test*` and `vaadin-testbench-unit*` dependencies. Browser adapters only by option (`addPlaywright`, `addSelenium`, both off): without them the converted suite still runs on Browserless only, as before.
@@ -22,6 +22,8 @@ Browserless tests are converted to Unified UI Tests the way [ADR 0004](0004-test
 
 ## Consequences
 
+- A guide, `docs/migrating-from-browserless.md`, laid out like the TestBench one, also explains running a plain servlet suite in a browser.
+- Options: `addPlaywright`, `addSelenium`, `includePageObjects`, `addAgentSkill`, all off. Shared base classes and helpers are converted without an option, as in ADR 0004.
 - Each source style ships with a golden pair in the demo, starting with a base-class `ProfileBrowserlessTest` and its `ProfileBrowserlessMigratedTest`, run on all three Testing Tools in CI; `EditPersonBrowserlessTest` becomes the context API's golden source.
 
 ## Considered Options
