@@ -1700,4 +1700,52 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void runnersAndBrowserSetupGoWithAMarker() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.annotations.BrowserConfiguration;
+                import com.vaadin.testbench.annotations.RunLocally;
+                import com.vaadin.testbench.parallel.Browser;
+                import com.vaadin.testbench.parallel.ParallelTest;
+                import java.util.List;
+                import org.junit.Test;
+                import org.junit.runner.RunWith;
+                import org.openqa.selenium.remote.DesiredCapabilities;
+                import org.springframework.boot.test.context.SpringBootTest;
+                import org.springframework.test.context.junit4.SpringRunner;
+
+                @RunWith(SpringRunner.class)
+                @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+                @RunLocally(Browser.CHROME)
+                public class OrderIT extends ParallelTest {
+
+                    @BrowserConfiguration
+                    public List<DesiredCapabilities> browsers() {
+                        return List.of(Browser.FIREFOX.getDesiredCapabilities());
+                    }
+
+                    @Test
+                    public void opens() {
+                        getDriver().get("http://localhost:8080/order");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                // TODO unified: browser setup removed (@RunLocally, @BrowserConfiguration): configure the Unified Selenium adapter (vaadin.testing.* settings)
+                @UnifiedSpringBootTest
+                public class OrderIT {
+
+                    @Test
+                    public void opens(UnifiedPage page) {
+                        page.navigate("order");
+                    }
+                }
+                """));
+    }
 }
