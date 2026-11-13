@@ -36,19 +36,35 @@ public class MigrateTestBenchToUnified extends Recipe {
             required = false)
     private final @Nullable Boolean includePageObjects;
 
+    @Option(displayName = "Add the agent skill",
+            description = "Also write `.claude/skills/resolve-migration-markers/SKILL.md`, a Claude Code skill that works "
+                    + "through the Migration Markers the migration leaves.",
+            required = false)
+    private final @Nullable Boolean addAgentSkill;
+
     public MigrateTestBenchToUnified() {
-        this(null, null);
+        this(null, null, null);
     }
 
     public MigrateTestBenchToUnified(@Nullable Boolean addPlaywright) {
-        this(addPlaywright, null);
+        this(addPlaywright, null, null);
+    }
+
+    public MigrateTestBenchToUnified(@Nullable Boolean addPlaywright, @Nullable Boolean includePageObjects) {
+        this(addPlaywright, includePageObjects, null);
     }
 
     @JsonCreator
     public MigrateTestBenchToUnified(@JsonProperty("addPlaywright") @Nullable Boolean addPlaywright,
-            @JsonProperty("includePageObjects") @Nullable Boolean includePageObjects) {
+            @JsonProperty("includePageObjects") @Nullable Boolean includePageObjects,
+            @JsonProperty("addAgentSkill") @Nullable Boolean addAgentSkill) {
         this.addPlaywright = addPlaywright;
         this.includePageObjects = includePageObjects;
+        this.addAgentSkill = addAgentSkill;
+    }
+
+    public @Nullable Boolean getAddAgentSkill() {
+        return addAgentSkill;
     }
 
     public @Nullable Boolean getIncludePageObjects() {
@@ -80,6 +96,9 @@ public class MigrateTestBenchToUnified extends Recipe {
         Environment recipes = Environment.builder().load(declaredRecipes()).build();
         List<Recipe> list = new ArrayList<>(names.stream().map(name -> recipes.activateRecipes(name)).map(Recipe.class::cast).toList());
         list.add(new RemoveJUnit4WhenUnused()); // scans every source, so outside the build and test-code preconditions
+        if (Boolean.TRUE.equals(addAgentSkill)) {
+            list.add(new AddMigrationMarkersSkill());
+        }
         if (Boolean.TRUE.equals(includePageObjects)) {
             list.add(1, new TestBenchPageObjectsToUnified()); // before the test code, which then passes page for this
         }
@@ -100,11 +119,12 @@ public class MigrateTestBenchToUnified extends Recipe {
     @Override
     public boolean equals(Object o) {
         return o instanceof MigrateTestBenchToUnified other && Objects.equals(addPlaywright, other.addPlaywright)
-                && Objects.equals(includePageObjects, other.includePageObjects);
+                && Objects.equals(includePageObjects, other.includePageObjects)
+                && Objects.equals(addAgentSkill, other.addAgentSkill);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(addPlaywright, includePageObjects);
+        return Objects.hash(addPlaywright, includePageObjects, addAgentSkill);
     }
 }

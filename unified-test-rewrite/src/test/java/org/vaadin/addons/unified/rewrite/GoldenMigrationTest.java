@@ -97,7 +97,8 @@ class GoldenMigrationTest implements RewriteTest {
     /** The demo's views, reduced to their routes: the real ones need the whole application on the classpath. */
     private static List<org.openrewrite.test.SourceSpecs> views() {
         return List.of(view("ProfileView", "profile"), view("PeopleView", "people"),
-                view("PreferencesView", "preferences"), view("OrderView", "order"), view("AccountView", "account"));
+                view("PreferencesView", "preferences"), view("OrderView", "order"), view("AccountView", "account"),
+                view("AddonView", "addon"));
     }
 
     private static org.openrewrite.test.SourceSpecs view(String name, String route) {
@@ -113,16 +114,29 @@ class GoldenMigrationTest implements RewriteTest {
                 """.formatted(route, name));
     }
 
+    @Test
+    void aCustomElementStaysBehindTheEscapeHatch() throws IOException {
+        assertMigrates("RatingTestBenchTest", "RatingMigratedTest", "RatingElement");
+    }
+
+    @Test
+    void aPageObjectWithoutIncludePageObjectsStaysBehindTheEscapeHatch() throws IOException {
+        assertMigrates("ProfilePageObjectTestBenchTest", "ProfilePageObjectMigratedTest", "ProfileTestBenchPage");
+    }
+
     private void assertMigrates(String input, String twin) throws IOException {
+        assertMigrates(input, twin, new String[0]);
+    }
+
+    /** The input becomes the twin; the other demo test files it uses are parsed and stay as they are. */
+    private void assertMigrates(String input, String twin, String... unchanged) throws IOException {
         String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
         String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
-        rewriteRun(
-                // the demo's views, reduced to their routes: the real ones need the whole application on the classpath
-                view("ProfileView", "profile"),
-                view("PeopleView", "people"),
-                view("PreferencesView", "preferences"),
-                view("OrderView", "order"),
-                view("AccountView", "account"),
-                java(before, after));
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        for (String name : unchanged) {
+            sources.add(java(Files.readString(DEMO_TESTS.resolve(name + ".java"))));
+        }
+        sources.add(java(before, after));
+        rewriteRun(sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
     }
 }

@@ -42,6 +42,7 @@ Commit or stash your work first: the recipe changes files in place.
       - org.vaadin.addons.unified.rewrite.MigrateTestBenchToUnified:
           addPlaywright: true
           includePageObjects: true
+          addAgentSkill: true
     ```
 
     ```bash
@@ -74,8 +75,9 @@ Commit or stash your work first: the recipe changes files in place.
 |---|---|---|
 | `addPlaywright` | `false` | Also adds the Playwright adapter, `unified-test-playwright` |
 | `includePageObjects` | `false` | Also converts page objects (see below) |
+| `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
-Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `playwright` or `selenium`) and work through the Migration Markers.
+Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `playwright` or `selenium`) and work through the Migration Markers, by hand or with the agent skill.
 
 ## What it converts
 
@@ -134,4 +136,20 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 | `TestBench page object: new LoginPage(this)` | Convert the page object by hand, or rerun with `includePageObjects` |
 | `browser setup removed (@RunLocally, ...)` | Configure the Selenium adapter with `vaadin.testing.*` settings |
 
-An agent skill that works through the Migration Markers is planned ([#119](https://github.com/parttio/unified-testing-tool/issues/119)).
+Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
+
+## The agent skill
+
+`resolve-migration-markers` is a [Claude Code](https://claude.com/claude-code) skill that works through the Migration Markers: it resolves each one into Unified API code, or keeps the Escape Hatch and replaces the marker with `// Escape Hatch kept: <reason>`. It runs the tests it changed on Browserless and Playwright, and reports what it did.
+
+Add `addAgentSkill: true` to the recipe's options (see **Run it**): the migration then also writes `.claude/skills/resolve-migration-markers/SKILL.md`, the version matching your recipe's markers. In Claude Code, in the migrated project:
+
+```text
+/resolve-migration-markers
+```
+
+Review its changes like any other. The skill's source is in [`unified-test-rewrite`](https://github.com/parttio/unified-testing-tool/blob/main/unified-test-rewrite/src/main/resources/META-INF/unified/skills/resolve-migration-markers/SKILL.md).
+
+### Evaluating the skill
+
+`scripts/eval-migration-skill.sh` runs the skill with Claude Code on the demo's migrated tests in a scratch worktree, runs them on Browserless and Playwright, and scores the result: markers resolved, kept and untouched, Escape Hatches and Selenium-only tests left, tests passing on each Testing Tool. It compares the score with the committed baseline (`unified-test-rewrite/skill-eval/baseline.json`) and writes an HTML or Markdown report (`--format html|md`). A run is acceptable when no metric is worse, and, when the skill changed, at least one is better; `--accept` then commits it as the new baseline. CI can't run Claude Code, so when the skill changes on `main` without a new baseline, a workflow opens an issue to run it.

@@ -2,6 +2,7 @@ package org.vaadin.addons.unified.rewrite;
 
 import static org.openrewrite.java.Assertions.java;
 import static org.openrewrite.maven.Assertions.pomXml;
+import static org.openrewrite.test.SourceSpecs.text;
 
 import org.junit.jupiter.api.Test;
 import org.openrewrite.config.Environment;
@@ -1994,5 +1995,15 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         }
                     }
                     """));
+    }
+
+    @Test
+    void addAgentSkillWritesTheMigrationMarkersSkill() throws Exception {
+        String skill = new String(getClass().getResourceAsStream(
+                "/META-INF/unified/skills/resolve-migration-markers/SKILL.md").readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        rewriteRun(
+                spec -> spec.recipe(new MigrateTestBenchToUnified(null, null, true)),
+                text(null, skill, source -> source.path(".claude/skills/resolve-migration-markers/SKILL.md")));
     }
 }
