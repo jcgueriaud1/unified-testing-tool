@@ -64,6 +64,26 @@
             <groupId>org.openrewrite</groupId>
             <artifactId>rewrite-maven</artifactId>
         </dependency>
+        <!-- the JUnit 4 test-code recipes, for JUnit 4 TestBench suites -->
+        <dependency>
+            <groupId>org.openrewrite.recipe</groupId>
+            <artifactId>rewrite-testing-frameworks</artifactId>
+            <!-- only its Java recipes are used: no Gradle, Groovy or Kotlin parsers -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openrewrite</groupId>
+                    <artifactId>rewrite-gradle</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openrewrite</groupId>
+                    <artifactId>rewrite-groovy</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openrewrite</groupId>
+                    <artifactId>rewrite-kotlin</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>org.openrewrite</groupId>
             <artifactId>rewrite-java-21</artifactId>
