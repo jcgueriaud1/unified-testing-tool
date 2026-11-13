@@ -34,6 +34,7 @@ flowchart TD
 |---|---|
 | Test needs one tool | `@RequiresTestingTool(PLAYWRIGHT)` + `unwrap` |
 | TestBench test base API (`$(..)`, `executeScript`, `waitUntil`) on Selenium, as in a migrated test | `TestBenchEscapeHatch.of(page)` + `@RequiresTestingTool(SELENIUM)` ([ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md)) |
+| Browserless Test's test base API (`test(..)`, `$(..)`, `$view(..)`, `fireShortcut`) on Browserless, as in a migrated test | `BrowserlessEscapeHatch.of(page)` + `@RequiresTestingTool(BROWSERLESS)` ([ADR 0005](../adr/0005-browserless-migration-recipes.md)) |
 | Extra check, test runs everywhere | `tryUnwrap`, no annotation |
 | Server-side state (fields, beans) | `unwrap(Component.class)` + `@RequiresTestingTool(BROWSERLESS)` |
 | Disable Auto-Wait, back/forward, network, tracing | the tool's own API |
