@@ -17,7 +17,7 @@ Deliberately not decided in this spec.
 | Grid extras | TreeGrid, column reordering, Grid context menu, Grid Pro editing, drag and drop: same pattern as [07-grid.md](07-grid.md) |
 | Quarkus | Same pattern as `@UnifiedSpringBootTest`: `@QuarkusTest` with its test port for browser Testing Tools, `QuarkusBrowserlessTest` for Browserless |
 | Authentication without Spring Security | The application's real login, or the Escape Hatch ([11-users.md](11-users.md)) |
-| Migration from TestBench | Decided in [ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md): Migration Recipes, then an agent skill for Migration Markers |
+| Migration from TestBench | Decided in [ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md): Migration Recipes, then an agent skill for Migration Markers. How to run it: [Migrating from TestBench](../migrating-from-testbench.md) |
 
 ## To verify during implementation
 
