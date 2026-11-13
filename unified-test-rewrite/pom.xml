@@ -106,6 +106,12 @@
             <artifactId>unified-test-spring</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- resolved into the local repository for the JUnit 4 build tests (it runs no tests here) -->
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-selenium</artifactId>
