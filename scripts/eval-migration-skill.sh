@@ -75,7 +75,8 @@ if (cd "$work" && mvn -B -q -ntp test-compile -pl unified-test-demo) >"$out/comp
 fi
 
 git -C "$work" diff -- "$tests_dir" >"$out/changes.diff" || true
-git -C "$work" status --porcelain -- "$tests_dir" | grep '^??' | awk '{print $2}' | while read -r f; do
+# files the agent added (a Wrapper, say); none is fine
+{ git -C "$work" status --porcelain -- "$tests_dir" | grep '^??' || true; } | awk '{print $2}' | while read -r f; do
   git -C "$work" diff --no-index /dev/null "$f" >>"$out/changes.diff" || true
 done
 
