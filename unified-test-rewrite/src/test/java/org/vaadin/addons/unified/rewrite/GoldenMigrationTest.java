@@ -70,6 +70,11 @@ class GoldenMigrationTest implements RewriteTest {
     }
 
     @Test
+    void aJUnit4TestBenchTestMigratesToJUnit6() throws IOException {
+        assertMigrates("JUnit4TestBenchTest", "JUnit4MigratedTest");
+    }
+
+    @Test
     void aBaseClassASubclassAndAPageObjectMigrateTogether() throws IOException {
         // twin names in the after files are the input names, as the recipe can't rename classes
         java.util.Map<String, String> twins = java.util.Map.of(
