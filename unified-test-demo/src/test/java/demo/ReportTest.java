@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class ReportTest {
 
+    // --8<-- [start:findsAFieldByItsAccessibleName]
     /** A field named with setAriaLabel(..), no visible label. */
     @Test
     void findsAFieldByItsAccessibleName(UnifiedPage page) {
@@ -22,6 +23,7 @@ class ReportTest {
 
         assertThat(page.findComponent(Span.class).withId("selected-year").single()).hasText("2026");
     }
+    // --8<-- [end:findsAFieldByItsAccessibleName]
 
     /** Closed dialogs (the view's own, the dev tools') never match: single() finds the open one. */
     @Test

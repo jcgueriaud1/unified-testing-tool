@@ -24,6 +24,7 @@ class ProfileViewTest {
 ```
 
 - **Documentation site:** https://jcgueriaud1.github.io/unified-testing-tool/
+- **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, with examples of the query API.
 - **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
 - **Status:** first version. Spec draft, not yet `spec-v1`.
 

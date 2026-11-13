@@ -46,6 +46,7 @@ class KeyboardTest {
         assertThat(page.find(UnifiedNotification.class).withText("Saved with Ctrl+S").single()).isOpen();
     }
 
+    // --8<-- [start:escapeOnThePageClosesTheDialog]
     @Test
     void escapeOnThePageClosesTheDialog(UnifiedPage page) {
         page.navigate(KeyboardView.class);
@@ -57,6 +58,7 @@ class KeyboardTest {
 
         assertThat(dialog).isClosed();
     }
+    // --8<-- [end:escapeOnThePageClosesTheDialog]
 
     @Test
     void dispatchesACustomDomEvent(UnifiedPage page) {

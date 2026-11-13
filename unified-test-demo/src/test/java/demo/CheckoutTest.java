@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class CheckoutTest {
 
+    // --8<-- [start:picksTheFieldThroughItsContainer]
     @Test
     void picksTheFieldThroughItsContainer(UnifiedPage page) {
         page.navigate(CheckoutView.class);
@@ -28,6 +29,7 @@ class CheckoutTest {
         assertThat(page.find(UnifiedNotification.class).single()).hasText("Billing: Turku, shipping: Berlin");
         assertThat(billing.find(UnifiedTextField.class).withLabel("City").single()).hasValue("Turku");
     }
+    // --8<-- [end:picksTheFieldThroughItsContainer]
 
     @Test
     void sameLabelOutsideAContainerIsAmbiguous(UnifiedPage page) {
@@ -38,6 +40,7 @@ class CheckoutTest {
                 .find(UnifiedTextField.class).all().size());
     }
 
+    // --8<-- [start:containersNest]
     @Test
     void containersNest(UnifiedPage page) {
         page.navigate(CheckoutView.class);
@@ -50,4 +53,5 @@ class CheckoutTest {
         assertEquals(0, page.find(UnifiedContainer.class).withTestId("billing").single()
                 .find(UnifiedButton.class).all().size());
     }
+    // --8<-- [end:containersNest]
 }

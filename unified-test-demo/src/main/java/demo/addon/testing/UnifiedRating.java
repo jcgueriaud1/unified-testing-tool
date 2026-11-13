@@ -11,6 +11,7 @@ import demo.addon.Rating;
  * The add-on's wrapper, shipped in its own jar (ADR 0003): only the Unified Element, no per-tool code.
  * Tag from {@link Rating}'s {@code @Tag}.
  */
+// --8<-- [start:wrapper]
 @UnifiedComponent(Rating.class)
 public interface UnifiedRating extends UnifiedWrapper, Findable<UnifiedRating.RatingQuery> {
 
@@ -31,3 +32,4 @@ public interface UnifiedRating extends UnifiedWrapper, Findable<UnifiedRating.Ra
         return value == null ? 0 : value;
     }
 }
+// --8<-- [end:wrapper]

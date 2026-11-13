@@ -25,6 +25,7 @@ class UsersTest {
         assertThat(page).isAt(LoginView.class);
     }
 
+    // --8<-- [start:openWindowSharesTheSession]
     @Test
     void openWindowSharesTheSession(UnifiedPage page) {
         page.navigate(WhoAmIView.class);
@@ -36,6 +37,7 @@ class UsersTest {
         assertThat(second.findComponent(Span.class).withText("Visits in this session: 2").single()).isVisible();
         assertThat(second.findComponent(Span.class).withText("Anonymous").single()).isVisible();
     }
+    // --8<-- [end:openWindowSharesTheSession]
 
     // ---------------------------------------------------------------- logged in (browsers: test-only login endpoint)
 
