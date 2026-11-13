@@ -2,20 +2,13 @@ package org.vaadin.addons.unified.rewrite;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Properties;
 import org.jspecify.annotations.Nullable;
 import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.config.Environment;
-import org.openrewrite.config.YamlResourceLoader;
 
 /**
  * The composite Migration Recipe: rewrites TestBench (Selenium) tests in place into Unified UI Tests and swaps
@@ -93,7 +86,7 @@ public class MigrateTestBenchToUnified extends Recipe {
             names.add("org.vaadin.addons.unified.rewrite.AddPlaywrightAdapter");
         }
         names.add("org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode");
-        Environment recipes = Environment.builder().load(declaredRecipes()).build();
+        Environment recipes = Environment.builder().load(DeclaredRecipes.load(RECIPES)).build();
         List<Recipe> list = new ArrayList<>(names.stream().map(name -> recipes.activateRecipes(name)).map(Recipe.class::cast).toList());
         list.add(new RemoveJUnit4WhenUnused()); // scans every source, so outside the build and test-code preconditions
         if (Boolean.TRUE.equals(addAgentSkill)) {
@@ -103,17 +96,6 @@ public class MigrateTestBenchToUnified extends Recipe {
             list.add(1, new TestBenchPageObjectsToUnified()); // before the test code, which then passes page for this
         }
         return list;
-    }
-
-    private YamlResourceLoader declaredRecipes() {
-        URL url = MigrateTestBenchToUnified.class.getResource(RECIPES);
-        try (InputStream in = url.openStream()) {
-            return new YamlResourceLoader(in, url.toURI(), new Properties(), MigrateTestBenchToUnified.class.getClassLoader());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     @Override

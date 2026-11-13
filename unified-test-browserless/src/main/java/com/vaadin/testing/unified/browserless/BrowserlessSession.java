@@ -333,7 +333,8 @@ final class BrowserlessSession implements AdapterSession {
     @Override
     public <T> Optional<T> unwrap(Class<T> type) {
         if (type.isInstance(window)) {
-            return Optional.of(type.cast(window));
+            // made current: the caller (BrowserlessEscapeHatch) works on the thread-locals of this window
+            return Optional.of(type.cast(window()));
         }
         UI ui = window().getUI();
         if (type.isInstance(ui)) {
