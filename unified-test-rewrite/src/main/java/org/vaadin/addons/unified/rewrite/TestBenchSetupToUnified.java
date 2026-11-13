@@ -17,6 +17,7 @@ import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Space;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeUtils;
@@ -27,9 +28,14 @@ import org.openrewrite.java.tree.TypeUtils;
  * {@code @BrowserTest} method a {@code UnifiedPage page} parameter, and turns
  * {@code getDriver().get(url)} into {@code page.navigate(path)}.
  */
-public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<String>>> {
+public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnified.Scanned> {
 
     static final String BROWSER_TEST_BASE = "com.vaadin.testbench.BrowserTestBase";
+    static final String TEST_BENCH_TEST_CASE = "com.vaadin.testbench.TestBenchTestCase";
+    static final String PARALLEL_TEST = "com.vaadin.testbench.parallel.ParallelTest";
+    static final String UNIFIED_UI_TEST = "com.vaadin.testing.unified.UnifiedUITest";
+    private static final Set<String> TEST_ANNOTATIONS = Set.of("org.springframework.boot.test.context.SpringBootTest",
+            "com.vaadin.testing.unified.spring.UnifiedSpringBootTest", UNIFIED_UI_TEST);
     static final String BROWSER_TEST = "com.vaadin.testbench.BrowserTest";
     static final String LOCAL_SERVER_PORT = "org.springframework.boot.test.web.server.LocalServerPort";
     static final String BEFORE_EACH = "org.junit.jupiter.api.BeforeEach";
@@ -54,17 +60,28 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
                 + "parameter and turns `getDriver().get(url)` into `page.navigate(path)`.";
     }
 
+    /** Views by route path, and the TestBench helpers of each TestBench test class (and base class). */
+    public record Scanned(Map<String, Set<String>> routes, Map<String, Set<String>> helpersByClass,
+            Map<String, List<String>> beforeEachByClass) {
+    }
+
     @Override
-    public Map<String, Set<String>> getInitialValue(ExecutionContext ctx) {
-        return new HashMap<>();
+    public Scanned getInitialValue(ExecutionContext ctx) {
+        return new Scanned(new HashMap<>(), new HashMap<>(), new HashMap<>());
     }
 
     /** Collects the views by route path, to navigate by class when exactly one view has the path. */
     @Override
-    public TreeVisitor<?, ExecutionContext> getScanner(Map<String, Set<String>> routes) {
+    public TreeVisitor<?, ExecutionContext> getScanner(Scanned scanned) {
+        Map<String, Set<String>> routes = scanned.routes();
         return new JavaIsoVisitor<>() {
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
+                if (isTestBenchClass(classDecl)) {
+                    Set<String> helpers = Helpers.usingTestBench(classDecl);
+                    scanned.helpersByClass().put(classDecl.getType().getFullyQualifiedName(), helpers);
+                    scanned.beforeEachByClass().put(classDecl.getType().getFullyQualifiedName(), beforeEachOf(classDecl, helpers));
+                }
                 if (classDecl.getType() != null) {
                     for (J.Annotation a : classDecl.getLeadingAnnotations()) {
                         String path = routePath(a);
@@ -95,23 +112,45 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
     }
 
     @Override
-    public TreeVisitor<?, ExecutionContext> getVisitor(Map<String, Set<String>> routes) {
+    public TreeVisitor<?, ExecutionContext> getVisitor(Scanned scanned) {
+        Map<String, Set<String>> routes = scanned.routes();
         return new JavaIsoVisitor<>() {
 
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
-                if (classDecl.getExtends() == null
-                        || !TypeUtils.isOfClassType(classDecl.getExtends().getType(), BROWSER_TEST_BASE)) {
+                if (!isTestBenchClass(classDecl)) {
                     return super.visitClassDeclaration(classDecl, ctx);
                 }
-                Set<String> helpers = Helpers.usingTestBench(classDecl);
+                Set<String> inherited = inheritedHelpers(classDecl.getType(), scanned.helpersByClass());
+                Set<String> helpers = new java.util.HashSet<>(Helpers.usingTestBench(classDecl, inherited));
+                helpers.addAll(inherited);
                 getCursor().putMessage(HELPERS, helpers);
+                if (classDecl.getExtends() == null || !isTestBenchBase(classDecl.getExtends().getType())) {
+                    // a subclass of a TestBench base class: its tests call the inherited @BeforeEach helpers first
+                    J.ClassDeclaration sub = super.visitClassDeclaration(classDecl, ctx);
+                    doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
+                    List<String> beforeEach = new ArrayList<>(inheritedBeforeEach(classDecl.getType(), scanned.beforeEachByClass()));
+                    beforeEach.addAll(beforeEachOf(classDecl, helpers));
+                    return sub.withBody(sub.getBody().withStatements(Helpers.callBeforeEachFirst(sub, beforeEach)));
+                }
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
                 c = c.withBody(c.getBody().withStatements(Helpers.callBeforeEachFirst(c, beforeEachOf(classDecl, helpers))));
                 c = c.withExtends(null);
                 doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
                 c = c.withBody(c.getBody().withStatements(withoutUnusedPortFields(c)));
                 maybeRemoveImport(BROWSER_TEST_BASE);
+                maybeRemoveImport(TEST_BENCH_TEST_CASE);
+                maybeRemoveImport(PARALLEL_TEST);
+                if (c.getLeadingAnnotations().stream().noneMatch(a -> TEST_ANNOTATIONS.stream()
+                        .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)))) {
+                    // no Spring test: a test against a running application
+                    maybeAddImport(UNIFIED_UI_TEST);
+                    c = JavaTemplate.builder("@UnifiedUITest")
+                            .imports(UNIFIED_UI_TEST)
+                            .javaParser(Stubs.parser("package com.vaadin.testing.unified; public @interface UnifiedUITest {}"))
+                            .build()
+                            .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
+                }
                 maybeRemoveImport(LOCAL_SERVER_PORT);
                 return c;
             }
@@ -120,8 +159,9 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
                 Set<String> helpers = getCursor().getNearestMessage(HELPERS, Set.of());
-                boolean browserTest = m.getLeadingAnnotations().stream()
-                        .anyMatch(a -> TypeUtils.isOfClassType(a.getType(), BROWSER_TEST));
+                boolean browserTest = Helpers.isBrowserTest(m)
+                        && getCursor().firstEnclosing(J.ClassDeclaration.class) != null
+                        && isTestBenchClass(getCursor().firstEnclosing(J.ClassDeclaration.class));
                 if (!browserTest && !helpers.contains(m.getSimpleName()) || Pages.hasPageParameter(m)) {
                     return m;
                 }
@@ -163,7 +203,12 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
                 }
                 String path = Urls.pathOf(m.getArguments().get(0));
                 if (path == null) {
-                    return m;
+                    Expression pathExpression = Urls.pathExpression(m.getArguments().get(0));
+                    return pathExpression == null ? m
+                            : JavaTemplate.builder("#{any(" + UNIFIED_PAGE + ")}.navigate(#{any(String)})")
+                                    .javaParser(Stubs.parser())
+                                    .build()
+                                    .apply(getCursor(), m.getCoordinates().replace(), Stubs.page(), pathExpression);
                 }
                 Set<String> views = routes.getOrDefault(path, Set.of());
                 if (views.size() == 1) {
@@ -181,6 +226,36 @@ public class TestBenchSetupToUnified extends ScanningRecipe<Map<String, Set<Stri
                         .apply(getCursor(), m.getCoordinates().replace(), Stubs.page(), Stubs.literal(path));
             }
         };
+    }
+
+    /** A class that is, or extends, TestBench's {@code BrowserTestBase}. */
+    static boolean isTestBenchClass(J.ClassDeclaration c) {
+        return c.getType() != null && (TypeUtils.isAssignableTo(BROWSER_TEST_BASE, c.getType())
+                || TypeUtils.isAssignableTo(TEST_BENCH_TEST_CASE, c.getType()));
+    }
+
+    /** TestBench's own test base classes: JUnit 5/6 {@code BrowserTestBase}, JUnit 4 {@code TestBenchTestCase}. */
+    static boolean isTestBenchBase(JavaType type) {
+        return TypeUtils.isOfClassType(type, BROWSER_TEST_BASE) || TypeUtils.isOfClassType(type, TEST_BENCH_TEST_CASE)
+                || TypeUtils.isOfClassType(type, PARALLEL_TEST);
+    }
+
+    /** The {@code @BeforeEach} helpers the class's superclasses declare, the farthest ancestor's first. */
+    private static List<String> inheritedBeforeEach(JavaType.FullyQualified type, Map<String, List<String>> byClass) {
+        List<String> inherited = new ArrayList<>();
+        for (JavaType.FullyQualified s = type.getSupertype(); s != null; s = s.getSupertype()) {
+            inherited.addAll(0, byClass.getOrDefault(s.getFullyQualifiedName(), List.of()));
+        }
+        return inherited;
+    }
+
+    /** The TestBench helpers the class's superclasses declare. */
+    private static Set<String> inheritedHelpers(JavaType.FullyQualified type, Map<String, Set<String>> helpersByClass) {
+        Set<String> inherited = new java.util.HashSet<>();
+        for (JavaType.FullyQualified s = type.getSupertype(); s != null; s = s.getSupertype()) {
+            inherited.addAll(helpersByClass.getOrDefault(s.getFullyQualifiedName(), Set.of()));
+        }
+        return inherited;
     }
 
     /** The helpers that are {@code @BeforeEach} methods, in declaration order. */

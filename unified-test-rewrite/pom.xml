@@ -64,6 +64,26 @@
             <groupId>org.openrewrite</groupId>
             <artifactId>rewrite-maven</artifactId>
         </dependency>
+        <!-- the JUnit 4 test-code recipes, for JUnit 4 TestBench suites -->
+        <dependency>
+            <groupId>org.openrewrite.recipe</groupId>
+            <artifactId>rewrite-testing-frameworks</artifactId>
+            <!-- only its Java recipes are used: no Gradle, Groovy or Kotlin parsers -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openrewrite</groupId>
+                    <artifactId>rewrite-gradle</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openrewrite</groupId>
+                    <artifactId>rewrite-groovy</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.openrewrite</groupId>
+                    <artifactId>rewrite-kotlin</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>org.openrewrite</groupId>
             <artifactId>rewrite-java-21</artifactId>
@@ -84,6 +104,12 @@
         <dependency>
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-spring</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- resolved into the local repository for the JUnit 4 build tests (it runs no tests here) -->
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

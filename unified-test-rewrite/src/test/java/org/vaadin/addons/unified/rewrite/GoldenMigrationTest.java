@@ -69,6 +69,38 @@ class GoldenMigrationTest implements RewriteTest {
         assertMigrates("ContainersTestBenchTest", "ContainersMigratedTest");
     }
 
+    @Test
+    void aJUnit4TestBenchTestMigratesToJUnit6() throws IOException {
+        assertMigrates("JUnit4TestBenchTest", "JUnit4MigratedTest");
+    }
+
+    @Test
+    void aBaseClassASubclassAndAPageObjectMigrateTogether() throws IOException {
+        // twin names in the after files are the input names, as the recipe can't rename classes
+        java.util.Map<String, String> twins = java.util.Map.of(
+                "AbstractProfileTestBench", "AbstractProfileMigrated",
+                "ProfileTestBenchPage", "ProfileMigratedPage",
+                "ProfileSubclassTestBenchTest", "ProfileSubclassMigratedTest");
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        for (var pair : twins.entrySet()) {
+            String after = Files.readString(DEMO_TESTS.resolve(pair.getValue() + ".java"));
+            for (var name : twins.entrySet()) {
+                after = after.replace(name.getValue(), name.getKey());
+            }
+            String before = Files.readString(DEMO_TESTS.resolve(pair.getKey() + ".java"));
+            sources.add(java(before, after));
+        }
+        rewriteRun(spec -> spec.recipe(new MigrateTestBenchToUnified(null, true)),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    /** The demo's views, reduced to their routes: the real ones need the whole application on the classpath. */
+    private static List<org.openrewrite.test.SourceSpecs> views() {
+        return List.of(view("ProfileView", "profile"), view("PeopleView", "people"),
+                view("PreferencesView", "preferences"), view("OrderView", "order"), view("AccountView", "account"),
+                view("AddonView", "addon"));
+    }
+
     private static org.openrewrite.test.SourceSpecs view(String name, String route) {
         return java("""
                 package demo;
@@ -82,16 +114,29 @@ class GoldenMigrationTest implements RewriteTest {
                 """.formatted(route, name));
     }
 
+    @Test
+    void aCustomElementStaysBehindTheEscapeHatch() throws IOException {
+        assertMigrates("RatingTestBenchTest", "RatingMigratedTest", "RatingElement");
+    }
+
+    @Test
+    void aPageObjectWithoutIncludePageObjectsStaysBehindTheEscapeHatch() throws IOException {
+        assertMigrates("ProfilePageObjectTestBenchTest", "ProfilePageObjectMigratedTest", "ProfileTestBenchPage");
+    }
+
     private void assertMigrates(String input, String twin) throws IOException {
+        assertMigrates(input, twin, new String[0]);
+    }
+
+    /** The input becomes the twin; the other demo test files it uses are parsed and stay as they are. */
+    private void assertMigrates(String input, String twin, String... unchanged) throws IOException {
         String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
         String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
-        rewriteRun(
-                // the demo's views, reduced to their routes: the real ones need the whole application on the classpath
-                view("ProfileView", "profile"),
-                view("PeopleView", "people"),
-                view("PreferencesView", "preferences"),
-                view("OrderView", "order"),
-                view("AccountView", "account"),
-                java(before, after));
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        for (String name : unchanged) {
+            sources.add(java(Files.readString(DEMO_TESTS.resolve(name + ".java"))));
+        }
+        sources.add(java(before, after));
+        rewriteRun(sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
     }
 }

@@ -1,0 +1,48 @@
+name: Skill evaluation reminder
+
+# The resolve-migration-markers skill (#119) is evaluated with Claude Code, which CI can't run. When the skill
+# changes on main without a new evaluation baseline, open an issue to run scripts/eval-migration-skill.sh.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'unified-test-rewrite/src/main/resources/META-INF/unified/skills/**'
+      - 'unified-test-rewrite/skill-eval/baseline.json'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Open an issue when the baseline is not for this skill
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          skill=unified-test-rewrite/src/main/resources/META-INF/unified/skills/resolve-migration-markers/SKILL.md
+          baseline=unified-test-rewrite/skill-eval/baseline.json
+          sha=$(sha256sum "$skill" | cut -d' ' -f1)
+          if [ -f "$baseline" ] && grep -q "\"skillSha256\": \"$sha\"" "$baseline"; then
+            echo "The baseline is for this skill."
+            exit 0
+          fi
+          title="Re-run the migration skill evaluation"
+          if gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[].number' | grep -q .; then
+            echo "An open issue already asks for it."
+            exit 0
+          fi
+          gh issue create --title "$title" --label ready-for-human --body "$(cat <<EOF
+          The \`resolve-migration-markers\` skill changed in ${GITHUB_SHA} without a new evaluation baseline.
+
+          Run the evaluation locally (it needs Claude Code), and commit the new baseline when the run is better:
+
+          \`\`\`bash
+          scripts/eval-migration-skill.sh --format html --accept
+          \`\`\`
+
+          See [Migrating from TestBench](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/migrating-from-testbench.md#the-agent-skill).
+          EOF
+          )"

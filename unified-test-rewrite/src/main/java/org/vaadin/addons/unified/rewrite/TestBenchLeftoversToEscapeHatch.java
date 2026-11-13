@@ -35,6 +35,8 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
     /** The types whose methods a {@code BrowserTestBase} test calls without a receiver. */
     private static final Set<String> TEST_BASE_TYPES = Set.of(
             "com.vaadin.testbench.BrowserTestBase",
+            "com.vaadin.testbench.TestBenchTestCase",
+            "com.vaadin.testbench.parallel.ParallelTest",
             "com.vaadin.testbench.AbstractBrowserDriverTestBase",
             "com.vaadin.testbench.AbstractBrowserTestBase",
             "com.vaadin.testbench.HasElementQuery",
@@ -115,12 +117,33 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                         .apply(updateCursor(m), m.getCoordinates().addAnnotation((a, b) -> 1));
             }
 
+            /** {@code this} handed to a page object or helper as the TestBench test: it gets the Escape Hatch instead. */
+            @Override
+            public J.Identifier visitIdentifier(J.Identifier identifier, ExecutionContext ctx) {
+                J.Identifier id = super.visitIdentifier(identifier, ctx);
+                AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
+                Object parent = getCursor().getParentTreeCursor().getValue();
+                J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                boolean argument = parent instanceof J.NewClass n && n.getArguments().contains(identifier)
+                        || parent instanceof J.MethodInvocation call && call.getArguments().contains(identifier);
+                if (escapes == null || !id.getSimpleName().equals("this") || !argument || c == null
+                        || !TestBenchSetupToUnified.isTestBenchClass(c)
+                        || !MigrationMarkers.add(getCursor(), "TestBench page object: "
+                                + ((J) parent).printTrimmed(getCursor().getParentTreeCursor()))) {
+                    return id;
+                }
+                escapes.set(true);
+                return new J.Identifier(Tree.randomId(), id.getPrefix(), Markers.EMPTY, emptyList(), VARIABLE,
+                        JavaType.ShallowClass.build(ESCAPE_HATCH), null);
+            }
+
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
                 if (escapes == null || m.getSelect() != null || !isTestBaseCall(m)
-                        || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + method.printTrimmed(getCursor()))) {
+                        || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + method.printTrimmed(getCursor())
+                                + (isCustomElementLookup(method) ? ", a custom element: write a Wrapper for it (ADR 0003)" : ""))) {
                     return m;
                 }
                 escapes.set(true);
@@ -128,6 +151,17 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                         Markers.EMPTY, emptyList(), VARIABLE, JavaType.ShallowClass.build(ESCAPE_HATCH), null)));
             }
         };
+    }
+
+    /** A {@code $(X.class)} of an application's own {@code @Element} class, not one TestBench ships. */
+    private static boolean isCustomElementLookup(J.MethodInvocation m) {
+        if (!m.getSimpleName().equals("$") || m.getArguments().size() != 1
+                || !(m.getArguments().get(0) instanceof J.FieldAccess classLiteral)
+                || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
+            return false;
+        }
+        return !element.getFullyQualifiedName().startsWith("com.vaadin.") && element.getAnnotations().stream()
+                .anyMatch(a -> a.getFullyQualifiedName().equals("com.vaadin.testbench.elementsbase.Element"));
     }
 
     static boolean isTestBaseCall(J.MethodInvocation m) {

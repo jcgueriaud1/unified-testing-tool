@@ -18,6 +18,14 @@
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-testbench-core</artifactId>
+            <!-- JUnit 4 is only for TestBench's own JUnit 4 base classes, which the adapter doesn't use:
+                 Unified UI Tests run on JUnit 6 only -->
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- TestBenchEscapeHatch: TestBench's test base API on the Unified Page's driver, for migrated tests -->
         <dependency>

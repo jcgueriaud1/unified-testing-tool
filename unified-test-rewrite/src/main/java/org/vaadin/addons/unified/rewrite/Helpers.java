@@ -32,6 +32,11 @@ final class Helpers {
     }
 
     static Set<String> usingTestBench(J.ClassDeclaration c) {
+        return usingTestBench(c, Set.of());
+    }
+
+    /** The class's own helpers using TestBench, counting calls to the given inherited helpers as such use. */
+    static Set<String> usingTestBench(J.ClassDeclaration c, Set<String> inherited) {
         Map<String, Set<String>> calls = new HashMap<>();
         Set<String> using = new HashSet<>();
         for (Statement s : c.getBody().getStatements()) {
@@ -42,7 +47,8 @@ final class Helpers {
                 new JavaIsoVisitor<Integer>() {
                     @Override
                     public J.MethodInvocation visitMethodInvocation(J.MethodInvocation call, Integer p) {
-                        if (call.getSelect() == null && TestBenchLeftoversToEscapeHatch.isTestBaseCall(call)) {
+                        if (call.getSelect() == null && (TestBenchLeftoversToEscapeHatch.isTestBaseCall(call)
+                                || inherited.contains(call.getSimpleName()))) {
                             direct.set(true);
                         } else if (call.getSelect() == null) {
                             calls.get(m.getSimpleName()).add(call.getSimpleName());
@@ -74,6 +80,11 @@ final class Helpers {
             return c.getBody().getStatements();
         }
         Map<String, JavaType.Method> types = new HashMap<>();
+        for (JavaType.FullyQualified t = c.getType() == null ? null : c.getType().getSupertype(); t != null; t = t.getSupertype()) {
+            for (JavaType.Method inherited : t.getMethods()) {
+                types.putIfAbsent(inherited.getName(), inherited);
+            }
+        }
         for (Statement s : c.getBody().getStatements()) {
             if (s instanceof J.MethodDeclaration m) {
                 types.put(m.getSimpleName(), m.getMethodType());
@@ -103,8 +114,10 @@ final class Helpers {
                 type);
     }
 
+    /** A test method: TestBench's {@code @BrowserTest}, or JUnit's {@code @Test} (Jupiter, or JUnit 4). */
     static boolean isBrowserTest(J.MethodDeclaration m) {
-        return m.getLeadingAnnotations().stream()
-                .anyMatch(a -> TypeUtils.isOfClassType(a.getType(), TestBenchSetupToUnified.BROWSER_TEST));
+        return m.getLeadingAnnotations().stream().anyMatch(a -> TypeUtils.isOfClassType(a.getType(), TestBenchSetupToUnified.BROWSER_TEST)
+                || TypeUtils.isOfClassType(a.getType(), "org.junit.jupiter.api.Test")
+                || TypeUtils.isOfClassType(a.getType(), "org.junit.Test"));
     }
 }

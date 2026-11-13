@@ -60,6 +60,7 @@ nav:
       - When a test needs one Testing Tool: guide/tool-specific.md
       - Wrappers for your own components: guide/custom-wrappers.md
   - One test, four ways: comparison.md
+  - Migrating from TestBench: migrating-from-testbench.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md
