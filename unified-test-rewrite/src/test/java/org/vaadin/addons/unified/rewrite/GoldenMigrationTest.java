@@ -115,6 +115,17 @@ class GoldenMigrationTest implements RewriteTest {
     }
 
     @Test
+    void profileBrowserlessTestBecomesProfileBrowserlessMigratedTest() throws IOException {
+        String before = Files.readString(DEMO_TESTS.resolve("ProfileBrowserlessTest.java"));
+        String after = Files.readString(DEMO_TESTS.resolve("ProfileBrowserlessMigratedTest.java"))
+                .replace("class ProfileBrowserlessMigratedTest", "class ProfileBrowserlessTest");
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        sources.add(java(before, after));
+        rewriteRun(spec -> spec.recipe(new MigrateBrowserlessToUnified()),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    @Test
     void aCustomElementStaysBehindTheEscapeHatch() throws IOException {
         assertMigrates("RatingTestBenchTest", "RatingMigratedTest", "RatingElement");
     }

@@ -137,5 +137,26 @@
             <artifactId>flow-server</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Browserless tests before migration: Browserless Test, the Flow components, Spring test support -->
+        <dependency>
+            <groupId>org.vaadin.addons</groupId>
+            <artifactId>unified-test-browserless</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>browserless-test-spring</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
