@@ -22,7 +22,9 @@ final class Stubs {
             public interface UnifiedPage {
                 void navigate(String path);
                 void navigate(Class<?> view);
+                void navigate(Class<?> view, Object parameter);
                 Object find(Class<?> type);
+                void pressKey(String key);
             }
             """,
             """
@@ -60,6 +62,12 @@ final class Stubs {
             }
             """,
             """
+            package com.vaadin.testing.unified.browserless;
+            public final class BrowserlessEscapeHatch {
+                public static BrowserlessEscapeHatch of(com.vaadin.testing.unified.UnifiedPage page) { return null; }
+            }
+            """,
+            """
             package com.vaadin.testing.unified;
             public enum TestingTool { BROWSERLESS, PLAYWRIGHT, SELENIUM }
             """,
@@ -88,6 +96,7 @@ final class Stubs {
                     Assert hasSelectedItem(String item);
                     Assert hasSelectedItems(String... items);
                     Assert hasItems(String... items);
+                    Assert isAt(Class<?> view);
                 }
             }
             """

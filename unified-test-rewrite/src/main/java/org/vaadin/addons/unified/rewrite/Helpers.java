@@ -37,6 +37,15 @@ final class Helpers {
 
     /** The class's own helpers using TestBench, counting calls to the given inherited helpers as such use. */
     static Set<String> usingTestBench(J.ClassDeclaration c, Set<String> inherited) {
+        return using(c, inherited, TestBenchLeftoversToEscapeHatch::isTestBaseCall);
+    }
+
+    /**
+     * The class's own helpers that make a receiverless call the predicate accepts (a call to the Testing Tool's
+     * test base class), directly or through one another, counting calls to the given inherited helpers as such.
+     */
+    static Set<String> using(J.ClassDeclaration c, Set<String> inherited,
+            java.util.function.Predicate<J.MethodInvocation> testBaseCall) {
         Map<String, Set<String>> calls = new HashMap<>();
         Set<String> using = new HashSet<>();
         for (Statement s : c.getBody().getStatements()) {
@@ -47,7 +56,7 @@ final class Helpers {
                 new JavaIsoVisitor<Integer>() {
                     @Override
                     public J.MethodInvocation visitMethodInvocation(J.MethodInvocation call, Integer p) {
-                        if (call.getSelect() == null && (TestBenchLeftoversToEscapeHatch.isTestBaseCall(call)
+                        if (call.getSelect() == null && (testBaseCall.test(call)
                                 || inherited.contains(call.getSimpleName()))) {
                             direct.set(true);
                         } else if (call.getSelect() == null) {

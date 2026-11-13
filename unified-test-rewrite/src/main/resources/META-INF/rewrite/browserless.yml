@@ -60,3 +60,21 @@ recipeList:
       artifactId: unified-test-selenium
       version: ${project.version}
       scope: test
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.MigrateBrowserlessTestCode
+displayName: Migrate Browserless test code to the Unified API
+description: Rewrites the source of Browserless tests; only touches files that use Browserless Test's test base classes.
+preconditions:
+  - org.vaadin.addons.unified.rewrite.FindBrowserlessTests
+recipeList:
+  - org.vaadin.addons.unified.rewrite.BrowserlessOnlyPatterns
+  - org.vaadin.addons.unified.rewrite.BrowserlessSetupToUnified
+  - org.vaadin.addons.unified.rewrite.BrowserlessCallsToUnified
+  - org.vaadin.addons.unified.rewrite.BrowserlessAssertionsToUnified
+  - org.vaadin.addons.unified.rewrite.BrowserlessLookupsToUnified
+  - org.vaadin.addons.unified.rewrite.BrowserlessLeftoversToEscapeHatch
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: org.springframework.boot.test.context.SpringBootTest
+      newFullyQualifiedTypeName: com.vaadin.testing.unified.spring.UnifiedSpringBootTest
+  - org.openrewrite.java.RemoveUnusedImports
