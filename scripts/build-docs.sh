@@ -12,6 +12,7 @@ rm -rf "$src"
 mkdir -p "$src"
 cp -r docs/spec docs/adr "$src"/
 cp docs/comparison.md "$src"/comparison.md
+cp docs/migrating-from-testbench.md "$src"/migrating-from-testbench.md
 cp GLOSSARY.md "$src"/GLOSSARY.md
 cp README.md "$src"/index.md
 

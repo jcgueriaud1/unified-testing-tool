@@ -51,6 +51,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - One test, four ways: comparison.md
+  - Migrating from TestBench: migrating-from-testbench.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md
