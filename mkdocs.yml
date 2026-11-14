@@ -61,6 +61,7 @@ nav:
       - Wrappers for your own components: guide/custom-wrappers.md
   - One test, four ways: comparison.md
   - Migrating from TestBench: migrating-from-testbench.md
+  - Migrating from Browserless: migrating-from-browserless.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md
@@ -83,4 +84,5 @@ nav:
       - adr/0002-unified-wrapper-names-and-class-literal-lookups.md
       - adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md
       - adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md
+      - adr/0005-browserless-migration-recipes.md
   - Glossary: GLOSSARY.md
