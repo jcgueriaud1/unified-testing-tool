@@ -37,7 +37,7 @@ public class EvalMigrationSkill {
         METRICS.put("kept", null);
         METRICS.put("untouched", false);
         METRICS.put("escapeHatches", false);
-        METRICS.put("seleniumOnlyTests", false);
+        METRICS.put("singleToolTests", false);
         METRICS.put("compiles", true);
         METRICS.put("browserless.passed", true);
         METRICS.put("browserless.failed", false);
@@ -84,8 +84,10 @@ public class EvalMigrationSkill {
             m.put("untouched", count(now, MARKER));
             m.put("kept", count(now, KEPT));
             m.put("resolved", Math.max(0, m.get("markersBefore") - m.get("untouched") - m.get("kept")));
-            m.put("escapeHatches", count(now, "TestBenchEscapeHatch.of("));
-            m.put("seleniumOnlyTests", count(now, "@RequiresTestingTool(TestingTool.SELENIUM)"));
+            m.put("escapeHatches", count(now, "TestBenchEscapeHatch.of(") + count(now, "BrowserlessEscapeHatch.of("));
+            // tests (or classes) still tied to the Testing Tool of their Escape Hatch or Browserless-only pattern
+            m.put("singleToolTests", count(now, "@RequiresTestingTool(TestingTool.SELENIUM)")
+                    + count(now, "@RequiresTestingTool(TestingTool.BROWSERLESS)"));
             perFile.put(file, m);
             m.forEach((k, v) -> run.merge(k, v, Long::sum));
         }
@@ -218,11 +220,11 @@ public class EvalMigrationSkill {
             sb.append("| ").append(metric).append(" | ").append(baseline.getOrDefault(metric, ""))
                     .append(" | ").append(run.get(metric)).append(" | ").append(change(metric, run, baseline)).append(" |\n");
         }
-        sb.append("\n## Per fixture\n\n| File | Markers before | Resolved | Kept | Untouched | Escape Hatches | Selenium-only tests |\n|---|---|---|---|---|---|---|\n");
+        sb.append("\n## Per fixture\n\n| File | Markers before | Resolved | Kept | Untouched | Escape Hatches | Single-tool tests |\n|---|---|---|---|---|---|---|\n");
         perFile.forEach((file, m) -> sb.append("| ").append(file).append(" | ").append(m.get("markersBefore"))
                 .append(" | ").append(m.get("resolved")).append(" | ").append(m.get("kept")).append(" | ")
                 .append(m.get("untouched")).append(" | ").append(m.get("escapeHatches")).append(" | ")
-                .append(m.get("seleniumOnlyTests")).append(" |\n"));
+                .append(m.get("singleToolTests")).append(" |\n"));
         if (!diff.isBlank()) {
             sb.append("\n## Changes\n\n```diff\n").append(diff).append("\n```\n");
         }
@@ -259,11 +261,11 @@ public class EvalMigrationSkill {
                     .append(c).append("</td></tr>\n");
         }
         sb.append("</table>\n<h2>Per fixture</h2>\n<table><tr><th>File</th><th>Markers before</th><th>Resolved</th>"
-                + "<th>Kept</th><th>Untouched</th><th>Escape Hatches</th><th>Selenium-only tests</th></tr>\n");
+                + "<th>Kept</th><th>Untouched</th><th>Escape Hatches</th><th>Single-tool tests</th></tr>\n");
         perFile.forEach((file, m) -> sb.append("<tr><td>").append(escape(file)).append("</td><td>")
                 .append(m.get("markersBefore")).append("</td><td>").append(m.get("resolved")).append("</td><td>")
                 .append(m.get("kept")).append("</td><td>").append(m.get("untouched")).append("</td><td>")
-                .append(m.get("escapeHatches")).append("</td><td>").append(m.get("seleniumOnlyTests")).append("</td></tr>\n"));
+                .append(m.get("escapeHatches")).append("</td><td>").append(m.get("singleToolTests")).append("</td></tr>\n"));
         sb.append("</table>\n");
         if (!diff.isBlank()) {
             sb.append("<h2>Changes</h2>\n<pre>");
