@@ -26,9 +26,15 @@ final class Browserless {
     static final String ESCAPE_HATCH = "com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch";
     static final String VARIABLE = "browserless";
 
-    /** The types whose methods a Browserless test calls without a receiver. */
+    /**
+     * The types whose methods a Browserless test calls without a receiver. TestBench UI Unit's are here too: the
+     * UI Unit rename changes the types the test names, but a method's type can keep its UI Unit declaring type.
+     */
     private static final Set<String> TEST_BASE_TYPES = Set.of(SPRING_BROWSERLESS_TEST, BROWSERLESS_TEST,
-            "com.vaadin.browserless.BaseBrowserlessTest", "com.vaadin.browserless.TesterWrappers");
+            "com.vaadin.browserless.BaseBrowserlessTest", "com.vaadin.browserless.TesterWrappers",
+            "com.vaadin.testbench.unit.BaseUIUnitTest", "com.vaadin.testbench.unit.TesterWrappers",
+            "com.vaadin.testbench.unit.UIUnitTest", "com.vaadin.testbench.unit.UIUnit4Test",
+            "com.vaadin.testbench.unit.SpringUIUnitTest", "com.vaadin.testbench.unit.SpringUIUnit4Test");
 
     /** The test base's lookups: {@code $(X.class)} and friends, all starting a query on the current UI or view. */
     private static final Set<String> LOOKUPS = Set.of("$", "$view", "find", "findInView");

@@ -129,6 +129,19 @@ class GoldenMigrationTest implements RewriteTest {
         assertMigratesBrowserless("ProfileBrowserlessNarrowContextTest", "ProfileBrowserlessNarrowContextMigratedTest");
     }
 
+    @Test
+    void aTestBenchUiUnitTestMigratesLikeItsBrowserlessTwin() throws IOException {
+        // TestBench UI Unit 9.x needs Vaadin 24, so its golden source is no demo test: compile-only, here
+        String before = new String(getClass().getResourceAsStream("/golden/ProfileUIUnitTest.java").readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        String after = Files.readString(DEMO_TESTS.resolve("ProfileBrowserlessMigratedTest.java"))
+                .replace("class ProfileBrowserlessMigratedTest", "class ProfileUIUnitTest");
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        sources.add(java(before, after));
+        rewriteRun(spec -> spec.recipe(new MigrateBrowserlessToUnified()).parser(UiUnit.parser()),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
     /** The Browserless input becomes the twin. */
     private void assertMigratesBrowserless(String input, String twin) throws IOException {
         String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));

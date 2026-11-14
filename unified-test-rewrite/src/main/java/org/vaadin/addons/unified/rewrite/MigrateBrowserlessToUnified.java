@@ -83,6 +83,7 @@ public class MigrateBrowserlessToUnified extends Recipe {
         if (Boolean.TRUE.equals(addSelenium)) {
             names.add("org.vaadin.addons.unified.rewrite.AddSeleniumAdapter");
         }
+        names.add("org.vaadin.addons.unified.rewrite.MigrateUIUnitToBrowserless"); // UI Unit 9.x: first to Browserless
         names.add("org.vaadin.addons.unified.rewrite.MigrateBrowserlessTestCode");
         Environment recipes = Environment.builder()
                 .load(DeclaredRecipes.load("/META-INF/rewrite/browserless.yml"))
@@ -90,6 +91,7 @@ public class MigrateBrowserlessToUnified extends Recipe {
                 .build();
         List<Recipe> list = new ArrayList<>(names.stream().map(recipes::activateRecipes).map(Recipe.class::cast).toList());
         list.add(new BrowserlessPageObjectsMarked()); // the classes the test code recipes skip
+        list.add(new RemoveJUnit4WhenUnused()); // UI Unit's JUnit 4 tests: scans every source
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
         }
