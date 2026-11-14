@@ -1,14 +1,14 @@
 {
-  "skillSha256": "4362216e3ebcd42191cade6ebdacf16da50a15d84eab34f723bac6ad27d321a6",
-  "markersBefore": 16,
-  "resolved": 16,
+  "skillSha256": "3ae2eaed5ad36e0c700afd6ac81e37d3b122ff8810a6fc7977dae4b18d8f88c2",
+  "markersBefore": 23,
+  "resolved": 23,
   "kept": 0,
   "untouched": 0,
   "escapeHatches": 0,
-  "seleniumOnlyTests": 0,
+  "singleToolTests": 0,
   "compiles": 1,
-  "browserless.passed": 11,
+  "browserless.passed": 15,
   "browserless.failed": 0,
-  "playwright.passed": 11,
+  "playwright.passed": 15,
   "playwright.failed": 0
 }
