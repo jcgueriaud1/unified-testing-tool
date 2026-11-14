@@ -144,6 +144,7 @@ public final class SeleniumAdapter implements TestingToolAdapter {
                 driver.close();
             }
             driver.switchTo().window(fresh);
+            // a TestBench reset of the browser's cookies and storage: #167
             Object wrapped = driver.getWrappedDriver();
             if (wrapped instanceof org.openqa.selenium.chromium.HasCdp cdp) {
                 cdp.executeCdpCommand("Network.clearBrowserCookies", java.util.Map.of());

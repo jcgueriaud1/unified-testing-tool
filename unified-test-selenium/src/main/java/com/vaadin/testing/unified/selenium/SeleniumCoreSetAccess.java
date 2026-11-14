@@ -102,7 +102,7 @@ final class SeleniumCoreSetAccess {
         }
 
         private boolean enabled(WebElement item) {
-            return Boolean.TRUE.equals(session.js("return (" + ENABLED + ")(arguments[0]);", item));
+            return Boolean.TRUE.equals(session.js("return (" + ENABLED + ")(arguments[0]);", item)); // #162
         }
 
         private void close() {
@@ -115,7 +115,7 @@ final class SeleniumCoreSetAccess {
         /** The Item Names of these items, in one round trip. */
         @SuppressWarnings("unchecked")
         private List<String> names(List<? extends WebElement> items) {
-            return (List<String>) session.js("return arguments[0].map(" + BrowserQueries.ITEM_NAME + ");", items);
+            return (List<String>) session.js("return arguments[0].map(" + BrowserQueries.ITEM_NAME + ");", items); // #161
         }
 
         /** Opens the sub-menus along the path; returns the last one. */
@@ -156,7 +156,7 @@ final class SeleniumCoreSetAccess {
             type(input("date-picker"), date);
             WebElement timeInput = input("time-picker");
             type(timeInput, time);
-            session.js("arguments[0].blur();", timeInput);
+            session.js("arguments[0].blur();", timeInput); // #164, #170
             session.waitForVaadin();
         }
 

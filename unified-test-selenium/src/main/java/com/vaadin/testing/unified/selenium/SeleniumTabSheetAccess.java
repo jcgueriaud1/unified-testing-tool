@@ -7,7 +7,10 @@ import java.util.List;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
-/** TabSheet on Selenium: tabs by their Item Name, the content is the panel that isn't hidden. */
+/**
+ * TabSheet on Selenium: tabs by their Item Name, the content is the panel that isn't hidden. To move to
+ * TestBench's TabSheetElement: #170, blocked by #160 and #161.
+ */
 final class SeleniumTabSheetAccess implements TabSheetAccess {
 
     private static final String TABS = "[...arguments[0].querySelectorAll('vaadin-tab')]";

@@ -4,25 +4,29 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
-import com.vaadin.testing.unified.spi.Filter;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
 import org.vaadin.addons.dramafinder.element.shared.FocusableElement;
+import org.vaadin.addons.dramafinder.element.shared.HasDisabledAttributeElement;
 import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
 
 /**
  * Unified Element on Playwright: a locator for one component, with its Dramafinder element when the
- * component has one. Actions use Dramafinder where it exists (it waits for the server round-trip), else
- * Playwright, then wait for Vaadin to be idle.
+ * component has one. Reads and actions go through Dramafinder: the component's own element where it exists,
+ * else a generic Dramafinder element on the locator. Dramafinder's actions wait for the server round-trip;
+ * actions on a raw locator wait here.
+ * <p>
+ * The scripts left here have no Dramafinder API yet; each names the Dramafinder issue that would replace it.
  */
 final class PlaywrightElement implements UnifiedElement {
 
     private final PlaywrightSession session;
     private final Locator locator;
     private final VaadinElement dramafinder;
+    /** The generic Dramafinder element on the same locator: what every component has. */
+    private final GenericElement generic;
     private final PlaywrightComponents.Support support;
 
     PlaywrightElement(PlaywrightSession session, Locator locator, VaadinElement dramafinder,
@@ -30,7 +34,20 @@ final class PlaywrightElement implements UnifiedElement {
         this.session = session;
         this.locator = locator;
         this.dramafinder = dramafinder;
+        this.generic = new GenericElement(locator);
         this.support = support;
+    }
+
+    /**
+     * A Dramafinder element for any component: the generic {@code VaadinElement} API, focus, and enabled
+     * state from the {@code disabled} attribute. To be replaced by Dramafinder's own factory
+     * (parttio/dramafinder#269).
+     */
+    private static final class GenericElement extends VaadinElement
+            implements FocusableElement, HasDisabledAttributeElement {
+        GenericElement(Locator locator) {
+            super(locator);
+        }
     }
 
     Locator locator() {
@@ -45,17 +62,14 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public String getTag() {
-        return (String) locator.evaluate("e => e.localName");
+        return (String) locator.evaluate("e => e.localName"); // parttio/dramafinder#270
     }
 
     /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
     @Override
     public String getText() {
         Optional<String> special = support.text(locator);
-        if (special.isPresent()) {
-            return BrowserQueries.normalize(special.get());
-        }
-        return (String) locator.evaluate(BrowserQueries.TEXT);
+        return BrowserQueries.normalize(special.orElseGet(generic::getText));
     }
 
     @Override
@@ -65,12 +79,13 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public String getInlineStyle(String name) {
+        // parttio/dramafinder#271
         return (String) locator.evaluate(BrowserQueries.INLINE_STYLE, BrowserQueries.cssName(name));
     }
 
     @Override
     public String getProperty(String name) {
-        Object value = locator.evaluate("(e, n) => e[n]", name);
+        Object value = generic.getProperty(name);
         if (value == null) {
             return null;
         }
@@ -86,13 +101,22 @@ final class PlaywrightElement implements UnifiedElement {
         return value == null ? null : (int) Double.parseDouble(value);
     }
 
+    /** The property's JavaScript truthiness. */
     @Override
     public Boolean getPropertyBoolean(String name) {
         Optional<Boolean> special = support.booleanProperty(locator, name);
         if (special.isPresent()) {
             return special.get();
         }
-        return Boolean.TRUE.equals(locator.evaluate("(e, n) => !!e[n]", name));
+        Object value = generic.getProperty(name);
+        if (value == null || value instanceof Boolean b && !b) {
+            return false;
+        }
+        if (value instanceof Number n) {
+            double d = n.doubleValue();
+            return d != 0 && !Double.isNaN(d);
+        }
+        return !(value instanceof String s && s.isEmpty());
     }
 
     @Override
@@ -102,6 +126,7 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public String getCssValue(String property) {
+        // parttio/dramafinder#271
         return (String) locator.evaluate("(e, p) => getComputedStyle(e).getPropertyValue(p)", property);
     }
 
@@ -110,9 +135,10 @@ final class PlaywrightElement implements UnifiedElement {
         return support.visible(locator).orElseGet(locator::isVisible);
     }
 
+    /** No {@code disabled} attribute: Vaadin components reflect the property to it. */
     @Override
     public boolean isEnabled() {
-        return Boolean.TRUE.equals(locator.evaluate("e => !e.disabled && !e.hasAttribute('disabled')"));
+        return generic.isEnabled();
     }
 
     @Override
@@ -125,6 +151,7 @@ final class PlaywrightElement implements UnifiedElement {
         return lightDom(BrowserQueries.lightDomXPath(tag, true));
     }
 
+    /** Light DOM only: CSS would pierce shadow roots. parttio/dramafinder#272 */
     private List<UnifiedElement> lightDom(String xpath) {
         return locator.locator("xpath=" + xpath).all().stream()
                 .map(l -> (UnifiedElement) new PlaywrightElement(session, l, null, PlaywrightComponents.DEFAULT)).toList();
@@ -134,54 +161,46 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public void setProperty(String name, Object value) {
-        locator.evaluate("(e, a) => { e[a.name] = a.value; }", java.util.Map.of("name", name, "value", value));
-        AutoWait.afterAction(page());
+        generic.setProperty(name, value);
     }
 
     @Override
     public void click() {
-        if (dramafinder != null) {
-            dramafinder.click();
-        } else {
-            locator.click();
-        }
-        AutoWait.afterAction(page());
+        (dramafinder != null ? dramafinder : generic).click();
     }
 
     @Override
     public void setValueAsUser(Object value) {
         if (support.setValue(locator, value)) {
-            AutoWait.afterAction(page());
-            return;
+            return; // Dramafinder's element set it and waited
         }
         String text = BrowserQueries.typedText(value);
         if (dramafinder instanceof HasValueElement field) {
             field.setValue(text);
-        } else {
-            // the element itself when it is the native input, else the input inside it
-            boolean isInput = Boolean.TRUE.equals(locator.evaluate("e => e.matches('input, textarea')"));
-            Locator input = isInput ? locator : locator.locator("input, textarea").first();
-            input.fill(text); // fires input
-            input.dispatchEvent("change");
+            return;
         }
+        // the element itself when it is the native input, else the input inside it
+        boolean isInput = Boolean.TRUE.equals(
+                locator.evaluate("e => e.matches('input, textarea')")); // parttio/dramafinder#270
+        Locator input = isInput ? locator : locator.locator("input, textarea").first();
+        input.fill(text); // fires input
+        input.dispatchEvent("change");
         AutoWait.afterAction(page());
     }
 
     @Override
     public void focus() {
-        focusTarget().focus();
-        AutoWait.afterAction(page());
+        focusable().focus();
     }
 
     @Override
     public void blur() {
-        locator.evaluate("e => e.blur()");
-        AutoWait.afterAction(page());
+        focusable().blur();
     }
 
     @Override
     public void pressKey(String key) {
-        focusTarget().press(key);
+        focusable().getFocusLocator().press(key);
         AutoWait.afterAction(page());
     }
 
@@ -192,11 +211,11 @@ final class PlaywrightElement implements UnifiedElement {
     }
 
     /**
-     * The part that takes keyboard focus: a field's input, not its host element, which can't be focused
-     * (keys pressed on it would go to the page body).
+     * Dramafinder's focus handling: a field's input, not its host element, which can't be focused (keys
+     * pressed on it would go to the page body).
      */
-    private Locator focusTarget() {
-        return dramafinder instanceof FocusableElement focusable ? focusable.getFocusLocator() : locator;
+    private FocusableElement focusable() {
+        return dramafinder instanceof FocusableElement focusable ? focusable : generic;
     }
 
     // ---------------------------------------------------------------- Escape Hatch
@@ -229,45 +248,6 @@ final class PlaywrightElement implements UnifiedElement {
             return Optional.of(type.cast(page()));
         }
         return Optional.empty();
-    }
-
-    // ---------------------------------------------------------------- generic filters
-
-    /** Filters for components without a Dramafinder element. */
-    boolean matches(Filter f) {
-        return switch (f.kind()) {
-            case TEXT -> f.matches(getText());
-            case LABEL -> f.matches(getProperty("label"));
-            case PLACEHOLDER -> f.matches(getProperty("placeholder"));
-            case ACCESSIBLE_NAME -> f.matches(accessibleName());
-            case TEST_ID -> f.value().equals(getAttribute("data-testid"));
-            case ID -> f.value().equals(getAttribute("id"));
-            case CLASS_NAME -> Boolean.TRUE.equals(locator.evaluate("(e, c) => e.classList.contains(c)", f.value()));
-            case THEME -> {
-                String theme = getAttribute("theme");
-                yield theme != null && List.of(theme.split("\\s+")).contains(f.value());
-            }
-            case ATTRIBUTE -> f.value().equals(getAttribute(f.name()));
-        };
-    }
-
-    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
-    private String accessibleName() {
-        @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> names = (java.util.Map<String, Object>) locator.evaluate("""
-                e => {
-                  const by = e.getAttribute('aria-labelledby');
-                  const target = by && document.getElementById(by);
-                  return {aria: e.getAttribute('aria-label'), name: e.accessibleName,
-                          by: target ? target.textContent : null, label: e.label};
-                }""");
-        for (String key : List.of("aria", "name", "by", "label")) {
-            Object value = names.get(key);
-            if (value != null && !value.toString().isBlank()) {
-                return value.toString();
-            }
-        }
-        return getText();
     }
 
     @Override

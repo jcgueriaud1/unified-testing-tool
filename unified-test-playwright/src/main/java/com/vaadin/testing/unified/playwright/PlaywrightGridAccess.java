@@ -31,7 +31,10 @@ final class PlaywrightGridAccess implements GridAccess {
 
     // ---------------------------------------------------------------- columns
 
-    /** Browser column index of each Unified column: visible, display order, selection column skipped. */
+    /**
+     * Browser column index of each Unified column: visible, display order, selection column skipped. To be
+     * replaced by Dramafinder's column model: parttio/dramafinder#281
+     */
     private List<Integer> domColumns() {
         @SuppressWarnings("unchecked")
         List<Number> indexes = (List<Number>) locator.evaluate("""
@@ -178,7 +181,10 @@ final class PlaywrightGridAccess implements GridAccess {
         return element(cellOf(row, column).getCellContentLocator());
     }
 
-    /** The column's header cells in every header row (a group header above, a filter row below). */
+    /**
+     * The column's header cells in every header row (a group header above, a filter row below). To be
+     * replaced by one Dramafinder locator: parttio/dramafinder#282
+     */
     @Override
     public UnifiedElement header(int column) {
         return element(grid.getHeaderCells(dom(column)).stream().map(GridElement.CellElement::getCellContentLocator)

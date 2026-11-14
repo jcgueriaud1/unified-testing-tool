@@ -99,7 +99,8 @@ final class PlaywrightSession implements AdapterSession {
                     + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
         }
         // what CSS can express goes into the selector; the rest is checked in the page, for every candidate in
-        // one round trip: no browser call per element, and no element detaching between two calls
+        // one round trip: no browser call per element, and no element detaching between two calls.
+        // Dramafinder has no query by tag yet: parttio/dramafinder#273, #276
         String selector = BrowserQueries.selector(tag, spec.filters());
         Locator candidates = scope == null ? page.locator(selector) : scope.locator(selector);
         List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
@@ -134,11 +135,12 @@ final class PlaywrightSession implements AdapterSession {
                 case CLASS_NAME -> "withClassName";
                 case THEME, ATTRIBUTE -> null;
             };
-            if (f.kind() == Filter.Kind.THEME) {
+            if (f.kind() == Filter.Kind.THEME) { // parttio/dramafinder#274
                 query = refine(query, l -> l.and(page.locator("[theme~=\"" + f.value() + "\"]")));
             } else if (f.kind() == Filter.Kind.ATTRIBUTE) {
                 query = invoke(query, "withAttribute", new Class<?>[] { String.class, String.class }, f.name(), f.value());
             } else {
+                // no withPlaceholderContaining yet: parttio/dramafinder#275
                 String name = f.exact() || f.kind() == Filter.Kind.PLACEHOLDER ? method : method + "Containing";
                 query = invoke(query, name, new Class<?>[] { String.class }, f.value());
             }
@@ -216,7 +218,7 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public boolean isAt(Class<? extends Component> view) {
-        if (!CurrentView.hasRoute(view)) {
+        if (!CurrentView.hasRoute(view)) { // UI id from Dramafinder: parttio/dramafinder#280
             return CurrentView.shows((String) page.evaluate(CurrentView.SCRIPT, baseUrl + CurrentView.PATH), view);
         }
         return currentPath().equals(strip(RouteNavigation.pathOf(view)));
@@ -224,7 +226,8 @@ final class PlaywrightSession implements AdapterSession {
 
     /**
      * The browser's location, read in the page: {@code page.url()} only learns about a client-side navigation
-     * (a RouterLink, {@code history.pushState}) on the next call to the browser.
+     * (a RouterLink, {@code history.pushState}) on the next call to the browser. To be replaced by
+     * Dramafinder's RouteNavigation getters: parttio/dramafinder#279
      */
     private String location() {
         return (String) page.evaluate("() => location.href");
