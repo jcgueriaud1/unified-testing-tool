@@ -94,6 +94,12 @@ final class DramafinderWrappers {
             "withLabelContaining", "getByText", "withText", "getByTextContaining", "withTextContaining", "getById",
             "withId", "getByTestId", "withTestId", "getByHeaderText", "withHeaderTitle");
 
+    /** Dramafinder 1.x label and text factories, and the Unified filter that matches at least as much. */
+    private static final Map<String, String> VERSION_1_FACTORIES = Map.of("getByLabel", "withAccessibleNameContaining",
+            "getByText", "withTextContaining");
+    /** Dramafinder 1.x substring factories with no substring filter in the Unified API. */
+    private static final Set<String> VERSION_1_UNMAPPED = Set.of("getByHeaderText");
+
     /** Factories that match a substring and take the first match even in Dramafinder 2.x. */
     private static final Set<String> FIRST_MATCH = Set.of(ELEMENT + "NotificationElement#getByText");
 
@@ -114,17 +120,20 @@ final class DramafinderWrappers {
                 .findFirst().orElse(null);
     }
 
-    /** The lookup the expression is, when the Wrapper can express it on the test's page; else {@code null}. */
-    static Lookup ofLookup(Expression e) {
+    /**
+     * The lookup the expression is, when the Wrapper can express it on the test's page; else {@code null}.
+     * {@code version2}: the project uses Dramafinder 2.x, whose label and text factories are exact.
+     */
+    static Lookup ofLookup(Expression e, boolean version2) {
         if (!(e instanceof J.MethodInvocation call) || call.getMethodType() == null) {
             return null;
         }
-        Lookup factory = ofFactory(call);
+        Lookup factory = ofFactory(call, version2);
         return factory != null ? factory : ofQuery(call);
     }
 
     /** {@code XElement.getByLabel(page, "Name")} and the other static factories. */
-    private static Lookup ofFactory(J.MethodInvocation call) {
+    private static Lookup ofFactory(J.MethodInvocation call, boolean version2) {
         JavaType.FullyQualified declaring = call.getMethodType().getDeclaringType();
         Wrapper wrapper = BY_ELEMENT.get(declaring.getFullyQualifiedName());
         if (wrapper == null || !call.getMethodType().hasFlags(org.openrewrite.java.tree.Flag.Static)
@@ -142,7 +151,19 @@ final class DramafinderWrappers {
             return null;
         }
         String marker = null;
-        if (FIRST_MATCH.contains(declaring.getFullyQualifiedName() + "#" + name)) {
+        if (!version2 && VERSION_1_FACTORIES.containsKey(name)
+                && !FIRST_MATCH.contains(declaring.getFullyQualifiedName() + "#" + name)) {
+            // 1.x: a case-insensitive substring of the label, aria-label or placeholder, and the first match
+            filter = VERSION_1_FACTORIES.get(name);
+            if (!wrapper.filters().contains(filter)) {
+                return null;
+            }
+            String exact = name.equals("getByText") ? "withText" : "withLabel";
+            marker = "was 1.x " + name + "(..), a case-insensitive substring and first match; tighten it to "
+                    + exact + "(..) once the test passes";
+        } else if (!version2 && VERSION_1_UNMAPPED.contains(name)) {
+            return null; // 1.x matched a substring, and the Unified filter is exact
+        } else if (FIRST_MATCH.contains(declaring.getFullyQualifiedName() + "#" + name)) {
             filter = "withTextContaining";
             marker = "was " + name + "(..), a substring and first match; single() fails when several components match";
         }

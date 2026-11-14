@@ -72,9 +72,13 @@ public class DramafinderSetupToUnified extends Recipe {
                                 && m.getParameters().stream().allMatch(p -> p instanceof J.Empty)))
                         .toList()));
                 boolean spring = Dramafinder.isSpringClass(classDecl);
+                JavaType.FullyQualified parent = TypeUtils.asFullyQualified(classDecl.getExtends().getType());
                 c = c.withExtends(null);
                 maybeRemoveImport(Dramafinder.BASE);
                 maybeRemoveImport(Dramafinder.SPRING_BASE);
+                if (parent != null) {
+                    maybeRemoveImport(parent.getFullyQualifiedName()); // a copy of SpringPlaywrightIT
+                }
                 c = withoutToolGuard(c, ctx);
                 if (c.getLeadingAnnotations().stream().anyMatch(a -> TEST_ANNOTATIONS.stream()
                         .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)))) {

@@ -28,14 +28,40 @@ final class Dramafinder {
     private Dramafinder() {
     }
 
-    /** A test class extending Dramafinder's {@code AbstractBasePlaywrightIT} or {@code SpringPlaywrightIT} directly. */
+    /**
+     * A test class extending Dramafinder's {@code AbstractBasePlaywrightIT} or {@code SpringPlaywrightIT} directly,
+     * or a copy of {@code SpringPlaywrightIT} in the project, as Dramafinder 1.x projects have.
+     */
     static boolean isDramafinderClass(J.ClassDeclaration c) {
-        return c.getExtends() != null && (TypeUtils.isOfClassType(c.getExtends().getType(), BASE)
-                || TypeUtils.isOfClassType(c.getExtends().getType(), SPRING_BASE));
+        if (c.getExtends() == null || c.hasModifier(J.Modifier.Type.Abstract)) {
+            return false;
+        }
+        JavaType.FullyQualified parent = TypeUtils.asFullyQualified(c.getExtends().getType());
+        return parent != null && (parent.getFullyQualifiedName().equals(BASE)
+                || parent.getFullyQualifiedName().equals(SPRING_BASE) || isCopiedSpringBase(parent));
     }
 
     static boolean isSpringClass(J.ClassDeclaration c) {
-        return c.getExtends() != null && TypeUtils.isOfClassType(c.getExtends().getType(), SPRING_BASE);
+        JavaType.FullyQualified parent = c.getExtends() == null ? null : TypeUtils.asFullyQualified(c.getExtends().getType());
+        return parent != null && (parent.getFullyQualifiedName().equals(SPRING_BASE) || isCopiedSpringBase(parent));
+    }
+
+    /**
+     * A project's copy of {@code SpringPlaywrightIT}, from the template Dramafinder 1.x projects started with: an
+     * abstract class extending {@code AbstractBasePlaywrightIT} with {@code @SpringBootTest}.
+     */
+    static boolean isCopiedSpringBase(JavaType.FullyQualified type) {
+        return type != null && !BASE_TYPES.contains(type.getFullyQualifiedName())
+                && type.hasFlags(org.openrewrite.java.tree.Flag.Abstract) && type.getSupertype() != null
+                && type.getSupertype().getFullyQualifiedName().equals(BASE)
+                && type.getAnnotations().stream().anyMatch(a -> a.getFullyQualifiedName()
+                        .equals("org.springframework.boot.test.context.SpringBootTest"));
+    }
+
+    /** One of Dramafinder's base types, or a project's copy of {@code SpringPlaywrightIT}. */
+    static boolean isBaseType(JavaType type) {
+        JavaType.FullyQualified fq = TypeUtils.asFullyQualified(type);
+        return fq != null && (BASE_TYPES.contains(fq.getFullyQualifiedName()) || isCopiedSpringBase(fq));
     }
 
     /** The base class's {@code page} field. */
@@ -44,8 +70,7 @@ final class Dramafinder {
             e = f.getName();
         }
         return e instanceof J.Identifier id && id.getSimpleName().equals("page") && id.getFieldType() != null
-                && id.getFieldType().getOwner() instanceof JavaType.FullyQualified owner
-                && BASE_TYPES.contains(owner.getFullyQualifiedName());
+                && isBaseType(id.getFieldType().getOwner());
     }
 
     /** A call to a base class method, on this test. */
@@ -54,7 +79,7 @@ final class Dramafinder {
                 && (s.getSimpleName().equals("this") || s.getSimpleName().equals("super")))) {
             return false;
         }
-        return m.getMethodType() != null && BASE_TYPES.contains(m.getMethodType().getDeclaringType().getFullyQualifiedName());
+        return m.getMethodType() != null && isBaseType(m.getMethodType().getDeclaringType());
     }
 
     /** {@code getPage()} on this test: the base class's page. */
@@ -109,8 +134,7 @@ final class Dramafinder {
             @Override
             public J.Identifier visitIdentifier(J.Identifier id, Integer p) {
                 // a base class field other than page (the page itself the Escape Hatch replaces)
-                if (id.getFieldType() != null && id.getFieldType().getOwner() instanceof JavaType.FullyQualified owner
-                        && BASE_TYPES.contains(owner.getFullyQualifiedName()) && !id.getSimpleName().equals("page")) {
+                if (id.getFieldType() != null && isBaseType(id.getFieldType().getOwner()) && !id.getSimpleName().equals("page")) {
                     ok.set(false);
                 }
                 return id;
@@ -124,7 +148,7 @@ final class Dramafinder {
             return false;
         }
         for (JavaType.FullyQualified t = c.getType() == null ? null : c.getType().getSupertype(); t != null; t = t.getSupertype()) {
-            if (BASE_TYPES.contains(t.getFullyQualifiedName()) && t.getMethods().stream()
+            if (isBaseType(t) && t.getMethods().stream()
                     .anyMatch(b -> b.getName().equals(m.getSimpleName()) && b.getParameterTypes().size() == m.getMethodType().getParameterTypes().size())) {
                 return true;
             }

@@ -6,10 +6,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
-import org.openrewrite.Recipe;
+import org.openrewrite.ScanningRecipe;
 import org.openrewrite.Tree;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -28,7 +29,7 @@ import org.openrewrite.marker.Markers;
  * {@code UnifiedAssertions}. A lookup converts only when every call on what it finds does, directly or through a
  * local. Waits Auto-Wait makes unnecessary ({@code AutoWait.waitForVaadinIdle}, {@code waitForLoadState}) go.
  */
-public class DramafinderLookupsToUnified extends Recipe {
+public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
 
     private static final String LOCALS = "unified.dramafinder.locals";
     private static final String ASSERT_THAT = TestBenchAssertionsToUnified.UNIFIED_ASSERTIONS + ".assertThat";
@@ -41,11 +42,24 @@ public class DramafinderLookupsToUnified extends Recipe {
     @Override
     public String getDescription() {
         return "Turns Dramafinder lookups on the test's page into Unified Page lookups, and their actions and "
-                + "assertions into the Wrapper's and retrying Unified assertions.";
+                + "assertions into the Wrapper's and retrying Unified assertions. Dramafinder 1.x lookups, and lookups "
+                + "whose version can't be found, keep matching a substring.";
+    }
+
+    /** What the project's build and classpath say about its Dramafinder version: 1.x lookups match more. */
+    @Override
+    public Set<String> getInitialValue(ExecutionContext ctx) {
+        return new java.util.HashSet<>();
     }
 
     @Override
-    public TreeVisitor<?, ExecutionContext> getVisitor() {
+    public TreeVisitor<?, ExecutionContext> getScanner(Set<String> versions) {
+        return DramafinderVersion.scanner(versions);
+    }
+
+    @Override
+    public TreeVisitor<?, ExecutionContext> getVisitor(Set<String> versions) {
+        boolean version2 = DramafinderVersion.isVersion2(versions);
         return new JavaVisitor<>() {
 
             @Override
@@ -75,7 +89,7 @@ public class DramafinderLookupsToUnified extends Recipe {
                 }
                 DramafinderWrappers.Lookup lookup = locals == null || multiVariable.getVariables().size() != 1
                         || multiVariable.getTypeExpression() == null
-                        ? null : DramafinderWrappers.ofLookup(multiVariable.getVariables().get(0).getInitializer());
+                        ? null : DramafinderWrappers.ofLookup(multiVariable.getVariables().get(0).getInitializer(), version2);
                 String name = lookup == null ? null : multiVariable.getVariables().get(0).getSimpleName();
                 if (lookup == null || !(isGridWrapper(lookup.wrapper()) ? DramafinderGrids.gridUsesConvert(method, name)
                         : usedOnlyThrough(method, name, lookup.wrapper()))) {
@@ -143,7 +157,7 @@ public class DramafinderLookupsToUnified extends Recipe {
                     return renamed == null ? m : onWrapper(m.withName(m.getName().withSimpleName(renamed)), wrapper);
                 }
                 // a call on a lookup
-                DramafinderWrappers.Lookup lookup = DramafinderWrappers.ofLookup(method.getSelect());
+                DramafinderWrappers.Lookup lookup = DramafinderWrappers.ofLookup(method.getSelect(), version2);
                 if (lookup == null || !supportedCall(lookup.wrapper(), method, statement)) {
                     return m;
                 }
