@@ -9,7 +9,8 @@
     <artifactId>unified-test-rewrite</artifactId>
     <name>Unified API: Migration Recipes</name>
     <description>
-        OpenRewrite Migration Recipes that rewrite TestBench tests into Unified UI Tests (ADR 0004).
+        OpenRewrite Migration Recipes that rewrite TestBench, Browserless and Dramafinder tests into Unified UI Tests
+        (ADR 0004, 0005, 0006).
     </description>
 
     <properties>
@@ -156,6 +157,12 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-tx</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Dramafinder tests before migration: Dramafinder and Playwright, through the Playwright adapter -->
+        <dependency>
+            <groupId>org.vaadin.addons</groupId>
+            <artifactId>unified-test-playwright</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

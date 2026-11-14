@@ -12,8 +12,16 @@ test); `--accept` then replaces this file.
 A baseline with totals only (before #153) compares with nothing: the first run in this format is acceptable.
 See [Migrating from TestBench](../../docs/migrating-from-testbench.md#evaluating-the-skill).
 
-Current baseline (2026-11-14), for the skill that resolves the "was a scan of column" marker (#154): the same score as
-the previous one, accepted because that one had nothing left to improve: all 24 markers resolved across 12 fixtures,
+Previous baseline (2026-11-14), with the Dramafinder marker kinds (#180): all 39 markers resolved across 15 fixtures,
+including the three new Dramafinder ones (`ProfileDramafinderMigratedTest`: raw Playwright `getByRole(..)` calls and a
+custom `VaadinElement`, which the agent replaced with the existing `UnifiedRating`; `EditPersonDramafinderMigratedTest`;
+`EditPersonDramafinder1MigratedTest` with the 1.x substring markers); no Escape Hatch and no single-tool test left; 20
+tests passing on Browserless and on Playwright. The script's verdict was "same, not acceptable": the 12 compared fixtures
+were already at 100%, so a changed skill can't score better on them. It was accepted by hand, copying the run's
+`result.json`, since no metric got worse and every new fixture is fully resolved.
+
+Previous baseline (2026-11-14), for the skill that resolves the "was a scan of column" marker (#154): the same score as
+the one before, accepted because that one had nothing left to improve: all 24 markers resolved across 12 fixtures,
 no Escape Hatch, no single-tool test, 16 tests passing on Browserless and on Playwright.
 
 Previous baseline (2026-11-14), the first with per-fixture scores (#153): all 24 markers resolved across 12 fixtures,

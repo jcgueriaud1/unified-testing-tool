@@ -50,6 +50,31 @@ How each Unified API call maps onto the three Testing Tools: Browserless Test 25
 | row access, lazy data | in memory | `waitForGridToStopLoading` | `scrollToRow` |
 | `getRowCount()` | `size()` | `getTotalRowCount()` | `getRowCount()` |
 
+## Dramafinder calls the Migration Recipe converts
+
+What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above ([ADR 0006](../adr/0006-dramafinder-migration-recipes.md)).
+
+| Dramafinder | Unified API |
+|---|---|
+| `XElement.getByLabel(page, s)` / `getByText` / `getById` / `getByTestId` / `…Containing` | `page.find(UnifiedX.class).withLabel(s).single()` / `withText` / `withId` / `withTestId` / `…Containing` |
+| `ButtonElement.getByLabel(page, s)` | `.withAccessibleName(s).single()` |
+| `DialogElement.getByHeaderText(page, s)` | `.withHeaderTitle(s).single()` |
+| `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s).single()` + Migration Marker |
+| query `first()` / `get(i)` | `single()` + Migration Marker / `all().get(i)` |
+| `assertVisible` / `assertHidden` / `assertEnabled` / `assertDisabled` | `assertThat(w).isVisible()` / `isHidden()` / `isEnabled()` / `isDisabled()` |
+| `assertValue` / `assertLabel` / `assertValid` / `assertInvalid` / `assertErrorMessage` | `hasValue` / `hasLabel` / `isValid` / `isInvalid` / `hasErrorMessage` |
+| `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |
+| dialog `assertOpen` / `assertClosed` / `assertHeaderText`, `getHeaderText()`, `closeWithEscape()` | `isOpen` / `isClosed` / `hasHeaderTitle`, `getHeaderTitle()`, `close()` |
+| notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
+| `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
+| `GridElement.get(page)` | `page.find(UnifiedGrid.class).single()` (no marker: a second grid fails loudly) |
+| `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
+| `grid.findRowIndexesWithColumnText(col, s).get(0)` | `grid.rows().withCellText(s).single().getIndex()` + Migration Marker (any column matches) |
+| `row.getCell(col).getText()` / `row.getCell("Header").assertText(s)` | `row.getCellText(col)` / `assertThat(row).hasCellText("Header", s)` |
+| `row.getCell(col).click()` | `row.click()` + Migration Marker (the row, not that cell) |
+| `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |
+| `waitForGridToStopLoading()`, `scrollToRow(i)` | dropped (Auto-Wait) |
+
 ## Escape Hatch
 
 | `unwrap(…)` | Browserless | Dramafinder | TestBench |

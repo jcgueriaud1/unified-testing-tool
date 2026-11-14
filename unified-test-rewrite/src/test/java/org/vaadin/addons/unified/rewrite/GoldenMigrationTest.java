@@ -17,7 +17,8 @@ import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
 /**
- * The recipe's output on the demo's {@code ProfileTestBenchTest} is exactly the demo's {@code ProfileMigratedTest}.
+ * The recipe's output on the demo's {@code ProfileTestBenchTest} is exactly the demo's {@code ProfileMigratedTest},
+ * and likewise for the other golden pairs (Browserless, Dramafinder).
  * The demo's CI jobs run that twin on Browserless, Playwright and Selenium, so the output is proven to compile and
  * pass on every Testing Tool.
  */
@@ -180,6 +181,97 @@ class GoldenMigrationTest implements RewriteTest {
         sources.add(java(before, after));
         rewriteRun(spec -> spec.recipe(new MigrateBrowserlessToUnified()),
                 sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    @Test
+    void editPersonDramafinderTestBecomesEditPersonDramafinderMigratedTest() throws IOException {
+        String input = "EditPersonDramafinderTest";
+        String twin = "EditPersonDramafinderMigratedTest";
+        String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
+        String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        sources.add(java(before, after));
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified()),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    @Test
+    void rawPlaywrightAndACustomElementRunThroughTheEscapeHatch() throws IOException {
+        String input = "ProfileDramafinderTest";
+        String twin = "ProfileDramafinderMigratedTest";
+        String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
+        String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        sources.add(java(Files.readString(DEMO_TESTS.resolve("RatingDramafinderElement.java"))));
+        sources.add(java(before, after));
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified()),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    @Test
+    void aDramafinder1TestAndItsCopiedBaseClassMigrate() throws IOException {
+        // Dramafinder 1.x and 2.x can't share the demo's classpath, so the 1.x golden source is no demo test
+        String before = resource("/golden/dramafinder1/EditPersonDramafinder1Test.java");
+        String after = Files.readString(DEMO_TESTS.resolve("EditPersonDramafinder1MigratedTest.java"))
+                .replace("class EditPersonDramafinder1MigratedTest", "class EditPersonDramafinder1Test");
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        // the build says 1.x; the classpath the sources are attributed against is 2.x, which has the same names
+        sources.add(org.openrewrite.maven.Assertions.pomXml(dramafinderPom(true), dramafinderPom(false)));
+        sources.add(java(resource("/golden/dramafinder1/SpringPlaywrightIT.java"), (String) null));
+        sources.add(java(before, after));
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified()),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    private String resource(String name) throws IOException {
+        return new String(getClass().getResourceAsStream(name).readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /** A Spring Boot project on Dramafinder 1.2.4, or what the build recipe makes of it. */
+    private static String dramafinderPom(boolean before) {
+        String dependency = before ? """
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>dramafinder</artifactId>
+                            <version>1.2.4</version>
+                            <scope>test</scope>
+                        </dependency>
+                """ : """
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-playwright</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                """;
+        String bom = before ? "" : "\n" + String.join("\n",
+                "            <dependency>",
+                "                <groupId>org.vaadin.addons</groupId>",
+                "                <artifactId>unified-test-bom</artifactId>",
+                "                <version>" + System.getProperty("unified.version") + "</version>",
+                "                <type>pom</type>",
+                "                <scope>import</scope>",
+                "            </dependency>");
+        return """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-bom</artifactId>
+                                <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>%s
+                        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                %s    </dependencies>
+                </project>
+                """.formatted(bom, dependency);
     }
 
     @Test
