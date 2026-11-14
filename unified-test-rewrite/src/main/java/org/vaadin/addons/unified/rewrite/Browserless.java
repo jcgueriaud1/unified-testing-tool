@@ -159,8 +159,30 @@ final class Browserless {
      * methods are the test base's ({@code navigate}, {@code find}, {@code test}, {@code findTextField()}, ...).
      */
     static boolean isHandle(Expression e) {
-        return e instanceof J.Identifier id && id.getType() != null
-                && (TypeUtils.isAssignableTo(UI_CONTEXT, id.getType()) || TypeUtils.isAssignableTo(EXTENSION, id.getType()));
+        JavaType type = e instanceof J.Identifier id ? id.getType()
+                : e instanceof J.FieldAccess access && access.getTarget() instanceof J.Identifier t
+                        && t.getSimpleName().equals("this") ? access.getType() : null;
+        return type != null && (TypeUtils.isAssignableTo(UI_CONTEXT, type) || TypeUtils.isAssignableTo(EXTENSION, type)
+                || TypeUtils.isAssignableTo(BASE_TEST, type));
+    }
+
+    /** The test base itself, held by a page object in a field: its calls are test base calls too. */
+    static final String BASE_TEST = "com.vaadin.browserless.BaseBrowserlessTest";
+
+    /** A cursor message: the code is a page object's, converting with {@code includePageObjects}. */
+    static final String PAGE_OBJECT = "unified.browserless.page-object";
+
+    /**
+     * A call to a page object method that the page object recipe made return a Wrapper ({@code login.name()}):
+     * its Wrapper, else {@code null}.
+     */
+    static Wrapper ofPageObjectCall(Expression e) {
+        if (!(e instanceof J.MethodInvocation call) || call.getMethodType() == null
+                || !(call.getMethodType().getReturnType() instanceof JavaType.FullyQualified returned)) {
+            return null;
+        }
+        return BY_COMPONENT.values().stream().filter(w -> w.fqn().equals(returned.getFullyQualifiedName()))
+                .findFirst().orElse(null);
     }
 
     /**
@@ -325,6 +347,11 @@ final class Browserless {
         return null;
     }
 
+    /** Every Flow component the recipe knows, with its Wrapper. */
+    static Map<String, Wrapper> wrappersByComponent() {
+        return BY_COMPONENT;
+    }
+
     /** The Wrapper for a Flow component class, or {@code null} when it has none yet. */
     static Wrapper forComponent(String componentFqn) {
         return BY_COMPONENT.get(componentFqn);
@@ -419,7 +446,15 @@ final class Browserless {
         if (e instanceof J.Identifier id) {
             return convertibleLocal(cursor, id);
         }
-        return e instanceof J.MethodInvocation ? convertibleLookup(new Cursor(cursor, e)) : null;
+        if (!(e instanceof J.MethodInvocation)) {
+            return null;
+        }
+        Wrapper lookup = convertibleLookup(new Cursor(cursor, e));
+        if (lookup != null) {
+            return lookup;
+        }
+        Wrapper returned = ofPageObjectCall(e);
+        return returned != null && usedThrough(new Cursor(cursor, e), returned) ? returned : null;
     }
 
     /**
@@ -438,6 +473,13 @@ final class Browserless {
         }
         if (TestBenchAssertionsToUnified.isUnifiedAssertion(parent)) {
             return true;
+        }
+        // a page object method returning what it found: its return type becomes the Wrapper
+        if (parent instanceof J.Return && elementCursor.getNearestMessage(PAGE_OBJECT) != null) {
+            J.MethodDeclaration method = elementCursor.firstEnclosing(J.MethodDeclaration.class);
+            return method != null && method.getReturnTypeExpression() != null
+                    && method.getReturnTypeExpression().getType() instanceof JavaType.FullyQualified returned
+                    && forComponent(returned.getFullyQualifiedName()) == wrapper;
         }
         if (parent instanceof J.VariableDeclarations.NamedVariable variable && variable.getInitializer() == element) {
             Cursor method = parentCursor.dropParentUntil(t -> t instanceof J.MethodDeclaration || t == Cursor.ROOT_VALUE);

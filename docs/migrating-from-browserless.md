@@ -41,6 +41,7 @@ Commit or stash your work first: the recipe changes files in place.
     recipeList:
       - org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified:
           addPlaywright: true
+          includePageObjects: true
           addAgentSkill: true
     ```
 
@@ -74,6 +75,7 @@ Commit or stash your work first: the recipe changes files in place.
 |---|---|---|
 | `addPlaywright` | `false` | Also adds the Playwright adapter, `unified-test-playwright` |
 | `addSelenium` | `false` | Also adds the Selenium adapter, `unified-test-selenium` |
+| `includePageObjects` | `false` | Also converts page objects (see below) |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
 Without a browser adapter the migrated suite keeps running on Browserless only, as before; adding one is the step that makes it run in a browser (see **Running in a browser**).
@@ -120,6 +122,22 @@ The demo's `EditPersonBrowserlessTest` and what the recipe makes of it. Nothing 
     --8<-- "unified-test-demo/src/test/java/demo/EditPersonBrowserlessMigratedTest.java:test"
     ```
 
+### Page objects
+
+With `includePageObjects`, a page object that holds the Browserless test (`BrowserlessTest`, `SpringBrowserlessTest`, or your base class) takes the `UnifiedPage` instead. Its lookups and tester calls convert as in a test, its methods return Wrappers, and its tests pass `page` where they passed `this`. It converts only when every use of the test in it converts, and every caller uses what it returns through Wrapper calls; it then needs no Escape Hatch. Otherwise, and without the option, the test classes that pass `this` to it are left as they are, with a Migration Marker.
+
+=== "Before (Browserless)"
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/ProfileBrowserlessPage.java:page"
+    ```
+
+=== "After (Unified API)"
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/ProfileBrowserlessMigratedPage.java:page"
+    ```
+
 ### TestBench UI Unit tests
 
 Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.
@@ -156,7 +174,7 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `Browserless-only pattern: @Transactional ...` | The test's transaction reaches the views only on Browserless ([test data](spec/02-test-setup.md)): keep it, or commit test data and clean up |
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |
 | `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |
-| `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: make the page object take a `UnifiedPage`, then run the migration again |
+| `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: run with `includePageObjects`, or make the page object take a `UnifiedPage` by hand, then run the migration again |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 

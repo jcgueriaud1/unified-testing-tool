@@ -113,9 +113,11 @@ public class BrowserlessAssertionsToUnified extends Recipe {
             }
 
             private Browserless.Wrapper wrapperOf(Expression element) {
-                return element instanceof J.Identifier local
-                        ? Browserless.convertibleLocal(getCursor(), local)
-                        : Browserless.ofLookup(element);
+                if (element instanceof J.Identifier local) {
+                    return Browserless.convertibleLocal(getCursor(), local);
+                }
+                Browserless.Wrapper lookup = Browserless.ofLookup(element);
+                return lookup != null ? lookup : Browserless.ofPageObjectCall(element);
             }
         };
     }

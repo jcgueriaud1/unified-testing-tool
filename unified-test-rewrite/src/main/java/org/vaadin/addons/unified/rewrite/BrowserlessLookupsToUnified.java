@@ -44,7 +44,7 @@ public class BrowserlessLookupsToUnified extends Recipe {
         return new JavaIsoVisitor<>() {
             @Override
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
-                if (!Pages.hasPageParameter(method)) {
+                if (!Pages.hasPageParameter(method) && getCursor().getNearestMessage(Browserless.PAGE_OBJECT) == null) {
                     return method;
                 }
                 var markers = MigrationMarkers.collect(getCursor());
@@ -54,7 +54,8 @@ public class BrowserlessLookupsToUnified extends Recipe {
             @Override
             public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext ctx) {
                 Cursor method = getCursor().dropParentUntil(t -> t instanceof J.MethodDeclaration || t == Cursor.ROOT_VALUE);
-                boolean candidate = method.getValue() instanceof J.MethodDeclaration m && Pages.hasPageParameter(m)
+                boolean candidate = method.getValue() instanceof J.MethodDeclaration m && (Pages.hasPageParameter(m)
+                                || getCursor().getNearestMessage(Browserless.PAGE_OBJECT) != null)
                         && multiVariable.getVariables().size() == 1 && multiVariable.getTypeExpression() != null;
                 Browserless.Wrapper wrapper = candidate ? Browserless.convertibleLocal(method, multiVariable.getVariables().get(0)) : null;
                 Browserless.Wrapper tester = candidate && wrapper == null
@@ -150,7 +151,7 @@ public class BrowserlessLookupsToUnified extends Recipe {
                                 .imports(w.fqn())
                                 .javaParser(Stubs.parser(Stubs.interfaceStub(w.fqn())))
                                 .build()
-                                .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
+                                .apply(getCursor(), m.getCoordinates().replace(), receiver(method));
                     } else {
                         converted = unifiedCall(m, QUERY, w.filters().get(method.getSimpleName()),
                                 JavaType.ShallowClass.build(QUERY));
@@ -186,7 +187,7 @@ public class BrowserlessLookupsToUnified extends Recipe {
                             .imports(wrapper.fqn())
                             .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
                             .build()
-                            .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
+                            .apply(getCursor(), m.getCoordinates().replace(), receiver(method));
                 }
                 // the query's calls keep no Browserless types, so their imports go
                 boolean isTerminal = terminal.getValue() == method;
@@ -256,7 +257,22 @@ public class BrowserlessLookupsToUnified extends Recipe {
 
             private boolean inPageMethod() {
                 J.MethodDeclaration enclosing = getCursor().firstEnclosing(J.MethodDeclaration.class);
-                return enclosing != null && Pages.hasPageParameter(enclosing);
+                return enclosing != null && (Pages.hasPageParameter(enclosing)
+                        || getCursor().getNearestMessage(Browserless.PAGE_OBJECT) != null);
+            }
+
+            /**
+             * Who a lookup starts from: the test's {@code page}, or, in a page object, the field that held the
+             * test and now holds the Unified Page.
+             */
+            private Expression receiver(J.MethodInvocation start) {
+                if (getCursor().getNearestMessage(Browserless.PAGE_OBJECT) != null && start.getSelect() != null) {
+                    Expression field = start.getSelect();
+                    JavaType.ShallowClass page = JavaType.ShallowClass.build(TestBenchSetupToUnified.UNIFIED_PAGE);
+                    return field instanceof J.Identifier id ? id.withType(page).withFieldType(null)
+                            : ((J.FieldAccess) field).withType(page);
+                }
+                return Stubs.page();
             }
         };
     }
