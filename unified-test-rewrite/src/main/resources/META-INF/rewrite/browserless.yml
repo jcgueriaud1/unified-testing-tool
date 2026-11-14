@@ -78,3 +78,125 @@ recipeList:
       oldFullyQualifiedTypeName: org.springframework.boot.test.context.SpringBootTest
       newFullyQualifiedTypeName: com.vaadin.testing.unified.spring.UnifiedSpringBootTest
   - org.openrewrite.java.RemoveUnusedImports
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.MigrateUIUnitToBrowserless
+displayName: Move TestBench UI Unit tests to Browserless Test
+description: >-
+  Moves tests written with TestBench UI Unit 9.x (Vaadin 24: `UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4
+  `UIUnit4Test`) to their Browserless Test 25 equivalents, so the Browserless rules then apply. JUnit 4 UI Unit
+  tests go through OpenRewrite's JUnit 4 test-code recipes. Component testers already have the same names; the
+  HTML testers move out of `com.vaadin.flow.component.html.testbench`, whose TestBench elements stay where they are.
+preconditions:
+  - org.openrewrite.java.search.HasType:
+      fullyQualifiedTypeName: com.vaadin.testbench.unit..*
+      checkAssignability: false
+recipeList:
+  - org.openrewrite.java.testing.junit5.UpdateBeforeAfterAnnotations
+  - org.openrewrite.java.testing.junit5.UpdateTestAnnotation
+  - org.openrewrite.java.testing.junit5.AssertToAssertions
+  - org.openrewrite.java.testing.junit5.IgnoreToDisabled
+  - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.unit.UIUnitTest
+      newFullyQualifiedTypeName: com.vaadin.browserless.BrowserlessTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.unit.UIUnit4Test
+      newFullyQualifiedTypeName: com.vaadin.browserless.BrowserlessTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.unit.SpringUIUnitTest
+      newFullyQualifiedTypeName: com.vaadin.browserless.SpringBrowserlessTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.unit.SpringUIUnit4Test
+      newFullyQualifiedTypeName: com.vaadin.browserless.SpringBrowserlessTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.unit.BaseUIUnitTest
+      newFullyQualifiedTypeName: com.vaadin.browserless.BaseBrowserlessTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.unit.UIUnitTestSetupException
+      newFullyQualifiedTypeName: com.vaadin.browserless.BrowserlessTestSetupException
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.testbench.unit.UITestSpringLookupInitializer
+      newFullyQualifiedTypeName: com.vaadin.browserless.BrowserlessTestSpringLookupInitializer
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.AnchorTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.AnchorTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.DescriptionListTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.DescriptionListTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.DivTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.DivTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.EmphasisTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.EmphasisTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.H1Tester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.H1Tester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.H2Tester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.H2Tester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.H3Tester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.H3Tester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.H4Tester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.H4Tester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.H5Tester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.H5Tester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.H6Tester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.H6Tester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.HrTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.HrTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.HtmlClickContainer
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.HtmlClickContainer
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.HtmlComponentTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.HtmlComponentTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.HtmlContainerTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.HtmlContainerTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.ImageTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.ImageTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.InputTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.InputTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.ListItemTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.ListItemTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.NativeButtonTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.NativeButtonTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.NativeDetailsTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.NativeDetailsTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.NativeLabelTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.NativeLabelTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.OrderedListTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.OrderedListTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.ParagraphTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.ParagraphTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.PreTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.PreTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.RangeInputTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.RangeInputTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.SpanTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.SpanTester
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: com.vaadin.flow.component.html.testbench.UnorderedListTester
+      newFullyQualifiedTypeName: com.vaadin.flow.component.html.UnorderedListTester
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: com.vaadin.testbench.unit
+      newPackageName: com.vaadin.browserless
+      recursive: true
