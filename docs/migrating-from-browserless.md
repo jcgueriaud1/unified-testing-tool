@@ -96,14 +96,17 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 | `assertTrue(getCurrentView() instanceof V)`, `assertInstanceOf(V.class, getCurrentView())` | `assertThat(page).isAt(V.class)` |
 | `roundTrip()`, `runPendingSignalsTasks()` | removed: Auto-Wait |
 | `fireShortcut(Key.KEY_S, KeyModifier.CONTROL)` | `page.pressKey("Control+s")`, with a Migration Marker (see below) |
+| Grid `size()`, `getCellText(row, col)`, `clickRow(row)`, `select(row)` | `getRowCount()`, `row(row).getCellText(col)`, `row(row).click()`, `row(row).select()` |
+| a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class).single()` |
+| ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox and Dialog; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
+A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details and Grid; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
 
 ### Context API and extension tests
 
 Tests written against Browserless Test's context API (a `BrowserlessUIContext` window from `BrowserlessApplicationContext`, often built in a `@TestConfiguration`) or with `@RegisterExtension BrowserlessExtension` convert the same way. Their wiring goes: the context and extension fields, the `@TestConfiguration` that builds the application, and the `@BeforeEach`/`@AfterEach` methods that only open and close the window. Calls on the window or extension convert like the base-class calls above, and its locators become lookups: `window.findTextField().withLabel("Name").setValue("x")` becomes `page.find(UnifiedTextField.class).withLabel("Name").single().setValue("x")`. Views the wiring named (`create(View.class)`, `withViewPackages(..)`) become `@ViewPackages` on a plain test. A test that uses the application or user context beyond opening its window (a second user, a second window) is left as it is, with a Migration Marker.
 
-The demo's `EditPersonBrowserlessTest` and what the recipe makes of it: its Grid locator has no Wrapper yet, so it stays on the window, which the test now gets from the Unified Page.
+The demo's `EditPersonBrowserlessTest` and what the recipe makes of it. Nothing is left behind the Escape Hatch, so CI runs the result on Browserless, Playwright and Selenium.
 
 === "Before (context API)"
 

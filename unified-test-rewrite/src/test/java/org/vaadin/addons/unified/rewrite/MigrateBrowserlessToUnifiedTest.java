@@ -305,8 +305,8 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
         rewriteRun(java(
                 """
                 import com.vaadin.browserless.BrowserlessTest;
-                import com.vaadin.flow.component.grid.Grid;
                 import com.vaadin.flow.component.textfield.TextField;
+                import com.vaadin.flow.component.upload.Upload;
                 import org.junit.jupiter.api.Assertions;
                 import org.junit.jupiter.api.Test;
 
@@ -317,13 +317,13 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                     void readsTheView() {
                         test(name).setValue("Alice");
                         test($(TextField.class).withCondition(f -> f.isRequired()).single()).setValue("x");
-                        Assertions.assertEquals(3, test($(Grid.class).single()).size());
+                        Assertions.assertTrue(test($(Upload.class).single()).isUsable());
                     }
                 }
                 """,
                 """
-                import com.vaadin.flow.component.grid.Grid;
                 import com.vaadin.flow.component.textfield.TextField;
+                import com.vaadin.flow.component.upload.Upload;
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
@@ -344,8 +344,8 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                         browserless.test(name).setValue("Alice");
                         // TODO unified: filter runs Java on the component: test($(TextField.class).withCondition(f -> f.isRequired()).single()).setValue("x"): replace withCondition(..) with a locator
                         browserless.test(browserless.$(TextField.class).withCondition(f -> f.isRequired()).single()).setValue("x");
-                        // TODO unified: Browserless Escape Hatch: test($(Grid.class).single()).size(), no Wrapper for Grid: write one (ADR 0003)
-                        Assertions.assertEquals(3, browserless.test(browserless.$(Grid.class).single()).size());
+                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), no Wrapper for Upload: write one (ADR 0003)
+                        Assertions.assertTrue(browserless.test(browserless.$(Upload.class).single()).isUsable());
                     }
                 }
                 """));
@@ -356,7 +356,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
         rewriteRun(java(
                 """
                 import com.vaadin.browserless.BrowserlessTest;
-                import com.vaadin.flow.component.grid.Grid;
+                import com.vaadin.flow.component.upload.Upload;
                 import org.junit.jupiter.api.Test;
 
                 class PeopleTest extends BrowserlessTest {
@@ -365,13 +365,13 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                         count();
                     }
 
-                    private int count() {
-                        return test($(Grid.class).single()).size();
+                    private boolean count() {
+                        return test($(Upload.class).single()).isUsable();
                     }
                 }
                 """,
                 """
-                import com.vaadin.flow.component.grid.Grid;
+                import com.vaadin.flow.component.upload.Upload;
                 import com.vaadin.testing.unified.RequiresTestingTool;
                 import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
@@ -387,10 +387,10 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                         count(page);
                     }
 
-                    private int count(UnifiedPage page) {
+                    private boolean count(UnifiedPage page) {
                         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
-                        // TODO unified: Browserless Escape Hatch: test($(Grid.class).single()).size(), no Wrapper for Grid: write one (ADR 0003)
-                        return browserless.test(browserless.$(Grid.class).single()).size();
+                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), no Wrapper for Upload: write one (ADR 0003)
+                        return browserless.test(browserless.$(Upload.class).single()).isUsable();
                     }
                 }
                 """));
@@ -710,6 +710,134 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                     @Test
                     void seesTheOtherUser() {
                         BrowserlessUIContext other = app.newUser().newWindow();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void gridTesterCallsMoveTheRowIndexToRow() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.grid.Grid;
+                import com.vaadin.flow.component.grid.GridTester;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest extends BrowserlessTest {
+                    @Test
+                    void edits() {
+                        GridTester<Grid<String>, String> people = test($(Grid.class).single());
+                        people.clickRow(2);
+                        people.select(1);
+                        Assertions.assertEquals(3, people.size());
+                        Assertions.assertEquals("Alan", people.getCellText(2, 0));
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class PeopleTest {
+                    @Test
+                    void edits(UnifiedPage page) {
+                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        people.row(2).click();
+                        people.row(1).select();
+                        Assertions.assertEquals(3, people.getRowCount());
+                        Assertions.assertEquals("Alan", people.row(2).getCellText(0));
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void fieldAndContainerTesterCallsTakeTheirWrapperNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.combobox.ComboBox;
+                import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+                import com.vaadin.flow.component.datepicker.DatePicker;
+                import com.vaadin.flow.component.details.Details;
+                import com.vaadin.flow.component.tabs.TabSheet;
+                import com.vaadin.flow.component.textfield.IntegerField;
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Test;
+
+                class FormTest extends BrowserlessTest {
+                    @Test
+                    void fills() {
+                        test($(ComboBox.class).withCaption("Country").single()).selectItem("Finland");
+                        test($(MultiSelectComboBox.class).withCaption("Tags").single()).selectItem("a", "b");
+                        test($(DatePicker.class).withCaption("Start").single()).setValue(LocalDate.of(2026, 1, 1));
+                        test($(IntegerField.class).withCaption("Age").single()).setValue(42);
+                        test($(TabSheet.class).single()).select("Security");
+                        test($(Details.class).single()).openDetails();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.*;
+
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class FormTest {
+                    @Test
+                    void fills(UnifiedPage page) {
+                        page.find(UnifiedComboBox.class).withLabel("Country").single().selectItem("Finland");
+                        page.find(UnifiedMultiSelectComboBox.class).withLabel("Tags").single().selectItems("a", "b");
+                        page.find(UnifiedDatePicker.class).withLabel("Start").single().setValue(LocalDate.of(2026, 1, 1));
+                        page.find(UnifiedIntegerField.class).withLabel("Age").single().setValue(42);
+                        page.find(UnifiedTabSheet.class).single().selectTab("Security");
+                        page.find(UnifiedDetails.class).single().open();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aTabSheetSelectedByIndexStaysBehindTheEscapeHatch() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.tabs.TabSheet;
+                import org.junit.jupiter.api.Test;
+
+                class TabsTest extends BrowserlessTest {
+                    @Test
+                    void selects() {
+                        test($(TabSheet.class).single()).select(1);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.tabs.TabSheet;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class TabsTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void selects(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: test($(TabSheet.class).single()).select(1)
+                        browserless.test(browserless.$(TabSheet.class).single()).select(1);
                     }
                 }
                 """));
