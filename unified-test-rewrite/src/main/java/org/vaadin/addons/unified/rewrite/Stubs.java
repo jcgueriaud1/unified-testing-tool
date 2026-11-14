@@ -25,6 +25,7 @@ final class Stubs {
                 void navigate(Class<?> view, Object parameter);
                 Object find(Class<?> type);
                 void pressKey(String key);
+                <T> T unwrap(Class<T> type);
             }
             """,
             """

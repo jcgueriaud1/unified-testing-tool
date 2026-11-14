@@ -30,6 +30,15 @@ public class BrowserlessSetupToUnified extends ScanningRecipe<BrowserlessSetupTo
 
     private static final String HELPERS = "unified.browserless.helpers";
     private static final String SPRING_BOOT_TEST = "org.springframework.boot.test.context.SpringBootTest";
+    private static final String VIEW_PACKAGES = "com.vaadin.browserless.ViewPackages";
+    /** What a context-API or extension test's wiring imports; each goes when nothing else uses it. */
+    private static final List<String> WIRING_IMPORTS = List.of("com.vaadin.browserless.BrowserlessApplicationContext",
+            "com.vaadin.browserless.BrowserlessUserContext", Browserless.UI_CONTEXT, Browserless.EXTENSION,
+            "com.vaadin.browserless.SpringBrowserlessApplicationContext",
+            "org.junit.jupiter.api.extension.RegisterExtension", "org.junit.jupiter.api.BeforeEach",
+            "org.junit.jupiter.api.AfterEach", "org.junit.jupiter.api.BeforeAll", "org.junit.jupiter.api.AfterAll",
+            "org.springframework.boot.test.context.TestConfiguration", "org.springframework.context.annotation.Bean",
+            "org.springframework.beans.factory.annotation.Autowired", "org.springframework.context.ApplicationContext");
     private static final Set<String> TEST_ANNOTATIONS = Set.of(SPRING_BOOT_TEST,
             "com.vaadin.testing.unified.spring.UnifiedSpringBootTest", TestBenchSetupToUnified.UNIFIED_UI_TEST);
 
@@ -86,6 +95,9 @@ public class BrowserlessSetupToUnified extends ScanningRecipe<BrowserlessSetupTo
                 List<String> beforeEach = new ArrayList<>(inheritedBeforeEach(classDecl.getType(), scanned.beforeEachByClass()));
                 beforeEach.addAll(beforeEachOf(classDecl, helpers));
                 c = c.withBody(c.getBody().withStatements(Helpers.callBeforeEachFirst(c, beforeEach)));
+                if (Browserless.isContextClass(classDecl)) {
+                    return contextApiToUnified(classDecl, c);
+                }
                 if (classDecl.getExtends() == null || !Browserless.isTestBase(classDecl.getExtends().getType())) {
                     return c; // a subclass of the project's own Browserless base class
                 }
@@ -102,6 +114,63 @@ public class BrowserlessSetupToUnified extends ScanningRecipe<BrowserlessSetupTo
                             .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
                 }
                 return c;
+            }
+
+            /**
+             * A context-API or extension test: its wiring goes, and a plain one becomes a {@code @UnifiedUITest} with
+             * the views the wiring named as {@code @ViewPackages}. The tests' calls on the window or extension are
+             * converted by the other recipes, or keep it through {@code page.unwrap(BrowserlessUIContext.class)}.
+             */
+            private J.ClassDeclaration contextApiToUnified(J.ClassDeclaration original, J.ClassDeclaration c) {
+                Set<String> fields = BrowserlessContexts.fields(original);
+                List<Expression> views = BrowserlessContexts.viewSources(original);
+                List<Statement> kept = new ArrayList<>();
+                List<Statement> before = original.getBody().getStatements();
+                List<Statement> after = c.getBody().getStatements();
+                for (int i = 0; i < after.size(); i++) {
+                    if (i >= before.size() || !BrowserlessContexts.isWiring(before.get(i), fields)) {
+                        kept.add(after.get(i));
+                    }
+                }
+                c = c.withBody(c.getBody().withStatements(kept));
+                // type attribution can keep a removed field's types in use: a type the class no longer names goes
+                String printed = c.printTrimmed(getCursor().getParentOrThrow());
+                for (String wiring : WIRING_IMPORTS) {
+                    if (!printed.matches("(?s).*\\b" + wiring.substring(wiring.lastIndexOf('.') + 1) + "\\b.*")) {
+                        doAfterVisit(new org.openrewrite.java.RemoveImport<>(wiring, true));
+                    }
+                }
+                if (c.getLeadingAnnotations().stream().anyMatch(a -> TEST_ANNOTATIONS.stream()
+                        .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)))) {
+                    return c; // a Spring test: @SpringBootTest becomes @UnifiedSpringBootTest
+                }
+                maybeAddImport(TestBenchSetupToUnified.UNIFIED_UI_TEST);
+                c = JavaTemplate.builder("@UnifiedUITest")
+                        .imports(TestBenchSetupToUnified.UNIFIED_UI_TEST)
+                        .javaParser(Stubs.parser("package com.vaadin.testing.unified; public @interface UnifiedUITest {}"))
+                        .build()
+                        .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
+                List<Expression> classes = views.stream().filter(v -> v instanceof J.FieldAccess f
+                        && f.getSimpleName().equals("class")).toList();
+                List<Expression> packages = views.stream().filter(v -> v instanceof J.Literal l
+                        && l.getValue() instanceof String).toList();
+                if (classes.isEmpty() && packages.isEmpty()) {
+                    return c;
+                }
+                String attribute = classes.isEmpty() ? "packages" : "classes";
+                List<Expression> values = classes.isEmpty() ? packages : classes;
+                // the original expressions as parameters, so a view class keeps its type
+                String parameter = classes.isEmpty() ? "#{any(java.lang.String)}" : "#{any(java.lang.Class)}";
+                String code = "@ViewPackages(" + attribute + " = {"
+                        + String.join(", ", java.util.Collections.nCopies(values.size(), parameter)) + "})";
+                maybeAddImport(VIEW_PACKAGES);
+                return JavaTemplate.builder(code)
+                        .imports(VIEW_PACKAGES)
+                        .javaParser(Stubs.parser("package com.vaadin.browserless; public @interface ViewPackages {"
+                                + " Class<?>[] classes() default {}; String[] packages() default {}; }"))
+                        .build()
+                        .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 1),
+                                values.stream().map(v -> v.withPrefix(org.openrewrite.java.tree.Space.EMPTY)).toArray());
             }
 
             @Override

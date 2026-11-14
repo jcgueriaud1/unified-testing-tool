@@ -19,6 +19,7 @@ import org.openrewrite.java.tree.JRightPadded;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Space;
 import org.openrewrite.java.tree.Statement;
+import org.openrewrite.java.tree.TypeUtils;
 import org.openrewrite.marker.Markers;
 
 /**
@@ -57,25 +58,66 @@ public class BrowserlessLeftoversToEscapeHatch extends Recipe {
                 AtomicBoolean escapes = new AtomicBoolean();
                 getCursor().putMessage(LEFTOVERS, escapes);
                 J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
-                if (!escapes.get()) {
+                // a context-API test's window or extension, whose field the setup removed
+                List<String> handles = handlesUsed(m);
+                if (!escapes.get() && handles.isEmpty()) {
                     return callsAnEscapingHelper(m) ? requiresBrowserless(m) : m;
                 }
-                maybeAddImport(Browserless.ESCAPE_HATCH);
-                m = withEscapeHatchFirst(m, ctx);
+                if (usesEscapeHatch(m)) {
+                    maybeAddImport(Browserless.ESCAPE_HATCH);
+                    m = withFirst(m, ctx, "import " + Browserless.ESCAPE_HATCH + ";", "BrowserlessEscapeHatch "
+                            + Browserless.VARIABLE + " = BrowserlessEscapeHatch.of(page);");
+                }
+                for (String handle : handles.reversed()) {
+                    maybeAddImport(Browserless.UI_CONTEXT);
+                    m = withFirst(m, ctx, "import " + Browserless.UI_CONTEXT + ";", "BrowserlessUIContext " + handle
+                            + " = page.unwrap(BrowserlessUIContext.class);");
+                }
                 m = MigrationMarkers.write(m, markers);
                 return Helpers.isBrowserTest(m) ? requiresBrowserless(m) : m;
             }
 
+            /** The handle fields (a window or the extension) the method still names. */
+            private List<String> handlesUsed(J.MethodDeclaration m) {
+                java.util.Set<String> used = new java.util.LinkedHashSet<>();
+                new JavaIsoVisitor<Integer>() {
+                    @Override
+                    public J.Identifier visitIdentifier(J.Identifier identifier, Integer p) {
+                        if (Browserless.isHandle(identifier) && identifier.getFieldType() != null
+                                && identifier.getFieldType().getOwner() instanceof JavaType.FullyQualified) {
+                            used.add(identifier.getSimpleName());
+                        }
+                        return identifier;
+                    }
+                }.visit(m.getBody(), 0);
+                return new ArrayList<>(used);
+            }
+
+            private boolean usesEscapeHatch(J.MethodDeclaration m) {
+                AtomicBoolean uses = new AtomicBoolean();
+                new JavaIsoVisitor<Integer>() {
+                    @Override
+                    public J.Identifier visitIdentifier(J.Identifier identifier, Integer p) {
+                        if (identifier.getSimpleName().equals(Browserless.VARIABLE)
+                                && TypeUtils.isOfClassType(identifier.getType(), Browserless.ESCAPE_HATCH)) {
+                            uses.set(true);
+                        }
+                        return identifier;
+                    }
+                }.visit(m.getBody(), 0);
+                return uses.get();
+            }
+
             /**
-             * The method with {@code BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);} as its
-             * first statement. Parsed on its own and inserted, as a template inserted before a statement this
-             * recipe chain already rewrote can be lost.
+             * The method with the given declaration as its first statement. Parsed on its own and inserted, as a
+             * template inserted before a statement this recipe chain already rewrote can be lost.
              */
-            private J.MethodDeclaration withEscapeHatchFirst(J.MethodDeclaration m, ExecutionContext ctx) {
-                String source = "import " + Browserless.ESCAPE_HATCH + ";\nclass EscapeHatchStatement { void m("
-                        + TestBenchSetupToUnified.UNIFIED_PAGE + " page) { BrowserlessEscapeHatch " + Browserless.VARIABLE
-                        + " = BrowserlessEscapeHatch.of(page); } }";
-                J.CompilationUnit cu = (J.CompilationUnit) Stubs.parser().build().parse(ctx, source)
+            private J.MethodDeclaration withFirst(J.MethodDeclaration m, ExecutionContext ctx, String imports,
+                    String declarationSource) {
+                String source = imports + "\nclass EscapeHatchStatement { void m(" + TestBenchSetupToUnified.UNIFIED_PAGE
+                        + " page) { " + declarationSource + " } }";
+                J.CompilationUnit cu = (J.CompilationUnit) Stubs.parser(
+                                "package com.vaadin.browserless; public class BrowserlessUIContext {}").build().parse(ctx, source)
                         .findFirst().orElseThrow();
                 J.MethodDeclaration parsed = (J.MethodDeclaration) cu.getClasses().get(0).getBody().getStatements().get(0);
                 Statement declaration = parsed.getBody().getStatements().get(0);
@@ -130,6 +172,9 @@ public class BrowserlessLeftoversToEscapeHatch extends Recipe {
                 }
                 if (!insideAnotherLeftover() && !MigrationMarkers.add(getCursor(), reason(method))) {
                     return m;
+                }
+                if (method.getSelect() != null) {
+                    return m; // a call on a window or extension: it keeps its handle, which the method declares
                 }
                 escapes.set(true);
                 return m.getPadding().withSelect(JRightPadded.build(new J.Identifier(Tree.randomId(), Space.EMPTY,

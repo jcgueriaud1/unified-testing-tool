@@ -24,6 +24,8 @@ final class Browserless {
     static final String SPRING_BROWSERLESS_TEST = "com.vaadin.browserless.SpringBrowserlessTest";
     static final String BROWSERLESS_TEST = "com.vaadin.browserless.BrowserlessTest";
     static final String ESCAPE_HATCH = "com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch";
+    static final String UI_CONTEXT = "com.vaadin.browserless.BrowserlessUIContext";
+    static final String EXTENSION = "com.vaadin.browserless.BrowserlessExtension";
     static final String VARIABLE = "browserless";
 
     /**
@@ -86,10 +88,32 @@ final class Browserless {
     private Browserless() {
     }
 
-    /** A class that extends one of Browserless Test's test base classes, directly or through the project's own. */
+    /**
+     * A Browserless test class: one that extends a Browserless Test test base class, directly or through the
+     * project's own, or one that holds a Browserless context or extension in a field (the context API).
+     */
     static boolean isBrowserlessClass(J.ClassDeclaration c) {
         return c.getType() != null && (TypeUtils.isAssignableTo(SPRING_BROWSERLESS_TEST, c.getType())
-                || TypeUtils.isAssignableTo(BROWSERLESS_TEST, c.getType()));
+                || TypeUtils.isAssignableTo(BROWSERLESS_TEST, c.getType()) || isContextClass(c));
+    }
+
+    /** A class holding a Browserless context or extension in a field, instead of extending a test base class. */
+    static boolean isContextClass(J.ClassDeclaration c) {
+        return c.getBody().getStatements().stream().anyMatch(s -> s instanceof J.VariableDeclarations v
+                && CONTEXT_TYPES.stream().anyMatch(t -> TypeUtils.isAssignableTo(t, v.getType())));
+    }
+
+    /** The context API's types a test class holds: its application, user and window, and the JUnit extension. */
+    static final List<String> CONTEXT_TYPES = List.of("com.vaadin.browserless.BrowserlessApplicationContext",
+            "com.vaadin.browserless.BrowserlessUserContext", UI_CONTEXT, EXTENSION);
+
+    /**
+     * A handle: an identifier holding a window ({@code BrowserlessUIContext}) or the JUnit extension, whose
+     * methods are the test base's ({@code navigate}, {@code find}, {@code test}, {@code findTextField()}, ...).
+     */
+    static boolean isHandle(Expression e) {
+        return e instanceof J.Identifier id && id.getType() != null
+                && (TypeUtils.isAssignableTo(UI_CONTEXT, id.getType()) || TypeUtils.isAssignableTo(EXTENSION, id.getType()));
     }
 
     /**
@@ -117,11 +141,61 @@ final class Browserless {
         return TypeUtils.isOfClassType(type, SPRING_BROWSERLESS_TEST) || TypeUtils.isOfClassType(type, BROWSERLESS_TEST);
     }
 
-    /** A receiverless call to a method of Browserless Test's test base. */
+    /** A call to the test base: receiverless on a test base class, or on a handle (the context API). */
     static boolean isTestBaseCall(J.MethodInvocation m) {
         JavaType.Method type = m.getMethodType();
-        return m.getSelect() == null && type != null
-                && TEST_BASE_TYPES.contains(type.getDeclaringType().getFullyQualifiedName());
+        return m.getSelect() == null ? type != null && TEST_BASE_TYPES.contains(type.getDeclaringType().getFullyQualifiedName())
+                : isHandle(m.getSelect());
+    }
+
+    /**
+     * A locator's start, {@code window.findTextField()}: a {@code find..()} on a handle returning a
+     * {@code ..Locator} of a component that has a Wrapper. Its Wrapper, else {@code null}.
+     */
+    static Wrapper ofLocatorStart(Expression e) {
+        if (!(e instanceof J.MethodInvocation call) || call.getSelect() == null || !isHandle(call.getSelect())
+                || !call.getSimpleName().startsWith("find") || call.getMethodType() == null
+                || !(call.getMethodType().getReturnType() instanceof JavaType.FullyQualified locator)
+                || !locator.getFullyQualifiedName().endsWith("Locator")) {
+            return null;
+        }
+        String fqn = locator.getFullyQualifiedName();
+        return forComponent(fqn.substring(0, fqn.length() - "Locator".length()));
+    }
+
+    /** The Wrapper a whole locator expression converts to: its start, then only the Wrapper's filters. */
+    static Wrapper ofLocator(Expression e) {
+        List<String> filters = new ArrayList<>();
+        Expression start = e;
+        while (start instanceof J.MethodInvocation call && ofLocatorStart(call) == null) {
+            filters.add(call.getSimpleName());
+            start = call.getSelect();
+        }
+        Wrapper wrapper = ofLocatorStart(start);
+        return wrapper != null && wrapper.filters().keySet().containsAll(filters) ? wrapper : null;
+    }
+
+    /** The whole locator expression the cursor's call (its start or a filter) is part of. */
+    static Cursor locatorOf(Cursor callCursor) {
+        Cursor c = callCursor;
+        while (c.getParentTreeCursor().getValue() instanceof J.MethodInvocation p && p.getSelect() == c.getValue()
+                && ofLocator(p) != null) {
+            c = c.getParentTreeCursor();
+        }
+        return ofLocator((Expression) c.getValue()) == null ? null : c;
+    }
+
+    /** The Wrapper a whole locator converts to: it is used only through a call or assertion the Wrapper has. */
+    static Wrapper convertibleLocator(Cursor locatorCursor) {
+        Wrapper wrapper = ofLocator((Expression) locatorCursor.getValue());
+        if (wrapper == null) {
+            return null;
+        }
+        Object parent = locatorCursor.getParentTreeCursor().getValue();
+        boolean used = parent instanceof J.MethodInvocation call && call.getSelect() == locatorCursor.getValue()
+                && wrapper.testerCalls().containsKey(call.getSimpleName())
+                || TestBenchAssertionsToUnified.isUnifiedAssertion(parent);
+        return used ? wrapper : null;
     }
 
     /** The Wrapper for a Flow component class, or {@code null} when it has none yet. */

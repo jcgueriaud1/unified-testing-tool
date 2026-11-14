@@ -31,6 +31,7 @@ public class FindBrowserlessTests extends Recipe {
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
                 return Browserless.isBrowserlessClass(classDecl) && !Browserless.passesItself(classDecl)
+                        && (!Browserless.isContextClass(classDecl) || BrowserlessContexts.migratable(classDecl))
                         ? SearchResult.found(c) : c;
             }
         };
