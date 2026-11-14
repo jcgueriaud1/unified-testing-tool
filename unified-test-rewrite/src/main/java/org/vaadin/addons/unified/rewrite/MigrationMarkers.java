@@ -38,8 +38,10 @@ final class MigrationMarkers {
             return false;
         }
         List<String> texts = markers.computeIfAbsent(((Statement) statement.getValue()).getId(), id -> new ArrayList<>());
-        if (!texts.contains(text)) {
-            texts.add(text);
+        // one line: code printed over several lines would end the // comment and break the file
+        String line = text.replaceAll("\\s*\\R\\s*", "");
+        if (!texts.contains(line)) {
+            texts.add(line);
         }
         return true;
     }

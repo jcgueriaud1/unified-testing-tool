@@ -116,10 +116,30 @@ class GoldenMigrationTest implements RewriteTest {
 
     @Test
     void profileBrowserlessTestBecomesProfileBrowserlessMigratedTest() throws IOException {
-        String before = Files.readString(DEMO_TESTS.resolve("ProfileBrowserlessTest.java"));
-        String after = Files.readString(DEMO_TESTS.resolve("ProfileBrowserlessMigratedTest.java"))
-                .replace("class ProfileBrowserlessMigratedTest", "class ProfileBrowserlessTest");
+        assertMigratesBrowserless("ProfileBrowserlessTest", "ProfileBrowserlessMigratedTest");
+    }
+
+    @Test
+    void browserlessLeftoversRunThroughTheEscapeHatch() throws IOException {
+        assertMigratesBrowserless("ProfileBrowserlessLeftoversTest", "ProfileBrowserlessLeftoversMigratedTest");
+    }
+
+    @Test
+    void aNarrowSpringContextStaysOnBrowserless() throws IOException {
+        assertMigratesBrowserless("ProfileBrowserlessNarrowContextTest", "ProfileBrowserlessNarrowContextMigratedTest");
+    }
+
+    /** The Browserless input becomes the twin. */
+    private void assertMigratesBrowserless(String input, String twin) throws IOException {
+        String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
+        String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
         List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        sources.add(java("""
+                package demo;
+
+                public class ProfileService {
+                }
+                """));
         sources.add(java(before, after));
         rewriteRun(spec -> spec.recipe(new MigrateBrowserlessToUnified()),
                 sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
