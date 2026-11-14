@@ -48,6 +48,7 @@ preconditions:
   - org.vaadin.addons.unified.rewrite.FindDramafinderTests
 recipeList:
   - org.vaadin.addons.unified.rewrite.DramafinderSetupToUnified
+  - org.vaadin.addons.unified.rewrite.DramafinderLookupsToUnified
   - org.vaadin.addons.unified.rewrite.DramafinderLeftoversToEscapeHatch
   - org.openrewrite.java.RemoveAnnotationAttribute:
       annotationType: org.springframework.boot.test.context.SpringBootTest
