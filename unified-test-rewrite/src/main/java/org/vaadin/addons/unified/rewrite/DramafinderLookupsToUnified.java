@@ -54,10 +54,11 @@ public class DramafinderLookupsToUnified extends Recipe {
                     return method;
                 }
                 var markers = MigrationMarkers.collect(getCursor());
-                getCursor().putMessage(LOCALS, new HashMap<String, DramafinderWrappers.Wrapper>());
+                Map<String, DramafinderWrappers.Wrapper> locals = new HashMap<>();
+                getCursor().putMessage(LOCALS, locals);
                 J.MethodDeclaration m = (J.MethodDeclaration) super.visitMethodDeclaration(method, ctx);
                 m = m.withBody(m.getBody().withStatements(m.getBody().getStatements().stream()
-                        .filter(s -> !isUnneededWait(s)).toList()));
+                        .filter(s -> !isUnneededWait(s) && !DramafinderGrids.isDropped(s, n -> isGrid(locals, n))).toList()));
                 return MigrationMarkers.write(m, markers);
             }
 
@@ -65,11 +66,19 @@ public class DramafinderLookupsToUnified extends Recipe {
             public J visitVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext ctx) {
                 Map<String, DramafinderWrappers.Wrapper> locals = getCursor().getNearestMessage(LOCALS);
                 J.MethodDeclaration method = getCursor().firstEnclosing(J.MethodDeclaration.class);
+                if (locals != null && multiVariable.getVariables().size() == 1 && multiVariable.getTypeExpression() != null
+                        && DramafinderGrids.isFindRow(multiVariable.getVariables().get(0).getInitializer(), n -> isGrid(locals, n))
+                        && DramafinderGrids.rowUsesConvert(method, multiVariable.getVariables().get(0).getSimpleName())) {
+                    J.VariableDeclarations v = (J.VariableDeclarations) super.visitVariableDeclarations(multiVariable, ctx);
+                    locals.put(v.getVariables().get(0).getSimpleName(), DramafinderWrappers.ROW);
+                    return retyped(v, DramafinderWrappers.ROW);
+                }
                 DramafinderWrappers.Lookup lookup = locals == null || multiVariable.getVariables().size() != 1
                         || multiVariable.getTypeExpression() == null
                         ? null : DramafinderWrappers.ofLookup(multiVariable.getVariables().get(0).getInitializer());
-                if (lookup == null || !usedOnlyThrough(method, multiVariable.getVariables().get(0).getSimpleName(),
-                        lookup.wrapper())) {
+                String name = lookup == null ? null : multiVariable.getVariables().get(0).getSimpleName();
+                if (lookup == null || !(isGridWrapper(lookup.wrapper()) ? DramafinderGrids.gridUsesConvert(method, name)
+                        : usedOnlyThrough(method, name, lookup.wrapper()))) {
                     return super.visitVariableDeclarations(multiVariable, ctx);
                 }
                 J.VariableDeclarations v = (J.VariableDeclarations) super.visitVariableDeclarations(multiVariable, ctx);
@@ -86,11 +95,29 @@ public class DramafinderLookupsToUnified extends Recipe {
                 Expression initializer = variable.getInitializer();
                 Expression converted = typed(template(code, wrapper).apply(
                         new Cursor(getCursor(), initializer), initializer.getCoordinates().replace(), parameters.toArray()), wrapper);
+                return retyped(v.withVariables(List.of(variable.withInitializer(converted.withPrefix(initializer.getPrefix()))
+                        .withName(variable.getName().withFieldType(null)))), wrapper);
+            }
+
+            /** The declaration with the Wrapper's type. */
+            private J.VariableDeclarations retyped(J.VariableDeclarations v, DramafinderWrappers.Wrapper wrapper) {
+                maybeAddImport(wrapper.importFqn());
                 JavaType.ShallowClass type = JavaType.ShallowClass.build(wrapper.fqn());
+                J.VariableDeclarations.NamedVariable variable = v.getVariables().get(0);
                 return v.withTypeExpression(new J.Identifier(Tree.randomId(), v.getTypeExpression().getPrefix(),
                                 Markers.EMPTY, emptyList(), wrapper.simpleName(), type, null))
-                        .withVariables(List.of(variable.withInitializer(converted.withPrefix(initializer.getPrefix()))
-                                .withType(type).withName(variable.getName().withType(type).withFieldType(null))));
+                        .withVariables(List.of(variable.withType(type).withName(variable.getName().withType(type))));
+            }
+
+            @Override
+            public J visitIdentifier(J.Identifier identifier, ExecutionContext ctx) {
+                Map<String, DramafinderWrappers.Wrapper> locals = getCursor().getNearestMessage(LOCALS);
+                DramafinderWrappers.Wrapper wrapper = locals == null ? null : locals.get(identifier.getSimpleName());
+                if (wrapper == null || identifier.getFieldType() != null && identifier.getFieldType().getOwner() != null
+                        && !(identifier.getFieldType().getOwner() instanceof JavaType.Method)) {
+                    return identifier;
+                }
+                return identifier.withType(JavaType.ShallowClass.build(wrapper.fqn())); // a use of a converted local
             }
 
             @Override
@@ -101,6 +128,10 @@ public class DramafinderLookupsToUnified extends Recipe {
                     return j;
                 }
                 boolean statement = getCursor().getParentTreeCursor().getValue() instanceof J.Block;
+                J grid = gridCall(method, m, locals, statement);
+                if (grid != null) {
+                    return grid;
+                }
                 // a call on a local that now holds a Wrapper
                 if (method.getSelect() instanceof J.Identifier id && locals.containsKey(id.getSimpleName())) {
                     DramafinderWrappers.Wrapper wrapper = locals.get(id.getSimpleName());
@@ -135,6 +166,54 @@ public class DramafinderLookupsToUnified extends Recipe {
                         .<J>apply(getCursor(), m.getCoordinates().replace(), parameters.toArray()).withId(m.getId()), wrapper);
             }
 
+            /** The grid and row patterns of {@link DramafinderGrids}, converted; {@code null} for any other call. */
+            private J gridCall(J.MethodInvocation original, J.MethodInvocation m, Map<String, DramafinderWrappers.Wrapper> locals,
+                    boolean statement) {
+                DramafinderWrappers.Wrapper grid = DramafinderWrappers.forElement(JavaType.ShallowClass.build(
+                        "org.vaadin.addons.dramafinder.element.GridElement"));
+                if (DramafinderGrids.isRowIndexLookup(original, n -> isGrid(locals, n))) {
+                    J.MethodInvocation indexes = (J.MethodInvocation) m.getSelect();
+                    Expression column = indexes.getArguments().get(0);
+                    // Dramafinder matches one column by its index; a Unified row query names a header, or any column
+                    MigrationMarkers.add(getCursor(), "was findRowIndexesWithColumnText(" + column.printTrimmed(getCursor())
+                            + ", ..).get(0): any column matches now; single() fails when several rows match");
+                    return typed(template("#{any()}.rows().withCellText(#{any(java.lang.String)}).single().getIndex()", grid)
+                            .<J>apply(getCursor(), m.getCoordinates().replace(), indexes.getSelect(), indexes.getArguments().get(1))
+                            .withId(m.getId()), DramafinderWrappers.ROW);
+                }
+                if (DramafinderGrids.isFindRow(original, n -> isGrid(locals, n))) {
+                    J.MethodInvocation findRow = (J.MethodInvocation) m.getSelect();
+                    return typed(template("#{any()}.row(#{any(int)})", grid).<J>apply(getCursor(), m.getCoordinates().replace(),
+                            findRow.getSelect(), findRow.getArguments().get(0)).withId(m.getId()), DramafinderWrappers.ROW);
+                }
+                if (original.getSelect() != null && DramafinderGrids.isGetCell(original.getSelect(),
+                        n -> locals.get(n) == DramafinderWrappers.ROW) && DramafinderGrids.cellCallConverts(original, statement)) {
+                    J.MethodInvocation cell = (J.MethodInvocation) m.getSelect();
+                    Expression row = cell.getSelect();
+                    Expression column = cell.getArguments().get(0);
+                    return switch (original.getSimpleName()) {
+                        case "click" -> {
+                            MigrationMarkers.add(getCursor(), "was getCell(" + column.printTrimmed(getCursor())
+                                    + ").click(); a row's click() clicks the row, not that cell");
+                            yield typed(template("#{any()}.click()", grid).<J>apply(getCursor(), m.getCoordinates().replace(), row)
+                                    .withId(m.getId()), DramafinderWrappers.ROW);
+                        }
+                        case "getText" -> typed(template("#{any()}.getCellText(#{any()})", grid).<J>apply(getCursor(),
+                                m.getCoordinates().replace(), row, column).withId(m.getId()), DramafinderWrappers.ROW);
+                        default -> {
+                            maybeAddImport(TestBenchAssertionsToUnified.UNIFIED_ASSERTIONS, "assertThat", false);
+                            yield typed(JavaTemplate.builder("assertThat(#{any()}).hasCellText(#{any(java.lang.String)}, #{any()})")
+                                    .staticImports(ASSERT_THAT)
+                                    .javaParser(Stubs.parser())
+                                    .build()
+                                    .<J>apply(getCursor(), m.getCoordinates().replace(), row, column, m.getArguments().get(0))
+                                    .withId(m.getId()), DramafinderWrappers.ROW);
+                        }
+                    };
+                }
+                return null;
+            }
+
             /** {@code assertThat(<wrapper code>).<assertion>(..)} with the element assertion's arguments. */
             private J assertion(J.MethodInvocation m, String wrapperCode, String assertion, List<Object> parameters,
                     DramafinderWrappers.Wrapper wrapper) {
@@ -145,16 +224,16 @@ public class DramafinderLookupsToUnified extends Recipe {
                 return JavaTemplate.builder("assertThat(" + wrapperCode + ")." + assertion + "("
                                 + String.join(", ", java.util.Collections.nCopies(arguments.size(), "#{any()}")) + ")")
                         .staticImports(ASSERT_THAT)
-                        .imports(wrapper.fqn())
-                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
+                        .imports(wrapper.importFqn())
+                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.importFqn())))
                         .build()
                         .<J>apply(getCursor(), m.getCoordinates().replace(), all.toArray()).withId(m.getId());
             }
 
             private JavaTemplate template(String code, DramafinderWrappers.Wrapper wrapper) {
                 return JavaTemplate.builder(code)
-                        .imports(wrapper.fqn())
-                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
+                        .imports(wrapper.importFqn())
+                        .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.importFqn())))
                         .build();
             }
         };
@@ -204,6 +283,15 @@ public class DramafinderLookupsToUnified extends Recipe {
                 parameterTypes, null, null, null, null);
         J.MethodInvocation typed = m.withMethodType(type);
         return typed.withName(typed.getName().withType(type));
+    }
+
+    private static boolean isGridWrapper(DramafinderWrappers.Wrapper wrapper) {
+        return wrapper.fqn().equals("com.vaadin.testing.unified.component.UnifiedGrid");
+    }
+
+    private static boolean isGrid(Map<String, DramafinderWrappers.Wrapper> locals, String name) {
+        DramafinderWrappers.Wrapper wrapper = locals.get(name);
+        return wrapper != null && isGridWrapper(wrapper);
     }
 
     private static List<Expression> arguments(J.MethodInvocation m) {

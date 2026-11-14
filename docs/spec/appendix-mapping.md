@@ -67,6 +67,13 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | dialog `assertOpen` / `assertClosed` / `assertHeaderText`, `getHeaderText()`, `closeWithEscape()` | `isOpen` / `isClosed` / `hasHeaderTitle`, `getHeaderTitle()`, `close()` |
 | notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
+| `GridElement.get(page)` | `page.find(UnifiedGrid.class).single()` (no marker: a second grid fails loudly) |
+| `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
+| `grid.findRowIndexesWithColumnText(col, s).get(0)` | `grid.rows().withCellText(s).single().getIndex()` + Migration Marker (any column matches) |
+| `row.getCell(col).getText()` / `row.getCell("Header").assertText(s)` | `row.getCellText(col)` / `assertThat(row).hasCellText("Header", s)` |
+| `row.getCell(col).click()` | `row.click()` + Migration Marker (the row, not that cell) |
+| `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |
+| `waitForGridToStopLoading()`, `scrollToRow(i)` | dropped (Auto-Wait) |
 
 ## Escape Hatch
 
