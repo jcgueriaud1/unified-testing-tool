@@ -4,7 +4,7 @@ Where a Testing Tool lacks something the Unified API needs, its adapter fills th
 
 ## Dramafinder
 
-All are closed: the first six in **Dramafinder 2.0.0**, the Grid, field and Tabs gaps in **2.0.1**, the rest in **2.0.2**. The Playwright adapter delegates to Dramafinder for each.
+The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, field and Tabs gaps in **2.0.1**, the rest in **2.0.2**. The Playwright adapter delegates to Dramafinder for each.
 
 | Gap | Issue |
 |---|---|
@@ -30,6 +30,12 @@ All are closed: the first six in **Dramafinder 2.0.0**, the Grid, field and Tabs
 | ComboBox / MultiSelectComboBox: `clear()` doesn't clear the selection | [parttio/dramafinder#245](https://github.com/parttio/dramafinder/issues/245) |
 | TabSheet: content locator matches nested TabSheets | [parttio/dramafinder#246](https://github.com/parttio/dramafinder/issues/246) |
 | Details: content only while open; summary matches nested Details | [parttio/dramafinder#247](https://github.com/parttio/dramafinder/issues/247) |
+
+Open:
+
+| Gap | Issue | Workaround in the adapter |
+|---|---|---|
+| Queries match inside the shadow DOM of Vaadin's components and dev tools (e.g. Copilot's radio group) | [parttio/dramafinder#276](https://github.com/parttio/dramafinder/issues/276) | Leaves those candidates out, as tag queries do ([#133](https://github.com/parttio/unified-testing-tool/issues/133)) |
 
 ## TestBench
 

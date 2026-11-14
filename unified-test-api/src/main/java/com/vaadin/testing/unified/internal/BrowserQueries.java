@@ -158,6 +158,19 @@ public final class BrowserQueries {
             }""".formatted(TEXT);
 
     /**
+     * Whether an element is the app's content. CSS in Playwright enters shadow roots: this leaves out what
+     * Vaadin's own components and dev tools (Copilot) render there. An app's own template keeps its shadow DOM
+     * searchable.
+     */
+    public static final String APP_CONTENT = """
+            e => {
+              for (let r = e.getRootNode(); r instanceof ShadowRoot; r = r.host.getRootNode()) {
+                if (/^(vaadin-|copilot-)/.test(r.host.localName)) return false;
+              }
+              return true;
+            }""";
+
+    /**
      * Browser function {@code (elements, filters) => indices}: the indices of the elements matching every
      * filter of {@link #remaining}, leaving out the shadow DOM of Vaadin's components and dev tools. Matching
      * is as in {@link Filter#matches}.
@@ -186,16 +199,9 @@ public final class BrowserQueries {
                   default: return false;
                 }
               };
-              // CSS in Playwright enters shadow roots: leave out what Vaadin's own components and dev tools have
-              // there, which is no app content (an app's own template keeps its shadow DOM searchable)
-              const appContent = e => {
-                for (let r = e.getRootNode(); r instanceof ShadowRoot; r = r.host.getRootNode()) {
-                  if (/^(vaadin-|copilot-)/.test(r.host.localName)) return false;
-                }
-                return true;
-              };
+              const appContent = %s;
               const found = [];
               elements.forEach((e, i) => { if (appContent(e) && filters.every(f => check(e, f))) found.push(i); });
               return found;
-            }""".formatted(TEXT, ACCESSIBLE_NAME);
+            }""".formatted(TEXT, ACCESSIBLE_NAME, APP_CONTENT);
 }
