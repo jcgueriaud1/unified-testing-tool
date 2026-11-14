@@ -44,9 +44,17 @@ final class Browserless {
     /** Query terminals; all but {@code single()} become {@code single()} with a Migration Marker. */
     static final Set<String> TERMINALS = Set.of("single", "first", "last", "atIndex");
 
-    /** A Wrapper, the Browserless filters it has (and their Unified names), tester calls and component getters. */
+    /**
+     * A Wrapper, the Browserless filters it has (and their Unified names), tester and locator calls, component
+     * getters, and row calls: a call whose first argument is a row index ({@code clickRow(i)}), which the Unified
+     * API makes on {@code row(i)}.
+     */
     record Wrapper(String fqn, Map<String, String> filters, Map<String, String> testerCalls,
-            Map<String, String> getters) {
+            Map<String, String> getters, Map<String, String> rowCalls) {
+
+        Wrapper(String fqn, Map<String, String> filters, Map<String, String> testerCalls, Map<String, String> getters) {
+            this(fqn, filters, testerCalls, getters, Map.of());
+        }
 
         String simpleName() {
             return fqn.substring(fqn.lastIndexOf('.') + 1);
@@ -66,7 +74,43 @@ final class Browserless {
             "getErrorMessage", "isInvalid", "isInvalid", "isEnabled", "isEnabled");
     private static final Map<String, String> TEXT_INPUT = Map.of("setValue", "setValue", "clear", "clear");
 
-    private static final Map<String, Wrapper> BY_COMPONENT = Map.of(
+    private static final Map<String, String> SINGLE_SELECT = Map.of("selectItem", "selectItem");
+    private static final String COMPONENT = "com.vaadin.testing.unified.component.";
+    private static final Map<String, String> VALUE_INPUT = Map.of("setValue", "setValue", "clear", "clear",
+            "clickClearButton", "clear");
+    private static final Map<String, String> VALUE_GETTERS = Map.of("getValue", "getValue", "getLabel", "getLabel",
+            "getPlaceholder", "getPlaceholder", "isEnabled", "isEnabled");
+    /** Tester calls that convert only with a String argument: TabSheet's {@code select(int)} has no Unified form. */
+    private static final Set<String> STRING_ARGUMENT = Set.of("select");
+
+    private static final Map<String, Wrapper> MORE = Map.of(
+            "com.vaadin.flow.component.grid.Grid", new Wrapper(COMPONENT + "UnifiedGrid", COMMON_FILTERS,
+                    Map.of("size", "getRowCount", "selectAll", "selectAll", "deselectAll", "deselectAll"),
+                    Map.of("isEnabled", "isEnabled"),
+                    Map.of("getCellText", "getCellText", "clickRow", "click", "doubleClickRow", "doubleClick",
+                            "select", "select", "deselect", "deselect")),
+            "com.vaadin.flow.component.combobox.ComboBox", new Wrapper(COMPONENT + "UnifiedComboBox", FIELD_FILTERS,
+                    with(SINGLE_SELECT, Map.of("clickClearButton", "clear")),
+                    Map.of("getLabel", "getLabel", "getPlaceholder", "getPlaceholder", "isEnabled", "isEnabled")),
+            "com.vaadin.flow.component.combobox.MultiSelectComboBox", new Wrapper(COMPONENT + "UnifiedMultiSelectComboBox",
+                    FIELD_FILTERS, Map.of("selectItem", "selectItems", "clickClearButton", "clear"),
+                    Map.of("getLabel", "getLabel", "getPlaceholder", "getPlaceholder", "isEnabled", "isEnabled")),
+            "com.vaadin.flow.component.radiobutton.RadioButtonGroup", new Wrapper(COMPONENT + "UnifiedRadioButtonGroup",
+                    with(COMMON_FILTERS, Map.of("withLabel", "withLabel", "withCaption", "withLabel")), SINGLE_SELECT,
+                    Map.of("getLabel", "getLabel", "isEnabled", "isEnabled")),
+            "com.vaadin.flow.component.datepicker.DatePicker", new Wrapper(COMPONENT + "UnifiedDatePicker", FIELD_FILTERS,
+                    VALUE_INPUT, VALUE_GETTERS),
+            "com.vaadin.flow.component.textfield.NumberField", new Wrapper(COMPONENT + "UnifiedNumberField", FIELD_FILTERS,
+                    VALUE_INPUT, VALUE_GETTERS),
+            "com.vaadin.flow.component.textfield.IntegerField", new Wrapper(COMPONENT + "UnifiedIntegerField", FIELD_FILTERS,
+                    VALUE_INPUT, VALUE_GETTERS),
+            "com.vaadin.flow.component.tabs.TabSheet", new Wrapper(COMPONENT + "UnifiedTabSheet", COMMON_FILTERS,
+                    Map.of("select", "selectTab"), Map.of("isEnabled", "isEnabled")),
+            "com.vaadin.flow.component.details.Details", new Wrapper(COMPONENT + "UnifiedDetails", COMMON_FILTERS,
+                    Map.of("openDetails", "open", "closeDetails", "close", "toggleDetails", "toggle", "isOpen", "isOpen"),
+                    Map.of("isOpened", "isOpen", "getSummaryText", "getSummaryText", "isEnabled", "isEnabled")));
+
+    private static final Map<String, Wrapper> CORE = Map.of(
             "com.vaadin.flow.component.textfield.TextField", new Wrapper("com.vaadin.testing.unified.component.UnifiedTextField",
                     FIELD_FILTERS, TEXT_INPUT, FIELD_GETTERS),
             "com.vaadin.flow.component.textfield.TextArea", new Wrapper("com.vaadin.testing.unified.component.UnifiedTextArea",
@@ -84,6 +128,9 @@ final class Browserless {
                     Map.of("getValue", "isChecked", "getLabel", "getLabel", "isEnabled", "isEnabled")),
             "com.vaadin.flow.component.dialog.Dialog", new Wrapper("com.vaadin.testing.unified.component.UnifiedDialog",
                     COMMON_FILTERS, Map.of(), Map.of("isOpened", "isOpen", "getHeaderTitle", "getHeaderTitle")));
+
+    private static final Map<String, Wrapper> BY_COMPONENT = Stream.concat(CORE.entrySet().stream(), MORE.entrySet().stream())
+            .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     private Browserless() {
     }
@@ -112,8 +159,30 @@ final class Browserless {
      * methods are the test base's ({@code navigate}, {@code find}, {@code test}, {@code findTextField()}, ...).
      */
     static boolean isHandle(Expression e) {
-        return e instanceof J.Identifier id && id.getType() != null
-                && (TypeUtils.isAssignableTo(UI_CONTEXT, id.getType()) || TypeUtils.isAssignableTo(EXTENSION, id.getType()));
+        JavaType type = e instanceof J.Identifier id ? id.getType()
+                : e instanceof J.FieldAccess access && access.getTarget() instanceof J.Identifier t
+                        && t.getSimpleName().equals("this") ? access.getType() : null;
+        return type != null && (TypeUtils.isAssignableTo(UI_CONTEXT, type) || TypeUtils.isAssignableTo(EXTENSION, type)
+                || TypeUtils.isAssignableTo(BASE_TEST, type));
+    }
+
+    /** The test base itself, held by a page object in a field: its calls are test base calls too. */
+    static final String BASE_TEST = "com.vaadin.browserless.BaseBrowserlessTest";
+
+    /** A cursor message: the code is a page object's, converting with {@code includePageObjects}. */
+    static final String PAGE_OBJECT = "unified.browserless.page-object";
+
+    /**
+     * A call to a page object method that the page object recipe made return a Wrapper ({@code login.name()}):
+     * its Wrapper, else {@code null}.
+     */
+    static Wrapper ofPageObjectCall(Expression e) {
+        if (!(e instanceof J.MethodInvocation call) || call.getMethodType() == null
+                || !(call.getMethodType().getReturnType() instanceof JavaType.FullyQualified returned)) {
+            return null;
+        }
+        return BY_COMPONENT.values().stream().filter(w -> w.fqn().equals(returned.getFullyQualifiedName()))
+                .findFirst().orElse(null);
     }
 
     /**
@@ -191,11 +260,96 @@ final class Browserless {
         if (wrapper == null) {
             return null;
         }
-        Object parent = locatorCursor.getParentTreeCursor().getValue();
-        boolean used = parent instanceof J.MethodInvocation call && call.getSelect() == locatorCursor.getValue()
-                && wrapper.testerCalls().containsKey(call.getSimpleName())
-                || TestBenchAssertionsToUnified.isUnifiedAssertion(parent);
-        return used ? wrapper : null;
+        return testerUse(locatorCursor, wrapper) ? wrapper : null;
+    }
+
+    /**
+     * The Unified name of a tester or locator call, a rename or (see {@link #isRowCall}) a row call; {@code null}
+     * when the Wrapper has no form of it.
+     */
+    static String operation(Wrapper wrapper, J.MethodInvocation call) {
+        if (isRowCall(wrapper, call)) {
+            return wrapper.rowCalls().get(call.getSimpleName());
+        }
+        String unified = wrapper.testerCalls().get(call.getSimpleName());
+        if (unified != null && STRING_ARGUMENT.contains(call.getSimpleName())
+                && (noArguments(call) || !TypeUtils.isString(call.getArguments().get(0).getType()))) {
+            return null;
+        }
+        return unified;
+    }
+
+    /** A call the Unified API makes on a row: {@code clickRow(i)} becomes {@code row(i).click()}. */
+    static boolean isRowCall(Wrapper wrapper, J.MethodInvocation call) {
+        return wrapper.rowCalls().containsKey(call.getSimpleName()) && !noArguments(call)
+                && call.getArguments().get(0).getType() == JavaType.Primitive.Int;
+    }
+
+    /**
+     * Whether a tester value ({@code test(component)}, a locator, or a local holding one) is used only through
+     * calls the Wrapper has, a Unified assertion, or a local the Wrapper can hold.
+     */
+    static boolean testerUse(Cursor valueCursor, Wrapper wrapper) {
+        Object value = valueCursor.getValue();
+        Cursor parentCursor = valueCursor.getParentTreeCursor();
+        Object parent = parentCursor.getValue();
+        if (parent instanceof J.MethodInvocation call && call.getSelect() == value) {
+            return operation(wrapper, call) != null;
+        }
+        if (TestBenchAssertionsToUnified.isUnifiedAssertion(parent)) {
+            return true;
+        }
+        if (parent instanceof J.VariableDeclarations.NamedVariable variable && variable.getInitializer() == value) {
+            Cursor method = parentCursor.dropParentUntil(t -> t instanceof J.MethodDeclaration || t == Cursor.ROOT_VALUE);
+            return method.getValue() instanceof J.MethodDeclaration && testerLocal(method, variable) != null;
+        }
+        return false;
+    }
+
+    /**
+     * The Wrapper a local holding a tester or locator converts to: initialized with {@code test(lookup)} or a
+     * locator, and used only through calls the Wrapper has.
+     */
+    static Wrapper testerLocal(Cursor methodCursor, J.VariableDeclarations.NamedVariable variable) {
+        Expression initializer = variable.getInitializer();
+        Wrapper wrapper = initializer instanceof J.MethodInvocation test && isTest(test)
+                ? ofLookup(test.getArguments().get(0)) : ofLocator(initializer);
+        if (wrapper == null) {
+            return null;
+        }
+        AtomicBoolean other = new AtomicBoolean();
+        new JavaIsoVisitor<AtomicBoolean>() {
+            @Override
+            public J.Identifier visitIdentifier(J.Identifier identifier, AtomicBoolean found) {
+                if (identifier.getSimpleName().equals(variable.getSimpleName())
+                        && !(getCursor().getParentTreeCursor().getValue() instanceof J.VariableDeclarations.NamedVariable)
+                        && !testerUse(getCursor(), wrapper)) {
+                    found.set(true);
+                }
+                return identifier;
+            }
+        }.visit(methodCursor.getValue(), other, methodCursor.getParentOrThrow());
+        return other.get() ? null : wrapper;
+    }
+
+    /** The Wrapper the tester or locator local named by {@code id} converts to, or {@code null}. */
+    static Wrapper testerLocal(Cursor cursor, J.Identifier id) {
+        Cursor methodCursor = cursor.dropParentUntil(t -> t instanceof J.MethodDeclaration || t == Cursor.ROOT_VALUE);
+        if (!(methodCursor.getValue() instanceof J.MethodDeclaration method) || method.getBody() == null) {
+            return null;
+        }
+        for (var statement : method.getBody().getStatements()) {
+            if (statement instanceof J.VariableDeclarations declarations && declarations.getVariables().size() == 1
+                    && declarations.getVariables().get(0).getSimpleName().equals(id.getSimpleName())) {
+                return testerLocal(methodCursor, declarations.getVariables().get(0));
+            }
+        }
+        return null;
+    }
+
+    /** Every Flow component the recipe knows, with its Wrapper. */
+    static Map<String, Wrapper> wrappersByComponent() {
+        return BY_COMPONENT;
     }
 
     /** The Wrapper for a Flow component class, or {@code null} when it has none yet. */
@@ -292,7 +446,15 @@ final class Browserless {
         if (e instanceof J.Identifier id) {
             return convertibleLocal(cursor, id);
         }
-        return e instanceof J.MethodInvocation ? convertibleLookup(new Cursor(cursor, e)) : null;
+        if (!(e instanceof J.MethodInvocation)) {
+            return null;
+        }
+        Wrapper lookup = convertibleLookup(new Cursor(cursor, e));
+        if (lookup != null) {
+            return lookup;
+        }
+        Wrapper returned = ofPageObjectCall(e);
+        return returned != null && usedThrough(new Cursor(cursor, e), returned) ? returned : null;
     }
 
     /**
@@ -307,12 +469,17 @@ final class Browserless {
             return wrapper.getters().containsKey(call.getSimpleName()) && noArguments(call);
         }
         if (parent instanceof J.MethodInvocation test && isTest(test) && test.getArguments().get(0) == element) {
-            Object grandparent = parentCursor.getParentTreeCursor().getValue();
-            return grandparent instanceof J.MethodInvocation testerCall && testerCall.getSelect() == test
-                    && wrapper.testerCalls().containsKey(testerCall.getSimpleName());
+            return testerUse(parentCursor, wrapper);
         }
         if (TestBenchAssertionsToUnified.isUnifiedAssertion(parent)) {
             return true;
+        }
+        // a page object method returning what it found: its return type becomes the Wrapper
+        if (parent instanceof J.Return && elementCursor.getNearestMessage(PAGE_OBJECT) != null) {
+            J.MethodDeclaration method = elementCursor.firstEnclosing(J.MethodDeclaration.class);
+            return method != null && method.getReturnTypeExpression() != null
+                    && method.getReturnTypeExpression().getType() instanceof JavaType.FullyQualified returned
+                    && forComponent(returned.getFullyQualifiedName()) == wrapper;
         }
         if (parent instanceof J.VariableDeclarations.NamedVariable variable && variable.getInitializer() == element) {
             Cursor method = parentCursor.dropParentUntil(t -> t instanceof J.MethodDeclaration || t == Cursor.ROOT_VALUE);

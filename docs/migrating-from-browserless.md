@@ -41,6 +41,7 @@ Commit or stash your work first: the recipe changes files in place.
     recipeList:
       - org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified:
           addPlaywright: true
+          includePageObjects: true
           addAgentSkill: true
     ```
 
@@ -74,6 +75,7 @@ Commit or stash your work first: the recipe changes files in place.
 |---|---|---|
 | `addPlaywright` | `false` | Also adds the Playwright adapter, `unified-test-playwright` |
 | `addSelenium` | `false` | Also adds the Selenium adapter, `unified-test-selenium` |
+| `includePageObjects` | `false` | Also converts page objects (see below) |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
 Without a browser adapter the migrated suite keeps running on Browserless only, as before; adding one is the step that makes it run in a browser (see **Running in a browser**).
@@ -96,14 +98,18 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 | `assertTrue(getCurrentView() instanceof V)`, `assertInstanceOf(V.class, getCurrentView())` | `assertThat(page).isAt(V.class)` |
 | `roundTrip()`, `runPendingSignalsTasks()` | removed: Auto-Wait |
 | `fireShortcut(Key.KEY_S, KeyModifier.CONTROL)` | `page.pressKey("Control+s")`, with a Migration Marker (see below) |
+| Grid `size()`, `getCellText(row, col)`, `clickRow(row)`, `select(row)` | `getRowCount()`, `row(row).getCellText(col)`, `row(row).click()`, `row(row).select()` |
+| a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class).single()` |
+| the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.rows().withCellText(text).single().getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
+| ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox and Dialog; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
+A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details and Grid; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
 
 ### Context API and extension tests
 
 Tests written against Browserless Test's context API (a `BrowserlessUIContext` window from `BrowserlessApplicationContext`, often built in a `@TestConfiguration`) or with `@RegisterExtension BrowserlessExtension` convert the same way. Their wiring goes: the context and extension fields, the `@TestConfiguration` that builds the application, and the `@BeforeEach`/`@AfterEach` methods that only open and close the window. Calls on the window or extension convert like the base-class calls above, and its locators become lookups: `window.findTextField().withLabel("Name").setValue("x")` becomes `page.find(UnifiedTextField.class).withLabel("Name").single().setValue("x")`. Views the wiring named (`create(View.class)`, `withViewPackages(..)`) become `@ViewPackages` on a plain test. A test that uses the application or user context beyond opening its window (a second user, a second window) is left as it is, with a Migration Marker.
 
-The demo's `EditPersonBrowserlessTest` and what the recipe makes of it: its Grid locator has no Wrapper yet, so it stays on the window, which the test now gets from the Unified Page.
+The demo's `EditPersonBrowserlessTest` and what the recipe makes of it. Nothing is left behind the Escape Hatch, so CI runs the result on Browserless, Playwright and Selenium.
 
 === "Before (context API)"
 
@@ -115,6 +121,22 @@ The demo's `EditPersonBrowserlessTest` and what the recipe makes of it: its Grid
 
     ```java
     --8<-- "unified-test-demo/src/test/java/demo/EditPersonBrowserlessMigratedTest.java:test"
+    ```
+
+### Page objects
+
+With `includePageObjects`, a page object that holds the Browserless test (`BrowserlessTest`, `SpringBrowserlessTest`, or your base class) takes the `UnifiedPage` instead. Its lookups and tester calls convert as in a test, its methods return Wrappers, and its tests pass `page` where they passed `this`. It converts only when every use of the test in it converts, and every caller uses what it returns through Wrapper calls; it then needs no Escape Hatch. Otherwise, and without the option, the test classes that pass `this` to it are left as they are, with a Migration Marker.
+
+=== "Before (Browserless)"
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/ProfileBrowserlessPage.java:page"
+    ```
+
+=== "After (Unified API)"
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/ProfileBrowserlessMigratedPage.java:page"
     ```
 
 ### TestBench UI Unit tests
@@ -149,11 +171,12 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `filter runs Java on the component: <call>: replace withCondition(..) with a locator` | `withCondition(..)` and `withPropertyValue(..)` run Java on each component: pick a label, text or test id that finds the same one |
 | `was first(); single() fails when several components match` | If the test now fails with "several match", add a filter |
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
+| `was a scan of column <col>; withCellText(text) matches any column ...` | If another column can hold the text, name the column: `withCellText("Header", text)` |
 | `was fireShortcut(..); pressKey also reaches the focused component and an open dialog` | `fireShortcut` fired the shortcut on the UI only; `pressKey` also reaches the focused component and an open dialog (Escape closes it). Check the test still means the same |
 | `Browserless-only pattern: @Transactional ...` | The test's transaction reaches the views only on Browserless ([test data](spec/02-test-setup.md)): keep it, or commit test data and clean up |
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |
 | `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |
-| `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: make the page object take a `UnifiedPage`, then run the migration again |
+| `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: run with `includePageObjects`, or make the page object take a `UnifiedPage` by hand, then run the migration again |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 

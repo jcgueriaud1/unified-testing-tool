@@ -44,7 +44,7 @@ public class BrowserlessLookupsToUnified extends Recipe {
         return new JavaIsoVisitor<>() {
             @Override
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
-                if (!Pages.hasPageParameter(method)) {
+                if (!Pages.hasPageParameter(method) && getCursor().getNearestMessage(Browserless.PAGE_OBJECT) == null) {
                     return method;
                 }
                 var markers = MigrationMarkers.collect(getCursor());
@@ -54,10 +54,23 @@ public class BrowserlessLookupsToUnified extends Recipe {
             @Override
             public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext ctx) {
                 Cursor method = getCursor().dropParentUntil(t -> t instanceof J.MethodDeclaration || t == Cursor.ROOT_VALUE);
-                Browserless.Wrapper wrapper = !(method.getValue() instanceof J.MethodDeclaration m) || !Pages.hasPageParameter(m)
-                        || multiVariable.getVariables().size() != 1 || multiVariable.getTypeExpression() == null
-                        ? null : Browserless.convertibleLocal(method, multiVariable.getVariables().get(0));
+                boolean candidate = method.getValue() instanceof J.MethodDeclaration m && (Pages.hasPageParameter(m)
+                                || getCursor().getNearestMessage(Browserless.PAGE_OBJECT) != null)
+                        && multiVariable.getVariables().size() == 1 && multiVariable.getTypeExpression() != null;
+                Browserless.Wrapper wrapper = candidate ? Browserless.convertibleLocal(method, multiVariable.getVariables().get(0)) : null;
+                Browserless.Wrapper tester = candidate && wrapper == null
+                        ? Browserless.testerLocal(method, multiVariable.getVariables().get(0)) : null;
                 J.VariableDeclarations v = super.visitVariableDeclarations(multiVariable, ctx);
+                if (tester != null) {
+                    // GridTester t = test(grid) → UnifiedGrid t = grid; a locator local is already a lookup
+                    wrapper = tester;
+                    if (v.getVariables().get(0).getInitializer() instanceof J.MethodInvocation test
+                            && multiVariable.getVariables().get(0).getInitializer() instanceof J.MethodInvocation original
+                            && Browserless.isTest(original)) {
+                        Expression component = test.getArguments().get(0).withPrefix(test.getPrefix());
+                        v = v.withVariables(List.of(v.getVariables().get(0).withInitializer(component)));
+                    }
+                }
                 if (wrapper == null) {
                     return v;
                 }
@@ -80,6 +93,9 @@ public class BrowserlessLookupsToUnified extends Recipe {
                     return id;
                 }
                 Browserless.Wrapper wrapper = Browserless.convertibleLocal(getCursor(), identifier);
+                if (wrapper == null) {
+                    wrapper = Browserless.testerLocal(getCursor(), identifier);
+                }
                 return wrapper == null ? id
                         : id.withType(JavaType.ShallowClass.build(wrapper.fqn())).withFieldType(null);
             }
@@ -95,14 +111,21 @@ public class BrowserlessLookupsToUnified extends Recipe {
                         && m.getSelect() instanceof J.MethodInvocation convertedTest) {
                     Browserless.Wrapper wrapper = Browserless.convertibleElement(
                             new Cursor(getCursor(), test), test.getArguments().get(0));
-                    String unified = wrapper == null ? null : wrapper.testerCalls().get(method.getSimpleName());
+                    String unified = wrapper == null ? null : Browserless.operation(wrapper, method);
                     if (unified != null) {
                         Expression component = convertedTest.getArguments().get(0).withPrefix(convertedTest.getPrefix());
                         // no Browserless types left behind, so their imports go
-                        return unifiedCall(m.getPadding().withSelect(JRightPadded.build(component)), wrapper.fqn(),
-                                unified, m.getMethodType() == null ? null : m.getMethodType().getReturnType());
+                        return operation(m, component, wrapper, method, unified);
                     }
                     return m;
+                }
+                // a tester or locator local: t.size() → t.getRowCount(), t.clickRow(i) → t.row(i).click()
+                if (method.getSelect() instanceof J.Identifier local && !(m.getSelect() instanceof J.MethodInvocation)) {
+                    Browserless.Wrapper wrapper = Browserless.testerLocal(getCursor(), local);
+                    String unified = wrapper == null ? null : Browserless.operation(wrapper, method);
+                    if (unified != null) {
+                        return operation(m, m.getSelect(), wrapper, method, unified);
+                    }
                 }
                 // component.getValue() → component.getValue(), checkbox.getValue() → checkbox.isChecked()
                 if (method.getSelect() != null && Browserless.noArguments(method)) {
@@ -128,25 +151,26 @@ public class BrowserlessLookupsToUnified extends Recipe {
                                 .imports(w.fqn())
                                 .javaParser(Stubs.parser(Stubs.interfaceStub(w.fqn())))
                                 .build()
-                                .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
+                                .apply(getCursor(), m.getCoordinates().replace(), receiver(method));
                     } else {
                         converted = unifiedCall(m, QUERY, w.filters().get(method.getSimpleName()),
                                 JavaType.ShallowClass.build(QUERY));
                     }
                     // a locator is lazy and unique; a Unified lookup ends in single()
+                    Object locatorParent = locator.getParentTreeCursor().getValue();
                     boolean asserted = locator.getValue() == method
-                            && TestBenchAssertionsToUnified.isUnifiedAssertion(locator.getParentTreeCursor().getValue());
+                            && (TestBenchAssertionsToUnified.isUnifiedAssertion(locatorParent)
+                                    || locatorParent instanceof J.VariableDeclarations.NamedVariable);
                     return asserted ? single(converted, w) : converted;
                 }
                 // ..locator.setValue(..) → ..single().setValue(..)
                 if (method.getSelect() != null && Browserless.ofLocator(method.getSelect()) != null) {
                     Browserless.Wrapper w = Browserless.convertibleLocator(new Cursor(getCursor(), method.getSelect()));
-                    String unified = w == null ? null : w.testerCalls().get(method.getSimpleName());
+                    String unified = w == null ? null : Browserless.operation(w, method);
                     if (unified == null) {
                         return m;
                     }
-                    return unifiedCall(m.getPadding().withSelect(JRightPadded.build(single(m.getSelect(), w))), w.fqn(),
-                            unified, m.getMethodType() == null ? null : m.getMethodType().getReturnType());
+                    return operation(m, single(m.getSelect(), w), w, method, unified);
                 }
                 Cursor terminal = Browserless.terminalOf(getCursor());
                 Browserless.Wrapper wrapper = terminal == null ? null : Browserless.convertibleLookup(terminal);
@@ -163,7 +187,7 @@ public class BrowserlessLookupsToUnified extends Recipe {
                             .imports(wrapper.fqn())
                             .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
                             .build()
-                            .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
+                            .apply(getCursor(), m.getCoordinates().replace(), receiver(method));
                 }
                 // the query's calls keep no Browserless types, so their imports go
                 boolean isTerminal = terminal.getValue() == method;
@@ -193,6 +217,39 @@ public class BrowserlessLookupsToUnified extends Recipe {
                 return filter == null ? m : unifiedCall(m, QUERY, filter, JavaType.ShallowClass.build(QUERY));
             }
 
+            /**
+             * The tester or locator call made on the Wrapper: renamed, or, for a row call, made on
+             * {@code row(index)} with the remaining arguments ({@code getCellText(r, c)} → {@code row(r).getCellText(c)}).
+             */
+            private J.MethodInvocation operation(J.MethodInvocation m, Expression wrapperValue, Browserless.Wrapper wrapper,
+                    J.MethodInvocation original, String unified) {
+                JavaType returned = m.getMethodType() == null ? null : m.getMethodType().getReturnType();
+                if (!Browserless.isRowCall(wrapper, original)) {
+                    return unifiedCall(m.getPadding().withSelect(JRightPadded.build(wrapperValue)), wrapper.fqn(), unified,
+                            returned);
+                }
+                String rowType = wrapper.fqn() + "$UnifiedGridRow";
+                JavaType.Method rowMethod = new JavaType.Method(null, 1L, JavaType.ShallowClass.build(wrapper.fqn()), "row",
+                        JavaType.ShallowClass.build(rowType), List.of("index"), List.of(JavaType.Primitive.Int), null, null,
+                        null, null);
+                J.MethodInvocation row = new J.MethodInvocation(Tree.randomId(), wrapperValue.getPrefix(), Markers.EMPTY,
+                        JRightPadded.build(wrapperValue.withPrefix(Space.EMPTY)), null,
+                        new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), "row", rowMethod, null),
+                        org.openrewrite.java.tree.JContainer.build(Space.EMPTY,
+                                List.of(JRightPadded.build(m.getArguments().get(0).withPrefix(Space.EMPTY))), Markers.EMPTY),
+                        rowMethod);
+                List<Expression> rest = m.getArguments().subList(1, m.getArguments().size()).stream()
+                        .map(a -> a == m.getArguments().get(1) ? a.withPrefix(Space.EMPTY) : a).toList();
+                J.MethodInvocation call = m.getPadding().withSelect(JRightPadded.build(row))
+                        .withArguments(rest.isEmpty() ? List.of(new J.Empty(Tree.randomId(), Space.EMPTY, Markers.EMPTY)) : rest);
+                JavaType.Method type = new JavaType.Method(null, 1L, JavaType.ShallowClass.build(rowType), unified,
+                        returned instanceof JavaType.Primitive || TypeUtils.isString(returned) ? returned : JavaType.Primitive.Void,
+                        rest.stream().map(a -> "p").toList(),
+                        rest.stream().map(a -> a.getType() == null ? (JavaType) JavaType.ShallowClass.build("java.lang.Object") : a.getType()).toList(),
+                        null, null, null, null);
+                return call.withMethodType(type).withName(call.getName().withSimpleName(unified).withType(type));
+            }
+
             /** The call alone, without what it is called on: {@code first()}, {@code withCaption("Save")}. */
             private String printCall(J.MethodInvocation call) {
                 return call.printTrimmed(getCursor()).replaceFirst("^[\\s\\S]*\\.(?=" + call.getSimpleName() + "\\()", "");
@@ -200,7 +257,22 @@ public class BrowserlessLookupsToUnified extends Recipe {
 
             private boolean inPageMethod() {
                 J.MethodDeclaration enclosing = getCursor().firstEnclosing(J.MethodDeclaration.class);
-                return enclosing != null && Pages.hasPageParameter(enclosing);
+                return enclosing != null && (Pages.hasPageParameter(enclosing)
+                        || getCursor().getNearestMessage(Browserless.PAGE_OBJECT) != null);
+            }
+
+            /**
+             * Who a lookup starts from: the test's {@code page}, or, in a page object, the field that held the
+             * test and now holds the Unified Page.
+             */
+            private Expression receiver(J.MethodInvocation start) {
+                if (getCursor().getNearestMessage(Browserless.PAGE_OBJECT) != null && start.getSelect() != null) {
+                    Expression field = start.getSelect();
+                    JavaType.ShallowClass page = JavaType.ShallowClass.build(TestBenchSetupToUnified.UNIFIED_PAGE);
+                    return field instanceof J.Identifier id ? id.withType(page).withFieldType(null)
+                            : ((J.FieldAccess) field).withType(page);
+                }
+                return Stubs.page();
             }
         };
     }

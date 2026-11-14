@@ -136,6 +136,24 @@ class GoldenMigrationTest implements RewriteTest {
     }
 
     @Test
+    void aBrowserlessTestAndItsPageObjectMigrateTogether() throws IOException {
+        // twin names in the after files are the input names, as the recipe can't rename classes
+        java.util.Map<String, String> twins = java.util.Map.of(
+                "ProfileBrowserlessPage", "ProfileBrowserlessMigratedPage",
+                "ProfileBrowserlessPageObjectTest", "ProfileBrowserlessPageObjectMigratedTest");
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        for (var pair : twins.entrySet()) {
+            String after = Files.readString(DEMO_TESTS.resolve(pair.getValue() + ".java"));
+            for (var name : twins.entrySet()) {
+                after = after.replace(name.getValue(), name.getKey());
+            }
+            sources.add(java(Files.readString(DEMO_TESTS.resolve(pair.getKey() + ".java")), after));
+        }
+        rewriteRun(spec -> spec.recipe(new MigrateBrowserlessToUnified(null, null, true, null)),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    @Test
     void aTestBenchUiUnitTestMigratesLikeItsBrowserlessTwin() throws IOException {
         // TestBench UI Unit 9.x needs Vaadin 24, so its golden source is no demo test: compile-only, here
         String before = new String(getClass().getResourceAsStream("/golden/ProfileUIUnitTest.java").readAllBytes(),

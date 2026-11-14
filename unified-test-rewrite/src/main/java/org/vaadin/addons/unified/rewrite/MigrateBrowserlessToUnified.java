@@ -28,6 +28,11 @@ public class MigrateBrowserlessToUnified extends Recipe {
             required = false)
     private final @Nullable Boolean addSelenium;
 
+    @Option(displayName = "Include page objects",
+            description = "Also migrate page objects: classes that look components up through the Browserless test.",
+            required = false)
+    private final @Nullable Boolean includePageObjects;
+
     @Option(displayName = "Add the agent skill",
             description = "Also write `.claude/skills/resolve-migration-markers/SKILL.md`, a Claude Code skill that works "
                     + "through the Migration Markers the migration leaves.",
@@ -35,20 +40,31 @@ public class MigrateBrowserlessToUnified extends Recipe {
     private final @Nullable Boolean addAgentSkill;
 
     public MigrateBrowserlessToUnified() {
-        this(null, null, null);
+        this(null, null, null, null);
     }
 
     public MigrateBrowserlessToUnified(@Nullable Boolean addPlaywright, @Nullable Boolean addSelenium) {
-        this(addPlaywright, addSelenium, null);
+        this(addPlaywright, addSelenium, null, null);
+    }
+
+    public MigrateBrowserlessToUnified(@Nullable Boolean addPlaywright, @Nullable Boolean addSelenium,
+            @Nullable Boolean addAgentSkill) {
+        this(addPlaywright, addSelenium, null, addAgentSkill);
     }
 
     @JsonCreator
     public MigrateBrowserlessToUnified(@JsonProperty("addPlaywright") @Nullable Boolean addPlaywright,
             @JsonProperty("addSelenium") @Nullable Boolean addSelenium,
+            @JsonProperty("includePageObjects") @Nullable Boolean includePageObjects,
             @JsonProperty("addAgentSkill") @Nullable Boolean addAgentSkill) {
         this.addPlaywright = addPlaywright;
         this.addSelenium = addSelenium;
+        this.includePageObjects = includePageObjects;
         this.addAgentSkill = addAgentSkill;
+    }
+
+    public @Nullable Boolean getIncludePageObjects() {
+        return includePageObjects;
     }
 
     public @Nullable Boolean getAddAgentSkill() {
@@ -90,6 +106,10 @@ public class MigrateBrowserlessToUnified extends Recipe {
                 .load(DeclaredRecipes.load("/META-INF/rewrite/testbench.yml"))
                 .build();
         List<Recipe> list = new ArrayList<>(names.stream().map(recipes::activateRecipes).map(Recipe.class::cast).toList());
+        if (Boolean.TRUE.equals(includePageObjects)) {
+            // after the UI Unit rename, before the test code: its tests then pass page, not this
+            list.add(list.size() - 1, new BrowserlessPageObjectsToUnified());
+        }
         list.add(new BrowserlessPageObjectsMarked()); // the classes the test code recipes skip
         list.add(new RemoveJUnit4WhenUnused()); // UI Unit's JUnit 4 tests: scans every source
         if (Boolean.TRUE.equals(addAgentSkill)) {
@@ -101,11 +121,12 @@ public class MigrateBrowserlessToUnified extends Recipe {
     @Override
     public boolean equals(Object o) {
         return o instanceof MigrateBrowserlessToUnified other && Objects.equals(addPlaywright, other.addPlaywright)
-                && Objects.equals(addSelenium, other.addSelenium) && Objects.equals(addAgentSkill, other.addAgentSkill);
+                && Objects.equals(addSelenium, other.addSelenium) && Objects.equals(includePageObjects, other.includePageObjects)
+                && Objects.equals(addAgentSkill, other.addAgentSkill);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(addPlaywright, addSelenium, addAgentSkill);
+        return Objects.hash(addPlaywright, addSelenium, includePageObjects, addAgentSkill);
     }
 }
