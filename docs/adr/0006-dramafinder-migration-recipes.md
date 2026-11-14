@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Dramafinder test migration: the same recipes-then-skill path, for 1.x and 2.x
