@@ -4,12 +4,14 @@ import com.microsoft.playwright.Page;
 import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.component.UnifiedButton;
+import com.vaadin.testing.unified.component.UnifiedNotification;
+import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import org.junit.jupiter.api.Test;
-import org.vaadin.addons.dramafinder.element.ButtonElement;
 import org.vaadin.addons.dramafinder.element.GridElement;
-import org.vaadin.addons.dramafinder.element.NotificationElement;
-import org.vaadin.addons.dramafinder.element.TextFieldElement;
+
+import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
 /** Dramafinder (Playwright), without the Unified API. Shown in docs/comparison.md. */
 // --8<-- [start:test]
@@ -29,13 +31,11 @@ class EditPersonDramafinderMigratedTest {
                 .orElseThrow();
         // TODO unified: Dramafinder Escape Hatch: alan.getCell("Name").click()
         alan.getCell("Name").click();
-        // TODO unified: Dramafinder Escape Hatch: TextFieldElement.getByLabel(playwright, "Name").setValue("Alan M. Turing")
-        TextFieldElement.getByLabel(playwright, "Name").setValue("Alan M. Turing");
-        // TODO unified: Dramafinder Escape Hatch: ButtonElement.getByText(playwright, "Save").click()
-        ButtonElement.getByText(playwright, "Save").click();
+        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alan M. Turing");
+        page.find(UnifiedButton.class).withText("Save").single().click();
 
-        // TODO unified: Dramafinder Escape Hatch: NotificationElement.getByText(playwright, "Saved Alan M. Turing").assertOpen()
-        NotificationElement.getByText(playwright, "Saved Alan M. Turing").assertOpen();
+        // TODO unified: was getByText(..), a substring and first match; single() fails when several components match
+        assertThat(page.find(UnifiedNotification.class).withTextContaining("Saved Alan M. Turing").single()).isOpen();
         // TODO unified: Dramafinder Escape Hatch: alan.getCell("Name").assertText("Alan M. Turing")
         alan.getCell("Name").assertText("Alan M. Turing");
     }

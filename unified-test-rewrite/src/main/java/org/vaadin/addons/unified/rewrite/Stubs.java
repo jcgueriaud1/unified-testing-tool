@@ -99,6 +99,14 @@ final class Stubs {
                     Assert hasItems(String... items);
                     Assert isAt(Class<?> view);
                     Assert hasPath(String path);
+                    Assert isVisible();
+                    Assert isHidden();
+                    Assert hasLabel(String label);
+                    Assert isValid();
+                    Assert isInvalid();
+                    Assert hasErrorMessage(String message);
+                    Assert hasTextContaining(String part);
+                    Assert isIndeterminate();
                     Assert hasQueryParameter(String name, String value);
                 }
             }
