@@ -196,6 +196,19 @@ class GoldenMigrationTest implements RewriteTest {
     }
 
     @Test
+    void rawPlaywrightAndACustomElementRunThroughTheEscapeHatch() throws IOException {
+        String input = "ProfileDramafinderTest";
+        String twin = "ProfileDramafinderMigratedTest";
+        String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
+        String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        sources.add(java(Files.readString(DEMO_TESTS.resolve("RatingDramafinderElement.java"))));
+        sources.add(java(before, after));
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified()),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    @Test
     void aDramafinder1TestAndItsCopiedBaseClassMigrate() throws IOException {
         // Dramafinder 1.x and 2.x can't share the demo's classpath, so the 1.x golden source is no demo test
         String before = resource("/golden/dramafinder1/EditPersonDramafinder1Test.java");

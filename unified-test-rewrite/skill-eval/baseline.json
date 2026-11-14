@@ -1,16 +1,16 @@
 {
-  "skillSha256": "1a163725c81b6e02d2839d8c72663ab240eec90b9f97bd8daa355c8f63421cc1",
+  "skillSha256": "03f1a4b8b7c5a29a31ff3227aa4cd3d8b246426f635bd8c689dc7aae09ccf447",
   "compiles": 1,
   "totals": {
-    "markersBefore": 24,
-    "resolved": 24,
+    "markersBefore": 39,
+    "resolved": 39,
     "kept": 0,
     "untouched": 0,
     "escapeHatches": 0,
     "singleToolTests": 0,
-    "browserless.passed": 16,
+    "browserless.passed": 20,
     "browserless.failed": 0,
-    "playwright.passed": 16,
+    "playwright.passed": 20,
     "playwright.failed": 0
   },
   "fixtures": {
@@ -29,6 +29,30 @@
     "EditPersonBrowserlessMigratedTest.java": {
       "markersBefore": 1,
       "resolved": 1,
+      "kept": 0,
+      "untouched": 0,
+      "escapeHatches": 0,
+      "singleToolTests": 0,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0
+    },
+    "EditPersonDramafinder1MigratedTest.java": {
+      "markersBefore": 5,
+      "resolved": 5,
+      "kept": 0,
+      "untouched": 0,
+      "escapeHatches": 0,
+      "singleToolTests": 0,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0
+    },
+    "EditPersonDramafinderMigratedTest.java": {
+      "markersBefore": 3,
+      "resolved": 3,
       "kept": 0,
       "untouched": 0,
       "escapeHatches": 0,
@@ -108,6 +132,18 @@
       "browserless.passed": 1,
       "browserless.failed": 0,
       "playwright.passed": 1,
+      "playwright.failed": 0
+    },
+    "ProfileDramafinderMigratedTest.java": {
+      "markersBefore": 7,
+      "resolved": 7,
+      "kept": 0,
+      "untouched": 0,
+      "escapeHatches": 0,
+      "singleToolTests": 0,
+      "browserless.passed": 2,
+      "browserless.failed": 0,
+      "playwright.passed": 2,
       "playwright.failed": 0
     },
     "ProfileEscapeHatchMigratedTest.java": {

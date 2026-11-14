@@ -104,9 +104,24 @@ final class Dramafinder {
 
     static boolean isToolCall(J j) {
         if (j instanceof J.MethodInvocation m) {
-            return m.getMethodType() != null && !isBaseCall(m) && isToolType(m.getMethodType().getDeclaringType());
+            return m.getMethodType() != null && !isBaseCall(m) && (isToolType(m.getMethodType().getDeclaringType())
+                    || isCustomElement(m.getMethodType().getDeclaringType()));
         }
-        return j instanceof J.NewClass n && isToolType(TypeUtils.asFullyQualified(n.getType()));
+        return j instanceof J.NewClass n && (isToolType(TypeUtils.asFullyQualified(n.getType()))
+                || isCustomElement(TypeUtils.asFullyQualified(n.getType())));
+    }
+
+    /** A project's own Dramafinder element: a class extending Dramafinder's {@code VaadinElement}. */
+    static boolean isCustomElement(JavaType.FullyQualified type) {
+        if (type == null || isToolType(type)) {
+            return false;
+        }
+        for (JavaType.FullyQualified t = type.getSupertype(); t != null; t = t.getSupertype()) {
+            if (t.getFullyQualifiedName().equals("org.vaadin.addons.dramafinder.element.VaadinElement")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
