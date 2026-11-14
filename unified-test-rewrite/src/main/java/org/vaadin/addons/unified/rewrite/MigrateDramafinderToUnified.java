@@ -85,6 +85,7 @@ public class MigrateDramafinderToUnified extends Recipe {
                 .load(DeclaredRecipes.load("/META-INF/rewrite/browserless.yml"))
                 .build();
         List<Recipe> list = new ArrayList<>(names.stream().map(recipes::activateRecipes).map(Recipe.class::cast).toList());
+        list.add(new DramafinderCopiedBaseRemoved()); // a 1.x project's copy of SpringPlaywrightIT, once unused
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
         }
