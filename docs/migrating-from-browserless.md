@@ -100,6 +100,7 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 | `fireShortcut(Key.KEY_S, KeyModifier.CONTROL)` | `page.pressKey("Control+s")`, with a Migration Marker (see below) |
 | Grid `size()`, `getCellText(row, col)`, `clickRow(row)`, `select(row)` | `getRowCount()`, `row(row).getCellText(col)`, `row(row).click()`, `row(row).select()` |
 | a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class).single()` |
+| the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.rows().withCellText(text).single().getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
 | ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
 
 A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details and Grid; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
@@ -170,6 +171,7 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `filter runs Java on the component: <call>: replace withCondition(..) with a locator` | `withCondition(..)` and `withPropertyValue(..)` run Java on each component: pick a label, text or test id that finds the same one |
 | `was first(); single() fails when several components match` | If the test now fails with "several match", add a filter |
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
+| `was a scan of column <col>; withCellText(text) matches any column ...` | If another column can hold the text, name the column: `withCellText("Header", text)` |
 | `was fireShortcut(..); pressKey also reaches the focused component and an open dialog` | `fireShortcut` fired the shortcut on the UI only; `pressKey` also reaches the focused component and an open dialog (Escape closes it). Check the test still means the same |
 | `Browserless-only pattern: @Transactional ...` | The test's transaction reaches the views only on Browserless ([test data](spec/02-test-setup.md)): keep it, or commit test data and clean up |
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |

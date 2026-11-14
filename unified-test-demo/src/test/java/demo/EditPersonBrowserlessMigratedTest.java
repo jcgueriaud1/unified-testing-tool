@@ -9,8 +9,6 @@ import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
-
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 /** Browserless Test, without the Unified API. Shown in docs/comparison.md. */
@@ -23,9 +21,8 @@ class EditPersonBrowserlessMigratedTest {
         page.navigate(PeopleView.class);
         UnifiedGrid people = page.find(UnifiedGrid.class).single();
 
-        int row = IntStream.range(0, people.getRowCount())
-                .filter(i -> people.row(i).getCellText(0).equals("Alan Turing"))
-                .findFirst().orElseThrow();
+        // TODO unified: was a scan of column 0; withCellText(text) matches any column: name the column, withCellText(header, text), if another column can hold the text
+        int row = people.rows().withCellText("Alan Turing").single().getIndex();
         people.row(row).click();
         page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alan M. Turing");
         page.find(UnifiedButton.class).withText("Save").single().click();
