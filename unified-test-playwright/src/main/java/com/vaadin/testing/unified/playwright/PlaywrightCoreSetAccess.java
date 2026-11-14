@@ -21,7 +21,8 @@ import org.vaadin.addons.dramafinder.element.UploadElement;
 
 /**
  * Access to Tabs, Details, MenuBar, Upload and DateTimePicker on Playwright, through Dramafinder's elements.
- * Explicit waits after their actions keep Auto-Wait when Dramafinder's own is switched off.
+ * Dramafinder's element actions wait for the server round-trip themselves; only actions on raw locators
+ * wait here.
  */
 final class PlaywrightCoreSetAccess {
     private PlaywrightCoreSetAccess() {}
@@ -105,8 +106,7 @@ final class PlaywrightCoreSetAccess {
 
         @Override
         public void toggle() {
-            details().toggle();
-            AutoWait.afterAction(session.page());
+            details().toggle(); // waits for the round-trip
         }
 
         /** Everything but the summary, open or closed. */
@@ -141,8 +141,7 @@ final class PlaywrightCoreSetAccess {
                 topLevel(path.get(0)).click();
             } else {
                 item(open(path.subList(0, path.size() - 1)), path).click();
-            }
-            AutoWait.afterAction(session.page());
+            } // Dramafinder's click waits for the round-trip
         }
 
         @Override
@@ -186,8 +185,7 @@ final class PlaywrightCoreSetAccess {
     record DateTimePickerAccessImpl(PlaywrightSession session, Locator locator) implements DateTimePickerAccess {
         @Override
         public void typeText(String date, String time) {
-            new DateTimePickerElement(locator).typeText(date, time);
-            AutoWait.afterAction(session.page());
+            new DateTimePickerElement(locator).typeText(date, time); // waits for the round-trip
         }
     }
 

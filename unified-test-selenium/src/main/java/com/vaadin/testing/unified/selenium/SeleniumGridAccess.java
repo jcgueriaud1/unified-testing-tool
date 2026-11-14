@@ -13,6 +13,9 @@ import org.openqa.selenium.WebElement;
  * <p>
  * Columns are the visible ones in display order, <b>without</b> the multi-select checkbox column, as in
  * Flow's {@code Grid.getColumns()}.
+ * <p>
+ * The scripts here are to move to TestBench's GridElement: #170, blocked by #155-#159 (and sorting and row
+ * details in #21).
  */
 final class SeleniumGridAccess implements GridAccess {
 

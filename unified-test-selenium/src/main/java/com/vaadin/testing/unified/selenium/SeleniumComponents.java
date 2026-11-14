@@ -8,6 +8,7 @@ import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.datepicker.testbench.DatePickerElement;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.dialog.testbench.DialogElement;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
@@ -94,9 +95,7 @@ final class SeleniumComponents {
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {
                 DatePickerElement picker = session.testBench(element).wrap(DatePickerElement.class);
                 if (value instanceof String text) { // UnifiedDatePicker.typeText: as it is, unparsed
-                    WebElement input = (WebElement) session.js("return arguments[0].inputElement;", element);
-                    input.clear();
-                    input.sendKeys(text + org.openqa.selenium.Keys.ENTER);
+                    picker.setInputValue(text); // replaces the input's text, then Enter
                     return true;
                 }
                 if (value == null) {
@@ -133,13 +132,13 @@ final class SeleniumComponents {
             /** Open dialogs only: closed ones (the app's or the dev tools') are not part of the page. */
             @Override
             public boolean include(WebElement element, SeleniumSession session) {
-                return Boolean.TRUE.equals(session.js("return !!arguments[0].opened;", element));
+                return session.testBench(element).wrap(DialogElement.class).isOpen();
             }
 
             @Override
             public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
                 // the dialog host has no box of its own; open means shown
-                return Optional.of(Boolean.TRUE.equals(session.js("return !!arguments[0].opened;", element)));
+                return Optional.of(session.testBench(element).wrap(DialogElement.class).isOpen());
             }
         });
     }

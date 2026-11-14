@@ -3,8 +3,6 @@ package com.vaadin.testing.unified.selenium;
 import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
-import com.vaadin.testing.unified.spi.Filter;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,8 +14,10 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 
 /**
- * Unified Element on Selenium: reads the DOM through JavaScript, acts through WebDriver or TestBench's own
- * element classes, then waits for Vaadin to finish the round-trip.
+ * Unified Element on Selenium: reads and acts through TestBench's element API ({@link TestBenchElement})
+ * and WebDriver, then waits for Vaadin to finish the round-trip.
+ * <p>
+ * The scripts left here have no TestBench API yet; each names the issue that would replace it.
  */
 final class SeleniumElement implements UnifiedElement {
 
@@ -55,6 +55,41 @@ final class SeleniumElement implements UnifiedElement {
         return session.js(script, all);
     }
 
+    /** The element as TestBench's element, whose API the reads and actions below use. */
+    private TestBenchElement tb() {
+        return session.testBench(element);
+    }
+
+    /** A property read through TestBench, stale elements turned into the core's retryable exception. */
+    private Object property(String name) {
+        return SeleniumSession.stale(() -> tb().getProperty(name));
+    }
+
+    /** JavaScript truthiness of a value read from the browser. */
+    private static boolean truthy(Object value) {
+        if (value == null || value instanceof Boolean b && !b) {
+            return false;
+        }
+        if (value instanceof Number n) {
+            double d = n.doubleValue();
+            return d != 0 && !Double.isNaN(d);
+        }
+        return !(value instanceof String s && s.isEmpty());
+    }
+
+    /**
+     * The part that takes focus: the component's focus element or input (Vaadin fields), else the element
+     * itself.
+     */
+    private TestBenchElement focusTarget() {
+        for (String name : List.of("focusElement", "inputElement")) {
+            if (property(name) instanceof TestBenchElement target) {
+                return target;
+            }
+        }
+        return tb();
+    }
+
     // ---------------------------------------------------------------- reading
 
     @Override
@@ -69,7 +104,7 @@ final class SeleniumElement implements UnifiedElement {
         if (special.isPresent()) {
             return BrowserQueries.normalize(special.get());
         }
-        return (String) js("return (" + BrowserQueries.TEXT + ")(arguments[0]);");
+        return BrowserQueries.normalize((String) property("textContent"));
     }
 
     @Override
@@ -79,13 +114,14 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public String getInlineStyle(String name) {
+        // no TestBench API reads an inline style: #168
         return (String) js("return (" + BrowserQueries.INLINE_STYLE + ")(arguments[0], arguments[1]);",
                 BrowserQueries.cssName(name));
     }
 
     @Override
     public String getProperty(String name) {
-        Object value = js("return arguments[0][arguments[1]];", name);
+        Object value = property(name);
         if (value == null) {
             return null;
         }
@@ -107,7 +143,7 @@ final class SeleniumElement implements UnifiedElement {
         if (special.isPresent()) {
             return special.get();
         }
-        return Boolean.TRUE.equals(js("return !!arguments[0][arguments[1]];", name));
+        return truthy(property(name));
     }
 
     @Override
@@ -117,6 +153,7 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public String getCssValue(String property) {
+        // WebDriver's getCssValue rewrites colors to rgba(..), unlike the other Testing Tools: #169
         return (String) js("return getComputedStyle(arguments[0]).getPropertyValue(arguments[1]);", property);
     }
 
@@ -127,7 +164,7 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public boolean isEnabled() {
-        return Boolean.TRUE.equals(js("return !arguments[0].disabled && !arguments[0].hasAttribute('disabled');"));
+        return !truthy(property("disabled")) && !SeleniumSession.stale(() -> tb().hasAttribute("disabled"));
     }
 
     @Override
@@ -149,26 +186,43 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public void setProperty(String name, Object value) {
-        js("arguments[0][arguments[1]] = arguments[2];", name, value);
+        TestBenchElement tb = tb();
+        SeleniumSession.stale(() -> {
+            switch (value) {
+                case null -> tb.setProperty(name, (String) null);
+                case String text -> tb.setProperty(name, text);
+                case Boolean b -> tb.setProperty(name, b);
+                case Integer i -> tb.setProperty(name, i);
+                case Short i -> tb.setProperty(name, (int) i);
+                case Byte i -> tb.setProperty(name, (int) i);
+                case Number n -> tb.setProperty(name, n.doubleValue());
+                default -> throw new IllegalArgumentException("TestBench sets String, Boolean and number"
+                        + " properties, not " + value.getClass().getName());
+            }
+        });
         session.waitForVaadin();
     }
 
     @Override
     public void click() {
-        js("arguments[0].scrollIntoView({block: 'center', inline: 'center'});");
+        scrollToCenter();
         try {
             SeleniumSession.stale(element::click);
         } catch (ElementNotInteractableException e) { // incl. ElementClickInterceptedException
-            js("arguments[0].click();"); // e.g. a host element without a box of its own
+            SeleniumSession.stale(() -> tb().callFunction("click")); // e.g. a host element without a box of its own
         }
         session.waitForVaadin();
     }
 
     /** Double-clicks, then waits for Vaadin. */
     void doubleClick() {
-        js("arguments[0].scrollIntoView({block: 'center', inline: 'center'});");
+        scrollToCenter();
         new Actions(session.driver()).doubleClick(element).perform();
         session.waitForVaadin();
+    }
+
+    private void scrollToCenter() {
+        SeleniumSession.stale(() -> tb().scrollIntoView(Map.of("block", "center", "inline", "center")));
     }
 
     @Override
@@ -176,24 +230,25 @@ final class SeleniumElement implements UnifiedElement {
         if (!support.setValue(element, value, session)) {
             String text = BrowserQueries.typedText(value);
             // what TestBench's setValue does: set the value, then the events a user's input fires
-            js("""
-                    const e = arguments[0];
-                    e.value = arguments[1];
-                    e.dispatchEvent(new Event('input', {bubbles: true, composed: true}));
-                    e.dispatchEvent(new Event('change', {bubbles: true, composed: true}));""", text);
+            TestBenchElement tb = tb();
+            SeleniumSession.stale(() -> {
+                tb.setProperty("value", text);
+                tb.dispatchEvent("input", Map.of("bubbles", true, "composed", true));
+                tb.dispatchEvent("change", Map.of("bubbles", true, "composed", true));
+            });
         }
         session.waitForVaadin();
     }
 
     @Override
     public void focus() {
-        js("const t = arguments[0].focusElement || arguments[0].inputElement || arguments[0]; t.focus();");
+        SeleniumSession.stale(() -> focusTarget().callFunction("focus"));
         session.waitForVaadin();
     }
 
     @Override
     public void blur() {
-        js("const t = arguments[0].focusElement || arguments[0].inputElement || arguments[0]; t.blur();");
+        SeleniumSession.stale(() -> focusTarget().callFunction("blur")); // no TestBenchElement.blur(): #164
         session.waitForVaadin();
     }
 
@@ -203,7 +258,7 @@ final class SeleniumElement implements UnifiedElement {
      */
     @Override
     public void pressKey(String key) {
-        WebElement target = (WebElement) js("return arguments[0].focusElement || arguments[0].inputElement || arguments[0];");
+        WebElement target = focusTarget();
         try {
             SeleniumSession.stale(() -> target.sendKeys(SeleniumKeys.chord(key)));
         } catch (ElementNotInteractableException e) {
@@ -214,7 +269,7 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public void dispatchEvent(String eventName) {
-        js("arguments[0].dispatchEvent(new CustomEvent(arguments[1], {bubbles: true, composed: true}));", eventName);
+        SeleniumSession.stale(() -> tb().dispatchEvent(eventName, Map.of("bubbles", true, "composed", true)));
         session.waitForVaadin();
     }
 
@@ -245,43 +300,6 @@ final class SeleniumElement implements UnifiedElement {
             return Optional.of(type.cast(session.driver()));
         }
         return Optional.empty();
-    }
-
-    // ---------------------------------------------------------------- filters
-
-    boolean matches(Filter f) {
-        return switch (f.kind()) {
-            case TEXT -> f.matches(getText());
-            case LABEL -> f.matches(getProperty("label"));
-            case PLACEHOLDER -> f.matches(getProperty("placeholder"));
-            case ACCESSIBLE_NAME -> f.matches(accessibleName());
-            case TEST_ID -> f.value().equals(getAttribute("data-testid"));
-            case ID -> f.value().equals(getAttribute("id"));
-            case CLASS_NAME -> Boolean.TRUE.equals(js("return arguments[0].classList.contains(arguments[1]);", f.value()));
-            case THEME -> {
-                String theme = getAttribute("theme");
-                yield theme != null && List.of(theme.split("\\s+")).contains(f.value());
-            }
-            case ATTRIBUTE -> f.value().equals(getAttribute(f.name()));
-        };
-    }
-
-    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
-    private String accessibleName() {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> names = (Map<String, Object>) js("""
-                const e = arguments[0];
-                const by = e.getAttribute('aria-labelledby');
-                const target = by && document.getElementById(by);
-                return {aria: e.getAttribute('aria-label'), name: e.accessibleName,
-                        by: target ? target.textContent : null, label: e.label};""");
-        for (String key : List.of("aria", "name", "by", "label")) {
-            Object value = names.get(key);
-            if (value != null && !value.toString().isBlank()) {
-                return value.toString();
-            }
-        }
-        return getText();
     }
 
     @Override

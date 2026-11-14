@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.selenium;
 import com.vaadin.flow.component.combobox.testbench.ComboBoxElement;
 import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
 import com.vaadin.flow.component.radiobutton.testbench.RadioButtonGroupElement;
+import com.vaadin.testbench.HasClearButton;
 import com.vaadin.testing.unified.spi.SelectionAccess;
 import java.util.List;
 import org.openqa.selenium.WebElement;
@@ -32,21 +33,28 @@ final class SeleniumSelectionAccess implements SelectionAccess {
 
     @Override
     public List<String> selectedItems() {
-        return strings(switch (kind) {
-            case COMBO_BOX -> "const c = arguments[0]; return c.selectedItem ? [String(c.selectedItem[c.itemLabelPath])] : [];";
-            case MULTI_SELECT_COMBO_BOX -> "const c = arguments[0]; return (c.selectedItems || []).map(i => String(i[c.itemLabelPath]));";
-            case RADIO_BUTTON_GROUP -> "return [...arguments[0].querySelectorAll('vaadin-radio-button')].filter(r => r.checked)"
-                    + ".map(r => (r.label || r.textContent).trim());";
-        });
+        return switch (kind) {
+            case COMBO_BOX -> {
+                String text = session.testBench(element).wrap(ComboBoxElement.class).getSelectedText();
+                yield text == null || text.isEmpty() ? List.of() : List.of(text); // "" when nothing is selected
+            }
+            case MULTI_SELECT_COMBO_BOX ->
+                    session.testBench(element).wrap(MultiSelectComboBoxElement.class).getSelectedTexts();
+            case RADIO_BUTTON_GROUP -> {
+                String text = session.testBench(element).wrap(RadioButtonGroupElement.class).getSelectedText();
+                yield text == null ? List.of() : List.of(text.strip());
+            }
+        };
     }
 
     /** Combo boxes: opens the drop-down, waits for its items, reads the loaded ones, closes it. */
     @Override
     public List<String> items() {
         if (kind == Kind.RADIO_BUTTON_GROUP) {
-            return strings("return [...arguments[0].querySelectorAll('vaadin-radio-button')]"
-                    + ".map(r => (r.label || r.textContent).trim());");
+            return session.testBench(element).wrap(RadioButtonGroupElement.class).getOptions().stream()
+                    .map(String::strip).toList();
         }
+        // ComboBoxElement.getOptions() doesn't wait for loading, skip placeholders or restore the popup: #163
         boolean wasOpen = Boolean.TRUE.equals(session.js("return !!arguments[0].opened;", element));
         if (!wasOpen) {
             session.js("arguments[0].opened = true;", element);
@@ -100,17 +108,15 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         if (kind == Kind.RADIO_BUTTON_GROUP) {
             throw new UnsupportedOperationException("A user can't clear a radio button group");
         }
-        boolean clicked = Boolean.TRUE.equals(session.js("""
-                const c = arguments[0];
-                const button = c.clearButtonVisible && c.shadowRoot && c.shadowRoot.querySelector("[part~='clear-button']");
-                if (button) { button.click(); return true; }
-                return false;""", element));
-        if (!clicked) {
-            if (kind == Kind.COMBO_BOX) {
-                session.testBench(element).wrap(ComboBoxElement.class).clear();
-            } else {
-                session.testBench(element).wrap(MultiSelectComboBoxElement.class).deselectAll();
-            }
+        HasClearButton field = kind == Kind.COMBO_BOX
+                ? session.testBench(element).wrap(ComboBoxElement.class)
+                : session.testBench(element).wrap(MultiSelectComboBoxElement.class);
+        if (field.isClearButtonVisible()) {
+            field.clickClearButton();
+        } else if (field instanceof ComboBoxElement comboBox) {
+            comboBox.clear();
+        } else {
+            ((MultiSelectComboBoxElement) field).deselectAll();
         }
         session.waitForVaadin();
     }

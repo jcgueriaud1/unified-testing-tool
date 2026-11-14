@@ -154,6 +154,7 @@ final class SeleniumSession implements AdapterSession {
                 List<WebElement> matching = candidates;
                 if (!remaining.isEmpty() && !candidates.isEmpty()) {
                     matching = new ArrayList<>();
+                    // no TestBench filter on textContent or accessible name, nor in one round trip: #165, #21
                     for (Object i : (List<?>) js("return (" + BrowserQueries.MATCH + ")(arguments[0], arguments[1]);",
                             candidates, remaining)) {
                         matching.add(candidates.get(((Number) i).intValue()));
@@ -213,6 +214,7 @@ final class SeleniumSession implements AdapterSession {
     @Override
     public boolean isAt(Class<? extends Component> view) {
         if (!CurrentView.hasRoute(view)) {
+            // the UI id from TestBench: #166
             Object answer = ((JavascriptExecutor) driver()).executeAsyncScript(
                     "const done = arguments[arguments.length - 1];"
                             + "(" + CurrentView.SCRIPT + ")(arguments[0]).then(done, () => done(null));",
