@@ -98,6 +98,8 @@ final class Stubs {
                     Assert hasSelectedItems(String... items);
                     Assert hasItems(String... items);
                     Assert isAt(Class<?> view);
+                    Assert hasPath(String path);
+                    Assert hasQueryParameter(String name, String value);
                 }
             }
             """

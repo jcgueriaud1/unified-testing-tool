@@ -17,7 +17,8 @@ import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
 /**
- * The recipe's output on the demo's {@code ProfileTestBenchTest} is exactly the demo's {@code ProfileMigratedTest}.
+ * The recipe's output on the demo's {@code ProfileTestBenchTest} is exactly the demo's {@code ProfileMigratedTest},
+ * and likewise for the other golden pairs (Browserless, Dramafinder).
  * The demo's CI jobs run that twin on Browserless, Playwright and Selenium, so the output is proven to compile and
  * pass on every Testing Tool.
  */
@@ -179,6 +180,18 @@ class GoldenMigrationTest implements RewriteTest {
                 """));
         sources.add(java(before, after));
         rewriteRun(spec -> spec.recipe(new MigrateBrowserlessToUnified()),
+                sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
+    }
+
+    @Test
+    void editPersonDramafinderTestBecomesEditPersonDramafinderMigratedTest() throws IOException {
+        String input = "EditPersonDramafinderTest";
+        String twin = "EditPersonDramafinderMigratedTest";
+        String before = Files.readString(DEMO_TESTS.resolve(input + ".java"));
+        String after = Files.readString(DEMO_TESTS.resolve(twin + ".java")).replace("class " + twin, "class " + input);
+        List<org.openrewrite.test.SourceSpecs> sources = new java.util.ArrayList<>(views());
+        sources.add(java(before, after));
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified()),
                 sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
     }
 
