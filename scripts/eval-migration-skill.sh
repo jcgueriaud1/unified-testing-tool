@@ -12,7 +12,7 @@
 # The run is compared with the baseline fixture by fixture, over the fixtures both have (marker metrics as rates of
 # each fixture's markers); a fixture the recipes no longer leave markers in drops out, a new one is only reported.
 # A run is acceptable when no compared metric is worse than the baseline, and, when SKILL.md changed since the
-# baseline, at least one is better. Exit code 0 when acceptable, 1 when not.
+# baseline, at least one is better, unless the baseline has nothing left to improve. Exit code 0 when acceptable, 1 when not.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$(pwd)

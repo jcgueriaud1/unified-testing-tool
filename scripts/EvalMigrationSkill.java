@@ -184,7 +184,11 @@ public class EvalMigrationSkill {
         }
 
         String verdict = was == null ? "no baseline in this format yet" : !worse.isEmpty() ? "worse" : better.isEmpty() ? "same" : "better";
-        boolean acceptable = was == null || worse.isEmpty() && (!skillChanged || !better.isEmpty());
+        // a baseline with nothing left to improve can't be bettered: a changed skill then only must not do worse
+        boolean perfect = was != null && Long.valueOf(1).equals(baseline.get("compiles"))
+                && rows.stream().anyMatch(r -> r.status() == Status.COMPARED)
+                && rows.stream().filter(r -> r.status() == Status.COMPARED).allMatch(r -> perfect(r.was()));
+        boolean acceptable = was == null || worse.isEmpty() && (!skillChanged || !better.isEmpty() || perfect);
 
         Map<String, Long> totals = totals(run.values());
         Map<String, Object> result = new LinkedHashMap<>();
@@ -195,14 +199,14 @@ public class EvalMigrationSkill {
         Path out = Path.of(a.get("out"));
         Files.writeString(out.resolveSibling("result.json"), Json.write(result, "") + "\n");
         String diff = a.containsKey("diff") && Files.exists(Path.of(a.get("diff"))) ? Files.readString(Path.of(a.get("diff"))) : "";
-        Report report = new Report(verdict, skillChanged, acceptable, compiles, baseline.get("compiles"), totals,
+        Report report = new Report(verdict, skillChanged, perfect, acceptable, compiles, baseline.get("compiles"), totals,
                 was == null ? null : totals(compared(rows, true)), totals(compared(rows, false)), rows, better, worse, diff);
         Files.writeString(out, format.equals("md") ? report.markdown() : report.html());
         if (a.containsKey("accept") && acceptable) {
             Files.writeString(baselineFile, Json.write(result, "") + "\n");
             System.out.println("Baseline updated: " + baselineFile);
         }
-        System.out.println("Verdict: " + verdict + (skillChanged ? " (skill changed: must be better)" : "")
+        System.out.println("Verdict: " + verdict + (skillChanged ? perfect ? " (skill changed; the baseline is perfect: must not be worse)" : " (skill changed: must be better)" : "")
                 + (acceptable ? ", acceptable" : ", NOT acceptable") + ". Report: " + out);
         System.exit(acceptable ? 0 : 1);
     }
@@ -216,6 +220,12 @@ public class EvalMigrationSkill {
         Map<String, Map<String, Long>> result = new LinkedHashMap<>();
         fixtures.forEach((file, scores) -> result.put((String) file, (Map<String, Long>) scores));
         return result;
+    }
+
+    /** Whether a fixture's scores are at their best on every measure: all markers resolved, nothing tied to one tool, no test failing. */
+    static boolean perfect(Map<String, Long> m) {
+        return m.get("resolved").equals(m.get("markersBefore")) && m.get("escapeHatches") == 0 && m.get("singleToolTests") == 0
+                && TOOLS.stream().allMatch(tool -> m.get(tool + ".failed") == 0);
     }
 
     /** The scores of the compared fixtures, in the baseline ({@code was}) or in this run. */
@@ -370,7 +380,7 @@ public class EvalMigrationSkill {
      * The report: the verdict, the totals over the compared fixtures with their rates, the per-fixture comparison and
      * the agent's changes. {@code wasCompared} is null without a baseline in this format.
      */
-    record Report(String verdict, boolean skillChanged, boolean acceptable, long compiles, Object baselineCompiles,
+    record Report(String verdict, boolean skillChanged, boolean perfect, boolean acceptable, long compiles, Object baselineCompiles,
             Map<String, Long> all, Map<String, Long> wasCompared, Map<String, Long> isCompared, List<Row> rows,
             List<String> better, List<String> worse, String diff) {
 
@@ -436,7 +446,9 @@ public class EvalMigrationSkill {
         }
 
         String heading() {
-            return "Verdict: " + verdict + (skillChanged ? " (the skill changed: it must be better)" : "")
+            return "Verdict: " + verdict + (!skillChanged ? "" : perfect
+                    ? " (the skill changed; the baseline has nothing left to improve: it must not be worse)"
+                    : " (the skill changed: it must be better)")
                     + (acceptable ? ". Acceptable." : ". Not acceptable.");
         }
 

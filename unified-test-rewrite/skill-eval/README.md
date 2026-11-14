@@ -6,7 +6,9 @@ A new run is compared with it fixture by fixture, over the fixtures both have, s
 leave markers in drops out ("no longer needs the skill") instead of making the run look worse, and a new fixture is
 reported and compared against nothing. Markers resolved and untouched are compared as rates of the fixture's markers;
 Escape Hatches, single-tool tests and tests passed or failed on each Testing Tool as counts. A run is acceptable when
-no compared metric is worse, and, when the skill changed, at least one is better; `--accept` then replaces this file.
+no compared metric is worse, and, when the skill changed, at least one is better, unless the baseline has nothing
+left to improve (every compared fixture with all its markers resolved, no Escape Hatch, no single-tool test, no failing
+test); `--accept` then replaces this file.
 A baseline with totals only (before #153) compares with nothing: the first run in this format is acceptable.
 See [Migrating from TestBench](../../docs/migrating-from-testbench.md#evaluating-the-skill).
 
