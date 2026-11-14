@@ -844,6 +844,136 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void withIncludePageObjectsAPageObjectTakesTheUnifiedPage() {
+        rewriteRun(
+                spec -> spec.recipe(new MigrateBrowserlessToUnified(null, null, true, null)),
+                java(
+                        """
+                        import com.vaadin.browserless.BrowserlessTest;
+                        import com.vaadin.flow.component.button.Button;
+                        import com.vaadin.flow.component.textfield.TextField;
+
+                        class LoginPage {
+                            private final BrowserlessTest test;
+
+                            LoginPage(BrowserlessTest test) {
+                                this.test = test;
+                            }
+
+                            void logIn(String user) {
+                                test.test(test.$(TextField.class).withCaption("User").single()).setValue(user);
+                                test.test(test.$(Button.class).withText("Log in").single()).click();
+                            }
+
+                            TextField user() {
+                                return test.$(TextField.class).withCaption("User").single();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.component.UnifiedTextField;
+
+                        class LoginPage {
+                            private final UnifiedPage test;
+
+                            LoginPage(UnifiedPage test) {
+                                this.test = test;
+                            }
+
+                            void logIn(String user) {
+                                test.find(UnifiedTextField.class).withLabel("User").single().setValue(user);
+                                test.find(UnifiedButton.class).withText("Log in").single().click();
+                            }
+
+                            UnifiedTextField user() {
+                                return test.find(UnifiedTextField.class).withLabel("User").single();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.browserless.BrowserlessTest;
+                        import org.junit.jupiter.api.Assertions;
+                        import org.junit.jupiter.api.Test;
+
+                        class LoginTest extends BrowserlessTest {
+                            @Test
+                            void logsIn() {
+                                LoginPage login = new LoginPage(this);
+                                login.logIn("alice");
+                                Assertions.assertEquals("alice", login.user().getValue());
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import org.junit.jupiter.api.Test;
+
+                        import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                        @UnifiedUITest
+                        class LoginTest {
+                            @Test
+                            void logsIn(UnifiedPage page) {
+                                LoginPage login = new LoginPage(page);
+                                login.logIn("alice");
+                                assertThat(login.user()).hasValue("alice");
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void aPageObjectThatCantConvertStaysAndItsTestIsMarked() {
+        rewriteRun(
+                spec -> spec.recipe(new MigrateBrowserlessToUnified(null, null, true, null)),
+                java(
+                        """
+                        import com.vaadin.browserless.BrowserlessTest;
+                        import com.vaadin.flow.component.upload.Upload;
+
+                        class UploadPage {
+                            private final BrowserlessTest test;
+
+                            UploadPage(BrowserlessTest test) {
+                                this.test = test;
+                            }
+
+                            boolean ready() {
+                                return test.test(test.$(Upload.class).single()).isUsable();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.browserless.BrowserlessTest;
+                        import org.junit.jupiter.api.Test;
+
+                        class UploadTest extends BrowserlessTest {
+                            @Test
+                            void uploads() {
+                                new UploadPage(this).ready();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.browserless.BrowserlessTest;
+                        import org.junit.jupiter.api.Test;
+
+                        // TODO unified: not migrated: this class passes itself (this) to a page object or helper; make them take a UnifiedPage, then run the migration again
+                        class UploadTest extends BrowserlessTest {
+                            @Test
+                            void uploads() {
+                                new UploadPage(this).ready();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
     void aClassThatIsNotABrowserlessTestIsLeftAlone() {
         rewriteRun(java(
                 """
