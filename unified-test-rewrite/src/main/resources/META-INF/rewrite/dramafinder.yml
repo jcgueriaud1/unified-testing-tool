@@ -1,0 +1,58 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.MigrateDramafinderBuild
+displayName: Swap Dramafinder for the Unified API in the Maven build
+description: >-
+  Imports unified-test-bom, adds the Playwright adapter (and the Spring integration in Spring Boot projects) as
+  test dependencies, and removes the direct Dramafinder dependency, which the Playwright adapter brings in.
+preconditions:
+  - org.openrewrite.maven.search.DependencyInsight:
+      groupIdPattern: org.vaadin.addons
+      artifactIdPattern: dramafinder
+      onlyDirect: true
+recipeList:
+  - org.openrewrite.maven.AddManagedDependency:
+      groupId: org.vaadin.addons
+      artifactId: unified-test-bom
+      version: ${project.version}
+      type: pom
+      scope: import
+  - org.openrewrite.maven.AddDependency:
+      groupId: org.vaadin.addons
+      artifactId: unified-test-playwright
+      version: ${project.version}
+      scope: test
+  - org.vaadin.addons.unified.rewrite.AddSpringIntegrationToSpringBootProjects
+  - org.openrewrite.maven.RemoveDependency:
+      groupId: org.vaadin.addons
+      artifactId: dramafinder
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.AddBrowserlessAdapter
+displayName: Add the Unified API's Browserless adapter
+description: Adds `unified-test-browserless` as a test dependency, to run Unified UI Tests on Browserless.
+recipeList:
+  - org.openrewrite.maven.AddDependency:
+      groupId: org.vaadin.addons
+      artifactId: unified-test-browserless
+      version: ${project.version}
+      scope: test
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.MigrateDramafinderTestCode
+displayName: Migrate Dramafinder test code to the Unified API
+description: >-
+  Rewrites the source of Dramafinder tests; only touches files with a class that extends Dramafinder's
+  `AbstractBasePlaywrightIT` or `SpringPlaywrightIT` and uses no base class member the recipes don't convert.
+preconditions:
+  - org.vaadin.addons.unified.rewrite.FindDramafinderTests
+recipeList:
+  - org.vaadin.addons.unified.rewrite.DramafinderSetupToUnified
+  - org.vaadin.addons.unified.rewrite.DramafinderLeftoversToEscapeHatch
+  - org.openrewrite.java.RemoveAnnotationAttribute:
+      annotationType: org.springframework.boot.test.context.SpringBootTest
+      attributeName: webEnvironment
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: org.springframework.boot.test.context.SpringBootTest
+      newFullyQualifiedTypeName: com.vaadin.testing.unified.spring.UnifiedSpringBootTest
+  - org.openrewrite.java.RemoveUnusedImports
