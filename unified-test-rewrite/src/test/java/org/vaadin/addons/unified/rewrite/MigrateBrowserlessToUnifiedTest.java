@@ -974,6 +974,54 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void aGridRowScanBecomesARowLookupByText() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.grid.Grid;
+                import com.vaadin.flow.component.grid.GridTester;
+                import java.util.stream.IntStream;
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest extends BrowserlessTest {
+                    @Test
+                    void edits() {
+                        GridTester<Grid<String>, String> people = test($(Grid.class).single());
+                        int row = IntStream.range(0, people.size())
+                                .filter(i -> people.getCellText(i, 1).equals("Alan"))
+                                .findFirst().getAsInt();
+                        people.clickRow(row);
+                        int other = IntStream.range(0, people.size())
+                                .filter(i -> people.getCellText(i, 1).startsWith("Al"))
+                                .findFirst().getAsInt();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+
+                import java.util.stream.IntStream;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class PeopleTest {
+                    @Test
+                    void edits(UnifiedPage page) {
+                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        // TODO unified: was a scan of column 1; withCellText(text) matches any column: name the column, withCellText(header, text), if another column can hold the text
+                        int row = people.rows().withCellText("Alan").single().getIndex();
+                        people.row(row).click();
+                        int other = IntStream.range(0, people.getRowCount())
+                                .filter(i -> people.row(i).getCellText(1).startsWith("Al"))
+                                .findFirst().getAsInt();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aClassThatIsNotABrowserlessTestIsLeftAlone() {
         rewriteRun(java(
                 """
