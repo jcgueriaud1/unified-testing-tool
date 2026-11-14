@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
 /** Golden migration: unified-test-rewrite turns ProfileBrowserlessTest into ProfileBrowserlessMigratedTest. */
+// --8<-- [start:test]
 @UnifiedSpringBootTest
 class ProfileBrowserlessMigratedTest {
 
@@ -53,3 +54,4 @@ class ProfileBrowserlessMigratedTest {
         Assertions.assertFalse(browserless.test(browserless.$(Button.class).withText("Archive").single()).isUsable());
     }
 }
+// --8<-- [end:test]

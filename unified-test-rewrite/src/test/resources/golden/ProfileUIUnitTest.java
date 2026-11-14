@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /** Golden migration: unified-test-rewrite turns ProfileBrowserlessTest into ProfileBrowserlessMigratedTest. */
+// --8<-- [start:test]
 @SpringBootTest
 class ProfileUIUnitTest extends SpringUIUnitTest {
 
@@ -44,3 +45,4 @@ class ProfileUIUnitTest extends SpringUIUnitTest {
         Assertions.assertFalse(test($(Button.class).withText("Archive").single()).isUsable());
     }
 }
+// --8<-- [end:test]

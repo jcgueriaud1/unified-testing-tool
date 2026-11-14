@@ -25,6 +25,7 @@ class ProfileViewTest {
 
 - **Documentation site:** https://parttio.github.io/unified-testing-tool/
 - **Migrating from TestBench:** [docs/migrating-from-testbench.md](docs/migrating-from-testbench.md), OpenRewrite Migration Recipes.
+- **Migrating from Browserless:** [docs/migrating-from-browserless.md](docs/migrating-from-browserless.md), the same for Browserless Test and TestBench UI Unit tests.
 - **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, with examples of the query API.
 - **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
 - **Status:** first version. Spec draft, not yet `spec-v1`.
@@ -40,7 +41,7 @@ class ProfileViewTest {
 | `unified-test-spring` | `@UnifiedSpringBootTest`, test-only login endpoint for browsers |
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
-| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md)); not published before `spec-v1` |
+| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench and Browserless to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)); not published before `spec-v1` |
 
 ## Try it
 
