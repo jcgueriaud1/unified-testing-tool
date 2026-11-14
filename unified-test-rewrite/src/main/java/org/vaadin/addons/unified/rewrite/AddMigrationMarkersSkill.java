@@ -33,7 +33,7 @@ public class AddMigrationMarkersSkill extends ScanningRecipe<AtomicBoolean> {
     @Override
     public String getDescription() {
         return "Writes `.claude/skills/resolve-migration-markers/SKILL.md`, a Claude Code skill that works through the "
-                + "Migration Markers the TestBench Migration Recipe leaves.";
+                + "Migration Markers the Migration Recipes leave.";
     }
 
     @Override

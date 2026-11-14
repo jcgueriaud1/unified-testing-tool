@@ -105,7 +105,9 @@ public class DramafinderLeftoversToEscapeHatch extends Recipe {
                 AtomicBoolean unwraps = getCursor().getNearestMessage(LEFTOVERS);
                 if (unwraps != null && (Dramafinder.isToolCall(newClass)
                         || newClass.getArguments().stream().anyMatch(Dramafinder::isPageField)) && !insideAnotherToolCall()) {
-                    MigrationMarkers.add(getCursor(), "Dramafinder Escape Hatch: " + n.printTrimmed(getCursor().getParentTreeCursor()).strip());
+                    JavaType.FullyQualified type = org.openrewrite.java.tree.TypeUtils.asFullyQualified(newClass.getType());
+                    MigrationMarkers.add(getCursor(), "Dramafinder Escape Hatch: " + n.printTrimmed(getCursor().getParentTreeCursor()).strip()
+                            + (Dramafinder.isCustomElement(type) ? ", a custom element: write a Wrapper for it (ADR 0003)" : ""));
                 }
                 return n;
             }
