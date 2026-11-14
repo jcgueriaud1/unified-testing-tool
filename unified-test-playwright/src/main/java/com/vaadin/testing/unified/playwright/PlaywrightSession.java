@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.internal.CurrentView;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
+import com.vaadin.testing.unified.spi.StaleElementException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -145,10 +146,23 @@ final class PlaywrightSession implements AdapterSession {
                 query = invoke(query, name, new Class<?>[] { String.class }, f.value());
             }
         }
+        // Dramafinder's queries also match inside the shadow DOM of Vaadin's components and dev tools (e.g. the
+        // Copilot toolbar's radio group): leave those out, as tag queries do. parttio/dramafinder#276
+        Locator candidates = (Locator) invoke(query, "getLocator", new Class<?>[0]);
+        List<?> app = (List<?>) candidates.evaluateAll("els => els.map(" + BrowserQueries.APP_CONTENT + ")");
         @SuppressWarnings("unchecked")
         List<VaadinElement> found = (List<VaadinElement>) invoke(query, "all", new Class<?>[0]);
-        return found.stream().filter(e -> support.include(e.getLocator()))
-                .map(e -> (UnifiedElement) new PlaywrightElement(this, e.getLocator(), e, support)).toList();
+        if (found.size() != app.size()) { // the page changed between the two reads: the core queries again
+            throw new StaleElementException("The page changed while finding " + candidates, null);
+        }
+        List<UnifiedElement> result = new ArrayList<>();
+        for (int i = 0; i < found.size(); i++) {
+            VaadinElement e = found.get(i);
+            if (Boolean.TRUE.equals(app.get(i)) && support.include(e.getLocator())) {
+                result.add(new PlaywrightElement(this, e.getLocator(), e, support));
+            }
+        }
+        return result;
     }
 
     private static Object refine(Object query, java.util.function.UnaryOperator<Locator> refinement) {

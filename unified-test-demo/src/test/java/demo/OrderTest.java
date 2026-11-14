@@ -42,6 +42,13 @@ class OrderTest {
     }
     // --8<-- [end:selectsByVisibleLabel]
 
+    /** One group on the page: found without a filter, on every Testing Tool (#133). */
+    @Test
+    void findsTheOnlyRadioButtonGroupWithoutFilter(UnifiedPage page) {
+        page.navigate(OrderView.class);
+        assertThat(page.find(UnifiedRadioButtonGroup.class).single()).hasSelectedItem("Medium");
+    }
+
     @Test
     void readsInitialSelection(UnifiedPage page) {
         page.navigate(OrderView.class);
