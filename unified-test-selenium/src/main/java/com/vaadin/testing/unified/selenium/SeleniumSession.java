@@ -150,20 +150,25 @@ final class SeleniumSession implements AdapterSession {
         List<UnifiedElement> result = new ArrayList<>();
         try {
             for (SearchContext root : roots) {
-                List<WebElement> candidates = root.findElements(By.cssSelector(selector));
+                List<WebElement> candidates = new ArrayList<>();
+                for (WebElement candidate : root.findElements(By.cssSelector(selector))) {
+                    if (support.include(candidate, this)) {
+                        candidates.add(candidate);
+                    }
+                }
                 List<WebElement> matching = candidates;
                 if (!remaining.isEmpty() && !candidates.isEmpty()) {
                     matching = new ArrayList<>();
+                    // the rest of the filters check what the user sees, e.g. a notification's card
+                    List<WebElement> contents = candidates.stream().map(c -> support.content(c, this)).toList();
                     // no TestBench filter on textContent or accessible name, nor in one round trip: #165, #21
                     for (Object i : (List<?>) js("return (" + BrowserQueries.MATCH + ")(arguments[0], arguments[1]);",
-                            candidates, remaining)) {
+                            contents, remaining)) {
                         matching.add(candidates.get(((Number) i).intValue()));
                     }
                 }
                 for (WebElement candidate : matching) {
-                    if (support.include(candidate, this)) {
-                        result.add(new SeleniumElement(this, candidate, support));
-                    }
+                    result.add(new SeleniumElement(this, candidate, support));
                 }
             }
         } catch (StaleElementReferenceException | StaleElementException e) {

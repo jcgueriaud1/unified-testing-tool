@@ -24,13 +24,14 @@ final class SeleniumElement implements UnifiedElement {
     private final SeleniumSession session;
     private final WebElement element;
     private final SeleniumComponents.Support support;
-    private final List<WebElement> roots;
+    /** Null until needed: the support's content element (e.g. a notification's card). */
+    private List<WebElement> roots;
 
     SeleniumElement(SeleniumSession session, WebElement element, SeleniumComponents.Support support) {
-        this(session, element, support, List.of(element));
+        this(session, element, support, null);
     }
 
-    /** An element whose scope is several elements (e.g. a grid column's header cells). */
+    /** An element whose scope is several elements (e.g. a grid column's header cells); null = its content. */
     SeleniumElement(SeleniumSession session, WebElement element, SeleniumComponents.Support support,
             List<WebElement> roots) {
         this.session = session;
@@ -45,6 +46,9 @@ final class SeleniumElement implements UnifiedElement {
 
     /** Where queries scoped to this element search: inside these elements. */
     List<? extends SearchContext> roots() {
+        if (roots == null) {
+            roots = List.of(SeleniumSession.stale(() -> support.content(element, session)));
+        }
         return roots;
     }
 
@@ -109,7 +113,8 @@ final class SeleniumElement implements UnifiedElement {
 
     @Override
     public String getVisibleText() {
-        return SeleniumSession.stale(element::getText).strip();
+        WebElement content = (WebElement) roots().get(0);
+        return SeleniumSession.stale(content::getText).strip();
     }
 
     @Override

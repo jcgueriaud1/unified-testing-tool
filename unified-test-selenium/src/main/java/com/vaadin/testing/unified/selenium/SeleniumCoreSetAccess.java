@@ -1,11 +1,14 @@
 package com.vaadin.testing.unified.selenium;
 
+import com.vaadin.flow.component.datetimepicker.testbench.DateTimePickerElement;
 import com.vaadin.flow.component.details.testbench.DetailsElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarButtonElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarItemElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarSubMenuElement;
+import com.vaadin.flow.component.timepicker.testbench.TimePickerElement;
 import com.vaadin.flow.component.upload.testbench.UploadElement;
+import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
@@ -59,9 +62,6 @@ final class SeleniumCoreSetAccess {
      * when hovered (TestBench's {@code openSubMenu()}). Items are found by their Item Name.
      */
     record MenuBarAccessImpl(SeleniumSession session, WebElement element) implements MenuBarAccess {
-        private static final String ENABLED =
-                "e => !(e.hasAttribute('disabled') || e.getAttribute('aria-disabled') === 'true')";
-
         private MenuBarElement menuBar() {
             return session.testBench(element).wrap(MenuBarElement.class);
         }
@@ -101,8 +101,9 @@ final class SeleniumCoreSetAccess {
             }
         }
 
-        private boolean enabled(WebElement item) {
-            return Boolean.TRUE.equals(session.js("return (" + ENABLED + ")(arguments[0]);", item)); // #162
+        /** A disabled item keeps focus with aria-disabled, which TestBench's isEnabled() misses: #162. */
+        private static boolean enabled(TestBenchElement item) {
+            return !item.hasAttribute("disabled") && !"true".equals(item.getDomAttribute("aria-disabled"));
         }
 
         private void close() {
@@ -147,27 +148,19 @@ final class SeleniumCoreSetAccess {
     }
 
     /**
-     * Types into the inputs of the date and time halves, each committed with Enter, then leaves the field as
-     * a user does: the field checks its halves (bad input, incomplete) when focus leaves it.
+     * Types into the date and time halves through TestBench's DateTimePickerElement, each committed with
+     * Enter, then leaves the field as a user does: the field checks its halves (bad input, incomplete) when
+     * focus leaves it.
      */
     record DateTimePickerAccessImpl(SeleniumSession session, WebElement element) implements DateTimePickerAccess {
         @Override
         public void typeText(String date, String time) {
-            type(input("date-picker"), date);
-            WebElement timeInput = input("time-picker");
-            type(timeInput, time);
-            session.js("arguments[0].blur();", timeInput); // #164, #170
+            DateTimePickerElement picker = session.testBench(element).wrap(DateTimePickerElement.class);
+            picker.getDatePicker().setInputValue(date);
+            TimePickerElement timePicker = picker.getTimePicker();
+            timePicker.selectByText(time);
+            timePicker.getTimePickerInputElement().callFunction("blur"); // no TestBenchElement.blur(): #164
             session.waitForVaadin();
-        }
-
-        private WebElement input(String slot) {
-            return (WebElement) session.js("return arguments[0].querySelector('[slot=' + arguments[1] + '] input');",
-                    element, slot);
-        }
-
-        private static void type(WebElement input, String text) {
-            input.clear();
-            input.sendKeys(text + org.openqa.selenium.Keys.ENTER);
         }
     }
 

@@ -11,6 +11,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.dialog.testbench.DialogElement;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.testbench.NotificationElement;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.NumberField;
@@ -62,6 +63,14 @@ final class SeleniumComponents {
         /** Sets the value as a user would; false = not handled (the generic input + change events). */
         default boolean setValue(WebElement element, Object value, SeleniumSession session) {
             return false;
+        }
+
+        /**
+         * The element that holds what the user sees, when it isn't the component's own element (e.g. a
+         * notification's card): text filters, the text and child queries go there.
+         */
+        default WebElement content(WebElement element, SeleniumSession session) {
+            return element;
         }
 
         /** A component-specific access object for the core (e.g. GridAccess), reached through unwrap. */
@@ -117,15 +126,36 @@ final class SeleniumComponents {
 
     static {
         register(Notification.class, new Support() {
+            /** Open notifications only, as TestBench's NotificationElement tells. */
             @Override
-            public String selector(String componentTag) {
-                // the visible part is the open card, not <vaadin-notification>
-                return "vaadin-notification-card[slot]";
+            public boolean include(WebElement element, SeleniumSession session) {
+                return notification(element, session).isOpen();
+            }
+
+            /** The card the notification shows its content in. */
+            @Override
+            public WebElement content(WebElement element, SeleniumSession session) {
+                return (WebElement) notification(element, session).getContext();
+            }
+
+            @Override
+            public Optional<String> text(WebElement element, SeleniumSession session) {
+                return Optional.of(notification(element, session).getText());
+            }
+
+            @Override
+            public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
+                // the notification host has no box of its own; open means shown
+                return Optional.of(notification(element, session).isOpen());
             }
 
             @Override
             public Optional<Boolean> booleanProperty(WebElement element, String name, SeleniumSession session) {
-                return "opened".equals(name) ? Optional.of(element.isDisplayed()) : Optional.empty();
+                return "opened".equals(name) ? Optional.of(notification(element, session).isOpen()) : Optional.empty();
+            }
+
+            private NotificationElement notification(WebElement element, SeleniumSession session) {
+                return session.testBench(element).wrap(NotificationElement.class);
             }
         });
         register(Dialog.class, new Support() {
@@ -185,7 +215,7 @@ final class SeleniumComponents {
             }
         });
         register(com.vaadin.flow.component.tabs.Tabs.class, access(TabSheetAccess.class,
-                (element, session) -> new SeleniumTabSheetAccess(session, element)));
+                (element, session) -> SeleniumTabSheetAccess.tabs(session, element)));
         register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
                 (element, session) -> new SeleniumCoreSetAccess.DetailsAccessImpl(session, element)));
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
@@ -202,7 +232,8 @@ final class SeleniumComponents {
                 new SeleniumSelectionAccess(session, element, SeleniumSelectionAccess.Kind.MULTI_SELECT_COMBO_BOX)));
         register(RadioButtonGroup.class, access(SelectionAccess.class, (element, session) ->
                 new SeleniumSelectionAccess(session, element, SeleniumSelectionAccess.Kind.RADIO_BUTTON_GROUP)));
-        register(TabSheet.class, access(TabSheetAccess.class, (element, session) -> new SeleniumTabSheetAccess(session, element)));
+        register(TabSheet.class, access(TabSheetAccess.class,
+                (element, session) -> SeleniumTabSheetAccess.tabSheet(session, element)));
     }
 
     private static Support access(Class<?> accessType,
