@@ -62,6 +62,7 @@ nav:
   - One test, four ways: comparison.md
   - Migrating from TestBench: migrating-from-testbench.md
   - Migrating from Browserless: migrating-from-browserless.md
+  - Migrating from Dramafinder: migrating-from-dramafinder.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md
@@ -85,4 +86,5 @@ nav:
       - adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md
       - adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md
       - adr/0005-browserless-migration-recipes.md
+      - adr/0006-dramafinder-migration-recipes.md
   - Glossary: GLOSSARY.md

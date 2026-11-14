@@ -14,6 +14,7 @@ cp -r docs/spec docs/adr docs/guide "$src"/
 cp docs/comparison.md "$src"/comparison.md
 cp docs/migrating-from-testbench.md "$src"/migrating-from-testbench.md
 cp docs/migrating-from-browserless.md "$src"/migrating-from-browserless.md
+cp docs/migrating-from-dramafinder.md "$src"/migrating-from-dramafinder.md
 cp GLOSSARY.md "$src"/GLOSSARY.md
 cp README.md "$src"/index.md
 
