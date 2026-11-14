@@ -26,8 +26,15 @@ final class DramafinderWrappers {
     /** A Wrapper: its filters, the element methods it has (Dramafinder name to Unified name) and assertions. */
     record Wrapper(String fqn, Set<String> filters, Map<String, String> methods, Map<String, String> assertions) {
 
+        /** The name a declaration uses, {@code UnifiedGrid.UnifiedGridRow} for a nested type. */
         String simpleName() {
-            return fqn.substring(fqn.lastIndexOf('.') + 1);
+            return fqn.substring(fqn.lastIndexOf('.') + 1).replace('$', '.');
+        }
+
+        /** The type to import: the outer type of a nested one. */
+        String importFqn() {
+            int nested = fqn.indexOf('$');
+            return nested < 0 ? fqn : fqn.substring(0, nested);
         }
 
         boolean supports(String method) {
@@ -75,7 +82,12 @@ final class DramafinderWrappers {
             ELEMENT + "DialogElement", new Wrapper(COMPONENT + "UnifiedDialog", union(COMMON_FILTERS, Set.of("withHeaderTitle")),
                     Map.of("isOpen", "isOpen", "getHeaderText", "getHeaderTitle", "closeWithEscape", "close"),
                     Map.of("assertOpen", "isOpen", "assertClosed", "isClosed", "assertHeaderText", "hasHeaderTitle")),
-            ELEMENT + "GridElement", new Wrapper(COMPONENT + "UnifiedGrid", COMMON_FILTERS, Map.of(), Map.of()));
+            ELEMENT + "GridElement", new Wrapper(COMPONENT + "UnifiedGrid", COMMON_FILTERS,
+                    Map.of("getTotalRowCount", "getRowCount"), Map.of("assertRowCount", "hasRowCount")));
+
+    /** A grid row: what {@code grid.findRow(index).orElseThrow()} becomes, {@code grid.row(index)}. */
+    static final Wrapper ROW = new Wrapper(COMPONENT + "UnifiedGrid$UnifiedGridRow", Set.of(),
+            same("select", "deselect", "click", "doubleClick"), Map.of("assertSelected", "isSelected"));
 
     /** Static factories: the Unified filter each one is. {@code getByLabel} on a button is its accessible name. */
     private static final Map<String, String> FACTORIES = Map.of("getByLabel", "withLabel", "getByLabelContaining",

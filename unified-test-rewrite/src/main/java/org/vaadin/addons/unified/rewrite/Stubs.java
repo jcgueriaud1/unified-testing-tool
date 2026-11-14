@@ -33,14 +33,20 @@ final class Stubs {
             public interface UnifiedGrid {
                 UnifiedGridRow row(int index);
                 RowQuery rows();
+                int getRowCount();
                 interface RowQuery {
                     RowQuery withCellText(String text);
+                    RowQuery withCellText(String columnHeader, String text);
                     UnifiedGridRow single();
                 }
                 interface UnifiedGridRow {
                     int getIndex();
                     String getCellText(int columnIndex);
+                    String getCellText(String columnHeader);
                     void click();
+                    void doubleClick();
+                    void select();
+                    void deselect();
                 }
             }
             """,
@@ -107,6 +113,9 @@ final class Stubs {
                     Assert hasErrorMessage(String message);
                     Assert hasTextContaining(String part);
                     Assert isIndeterminate();
+                    Assert hasCellText(String columnHeader, String text);
+                    Assert isSelected();
+                    Assert hasRowCount(int count);
                     Assert hasQueryParameter(String name, String value);
                 }
             }
