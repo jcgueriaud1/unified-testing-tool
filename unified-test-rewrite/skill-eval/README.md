@@ -12,7 +12,11 @@ test); `--accept` then replaces this file.
 A baseline with totals only (before #153) compares with nothing: the first run in this format is acceptable.
 See [Migrating from TestBench](../../docs/migrating-from-testbench.md#evaluating-the-skill).
 
-Current baseline (2026-11-14), the first with per-fixture scores (#153): all 24 markers resolved across 12 fixtures,
+Current baseline (2026-11-14), for the skill that resolves the "was a scan of column" marker (#154): the same score as
+the previous one, accepted because that one had nothing left to improve: all 24 markers resolved across 12 fixtures,
+no Escape Hatch, no single-tool test, 16 tests passing on Browserless and on Playwright.
+
+Previous baseline (2026-11-14), the first with per-fixture scores (#153): all 24 markers resolved across 12 fixtures,
 including the new "was a scan of column" marker in `EditPersonBrowserlessMigratedTest` (#154), which the skill doesn't
 list yet; no Escape Hatch and no single-tool test left; 16 tests passing on Browserless and on Playwright.
 
