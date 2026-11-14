@@ -113,6 +113,41 @@ public class BrowserlessLookupsToUnified extends Recipe {
                                 m.getMethodType() == null ? null : m.getMethodType().getReturnType());
                     }
                 }
+                // a locator of the context API: window.findTextField().withLabel("Name") → page.find(..).withLabel("Name")
+                if (Browserless.ofLocator(method) != null) {
+                    Cursor locator = Browserless.locatorOf(getCursor());
+                    Browserless.Wrapper w = locator == null ? null : Browserless.convertibleLocator(locator);
+                    if (w == null) {
+                        return m;
+                    }
+                    J.MethodInvocation converted;
+                    if (Browserless.ofLocatorStart(method) != null) {
+                        maybeAddImport(w.fqn());
+                        converted = JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.find("
+                                        + w.simpleName() + ".class)")
+                                .imports(w.fqn())
+                                .javaParser(Stubs.parser(Stubs.interfaceStub(w.fqn())))
+                                .build()
+                                .apply(getCursor(), m.getCoordinates().replace(), Stubs.page());
+                    } else {
+                        converted = unifiedCall(m, QUERY, w.filters().get(method.getSimpleName()),
+                                JavaType.ShallowClass.build(QUERY));
+                    }
+                    // a locator is lazy and unique; a Unified lookup ends in single()
+                    boolean asserted = locator.getValue() == method
+                            && TestBenchAssertionsToUnified.isUnifiedAssertion(locator.getParentTreeCursor().getValue());
+                    return asserted ? single(converted, w) : converted;
+                }
+                // ..locator.setValue(..) → ..single().setValue(..)
+                if (method.getSelect() != null && Browserless.ofLocator(method.getSelect()) != null) {
+                    Browserless.Wrapper w = Browserless.convertibleLocator(new Cursor(getCursor(), method.getSelect()));
+                    String unified = w == null ? null : w.testerCalls().get(method.getSimpleName());
+                    if (unified == null) {
+                        return m;
+                    }
+                    return unifiedCall(m.getPadding().withSelect(JRightPadded.build(single(m.getSelect(), w))), w.fqn(),
+                            unified, m.getMethodType() == null ? null : m.getMethodType().getReturnType());
+                }
                 Cursor terminal = Browserless.terminalOf(getCursor());
                 Browserless.Wrapper wrapper = terminal == null ? null : Browserless.convertibleLookup(terminal);
                 if (wrapper == null) {
@@ -171,6 +206,19 @@ public class BrowserlessLookupsToUnified extends Recipe {
     }
 
     private static final String QUERY = "com.vaadin.testing.unified.query.Query";
+
+    /** {@code query.single()}, typed as returning the Wrapper. */
+    private static J.MethodInvocation single(Expression query, Browserless.Wrapper wrapper) {
+        JavaType.Method type = new JavaType.Method(null, 1L, JavaType.ShallowClass.build(QUERY), "single",
+                JavaType.ShallowClass.build(wrapper.fqn()), List.of(), List.of(), null, null, null, null);
+        return new J.MethodInvocation(Tree.randomId(), query.getPrefix(), Markers.EMPTY,
+                JRightPadded.build(query.withPrefix(Space.EMPTY)), null,
+                new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), "single", type, null),
+                org.openrewrite.java.tree.JContainer.build(Space.EMPTY,
+                        List.of(JRightPadded.<Expression>build(new J.Empty(Tree.randomId(), Space.EMPTY, Markers.EMPTY))),
+                        Markers.EMPTY),
+                type);
+    }
 
     /**
      * The call renamed, with a method type on the Unified type: no Browserless type is left in it (so its import

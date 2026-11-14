@@ -36,6 +36,7 @@ Each gives a Testing Tool's own test base API on the test's page, and needs `@Re
 |---|---|---|
 | `TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);` | Selenium | `@RequiresTestingTool(TestingTool.SELENIUM)` |
 | `BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);` | Browserless | `@RequiresTestingTool(TestingTool.BROWSERLESS)` |
+| `BrowserlessUIContext window = page.unwrap(BrowserlessUIContext.class);` (a context-API test's window, under its old name) | Browserless | `@RequiresTestingTool(TestingTool.BROWSERLESS)` |
 
 When a method no longer uses its Escape Hatch variable, delete that line. When a test, and the helpers it calls, no longer use one, delete its `@RequiresTestingTool` too: the test then runs everywhere.
 
@@ -57,7 +58,7 @@ When a method no longer uses its Escape Hatch variable, delete that line. When a
 
 ## Reference: marker kinds of the Browserless recipe
 
-**`Browserless Escape Hatch: <call>`.** Say the same thing with the Unified API when it can: `navigate(View.class)` becomes `page.navigate(View.class)` (when the test reads the view it returns, find what it reads with a locator instead), a tester call becomes the Wrapper's method, a component getter becomes a Wrapper getter or a retrying assertion. Keep it when it needs the server-side Java objects only Browserless has (a view's fields, beans, `UI` or `VaadinSession` state).
+**`Browserless Escape Hatch: <call>`** (also on a window, `window.findGrid(..)`). Say the same thing with the Unified API when it can: a locator such as `window.findTextField().withLabel(..)` becomes `page.find(UnifiedTextField.class).withLabel(..).single()`, `navigate(View.class)` becomes `page.navigate(View.class)` (when the test reads the view it returns, find what it reads with a locator instead), a tester call becomes the Wrapper's method, a component getter becomes a Wrapper getter or a retrying assertion. Keep it when it needs the server-side Java objects only Browserless has (a view's fields, beans, `UI` or `VaadinSession` state).
 
 **`Component Reference: <call>: replace it with a locator that finds the same component`.** The test holds a component's Java object (a view field, `view.getChildren()...`) instead of finding it. Read the view to see how it builds that component, write the locator that finds it and nothing else (`withLabel`, `withText`, `withTestId`, ...), and use the Wrapper. Prove the locator is unique by running the test. Delete the local variable or view lookup that only served the reference.
 
@@ -68,5 +69,7 @@ When a method no longer uses its Escape Hatch variable, delete that line. When a
 **`Browserless-only pattern: @Transactional ...`.** The test's transaction reaches the views only on Browserless. Keep it, with `// Escape Hatch kept: test data rolled back by @Transactional`, unless the test can commit its data and clean up after itself; then remove `@Transactional` and `@RequiresTestingTool(TestingTool.BROWSERLESS)`.
 
 **`Browserless-only pattern: a Spring context without @SpringBootTest ...`.** A narrow `@ContextConfiguration` has no web server for the browser Testing Tools. To run everywhere: replace `@UnifiedUITest`, `@ContextConfiguration` and `@ExtendWith(SpringExtension.class)` with `@UnifiedSpringBootTest`, mock the beans the narrow context left out with `@MockitoBean`, and remove `@RequiresTestingTool(TestingTool.BROWSERLESS)`. Keep it when the full application context can't start in the test.
+
+**`not migrated: this test uses the Browserless application or user context ...`.** The recipe left the whole class as it is: a test opens a second user or window from the context API. Use `page.openWindow()` for another window of the same user and `page.openAsUser(name, roles...)` for another user, remove the context fields and their `@BeforeEach`/`@AfterEach`, then convert the rest by hand the way the recipe converts the others in this project.
 
 **`not migrated: this class passes itself (this) to a page object or helper ...`.** The recipe left the whole class as Browserless Test. Make the page object or helper take a `UnifiedPage` and use the Unified API inside it, then convert the test class by hand the way the recipe converts the others in this project (compare a migrated class), passing `page` instead of `this`.

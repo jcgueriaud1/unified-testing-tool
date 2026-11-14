@@ -101,6 +101,12 @@ public class BrowserlessAssertionsToUnified extends Recipe {
                     String unified = wrapper == null ? null : wrapper.testerCalls().get(getter.getSimpleName());
                     return unified == null ? null : new Read(element, wrapper, unified);
                 }
+                // a locator's own getter: window.findNotification().getText()
+                Browserless.Wrapper locator = Browserless.ofLocator(getter.getSelect());
+                if (locator != null) {
+                    String unified = locator.testerCalls().get(getter.getSimpleName());
+                    return unified == null ? null : new Read(getter.getSelect(), locator, unified);
+                }
                 Browserless.Wrapper wrapper = wrapperOf(getter.getSelect());
                 String unified = wrapper == null ? null : wrapper.getters().get(getter.getSimpleName());
                 return unified == null ? null : new Read(getter.getSelect(), wrapper, unified);

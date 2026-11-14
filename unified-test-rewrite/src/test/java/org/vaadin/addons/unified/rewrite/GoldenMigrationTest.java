@@ -102,6 +102,8 @@ class GoldenMigrationTest implements RewriteTest {
     }
 
     private static org.openrewrite.test.SourceSpecs view(String name, String route) {
+        // PeopleView's grid items, for the context-API test that names them
+        String body = name.equals("PeopleView") ? "\n    public record Person(String name, String email) {\n    }\n" : "";
         return java("""
                 package demo;
 
@@ -109,9 +111,8 @@ class GoldenMigrationTest implements RewriteTest {
                 import com.vaadin.flow.router.Route;
 
                 @Route("%s")
-                public class %s extends Component {
-                }
-                """.formatted(route, name));
+                public class %s extends Component {%s}
+                """.formatted(route, name, body));
     }
 
     @Test
@@ -127,6 +128,11 @@ class GoldenMigrationTest implements RewriteTest {
     @Test
     void aNarrowSpringContextStaysOnBrowserless() throws IOException {
         assertMigratesBrowserless("ProfileBrowserlessNarrowContextTest", "ProfileBrowserlessNarrowContextMigratedTest");
+    }
+
+    @Test
+    void aContextApiTestBecomesEditPersonBrowserlessMigratedTest() throws IOException {
+        assertMigratesBrowserless("EditPersonBrowserlessTest", "EditPersonBrowserlessMigratedTest");
     }
 
     @Test

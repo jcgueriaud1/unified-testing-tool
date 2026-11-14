@@ -568,6 +568,154 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void anExtensionTestBecomesAUnifiedUITestWithItsViewPackages() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessExtension;
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.flow.component.textfield.TextField;
+                import org.junit.jupiter.api.Test;
+                import org.junit.jupiter.api.extension.RegisterExtension;
+
+                class ProfileTest {
+                    @RegisterExtension
+                    BrowserlessExtension browserless = new BrowserlessExtension().withViewPackages(Div.class);
+
+                    @Test
+                    void types() {
+                        browserless.navigate(Div.class);
+                        browserless.findTextField().withLabel("Name").setValue("Alice");
+                        browserless.test(browserless.find(TextField.class).withLabel("Email").single()).setValue("a@b");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.browserless.ViewPackages;
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                @ViewPackages(classes = {Div.class})
+                class ProfileTest {
+
+                    @Test
+                    void types(UnifiedPage page) {
+                        page.navigate(Div.class);
+                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
+                        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("a@b");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aContextApiTestLosesItsWiringAndAssertsOnTheLocatorsLookup() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessApplicationContext;
+                import com.vaadin.browserless.BrowserlessUIContext;
+                import org.junit.jupiter.api.AfterEach;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest {
+                    BrowserlessUIContext window;
+
+                    @BeforeEach
+                    void open() {
+                        window = BrowserlessApplicationContext.create("com.example").newUser().newWindow();
+                    }
+
+                    @AfterEach
+                    void close() {
+                        window.getUser().close();
+                    }
+
+                    @Test
+                    void reads() {
+                        window.findButton().withText("Save").click();
+                        Assertions.assertEquals("Saved", window.findNotification().getText());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.browserless.ViewPackages;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedNotification;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedUITest
+                @ViewPackages(packages = {"com.example"})
+                class ProfileTest {
+
+                    @Test
+                    void reads(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aContextApiTestUsingItsApplicationIsMarkedAndLeftAsItIs() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessApplicationContext;
+                import com.vaadin.browserless.BrowserlessUIContext;
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+
+                class TwoUsersTest {
+                    BrowserlessApplicationContext app;
+                    BrowserlessUIContext window;
+
+                    @BeforeEach
+                    void open() {
+                        app = BrowserlessApplicationContext.create("com.example");
+                        window = app.newUser().newWindow();
+                    }
+
+                    @Test
+                    void seesTheOtherUser() {
+                        BrowserlessUIContext other = app.newUser().newWindow();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.browserless.BrowserlessApplicationContext;
+                import com.vaadin.browserless.BrowserlessUIContext;
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+
+                // TODO unified: not migrated: this test uses the Browserless application or user context beyond opening a window; use page.openWindow() or page.openAsUser(..) instead, then run the migration again
+                class TwoUsersTest {
+                    BrowserlessApplicationContext app;
+                    BrowserlessUIContext window;
+
+                    @BeforeEach
+                    void open() {
+                        app = BrowserlessApplicationContext.create("com.example");
+                        window = app.newUser().newWindow();
+                    }
+
+                    @Test
+                    void seesTheOtherUser() {
+                        BrowserlessUIContext other = app.newUser().newWindow();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aClassThatIsNotABrowserlessTestIsLeftAlone() {
         rewriteRun(java(
                 """

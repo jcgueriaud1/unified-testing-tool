@@ -99,6 +99,24 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 
 A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox and Dialog; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
 
+### Context API and extension tests
+
+Tests written against Browserless Test's context API (a `BrowserlessUIContext` window from `BrowserlessApplicationContext`, often built in a `@TestConfiguration`) or with `@RegisterExtension BrowserlessExtension` convert the same way. Their wiring goes: the context and extension fields, the `@TestConfiguration` that builds the application, and the `@BeforeEach`/`@AfterEach` methods that only open and close the window. Calls on the window or extension convert like the base-class calls above, and its locators become lookups: `window.findTextField().withLabel("Name").setValue("x")` becomes `page.find(UnifiedTextField.class).withLabel("Name").single().setValue("x")`. Views the wiring named (`create(View.class)`, `withViewPackages(..)`) become `@ViewPackages` on a plain test. A test that uses the application or user context beyond opening its window (a second user, a second window) is left as it is, with a Migration Marker.
+
+The demo's `EditPersonBrowserlessTest` and what the recipe makes of it: its Grid locator has no Wrapper yet, so it stays on the window, which the test now gets from the Unified Page.
+
+=== "Before (context API)"
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/EditPersonBrowserlessTest.java:test"
+    ```
+
+=== "After (Unified API)"
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/EditPersonBrowserlessMigratedTest.java:test"
+    ```
+
 ### TestBench UI Unit tests
 
 Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.
@@ -121,7 +139,7 @@ void readsTheView(UnifiedPage page) {
 }
 ```
 
-`@RequiresTestingTool(BROWSERLESS)` skips such a test on the other Testing Tools. A fully converted test has no Capability and runs everywhere.
+In a context-API test, a call on the window that doesn't convert keeps the window, under its old name, from `page.unwrap(BrowserlessUIContext.class)`. `@RequiresTestingTool(BROWSERLESS)` skips such a test on the other Testing Tools. A fully converted test has no Capability and runs everywhere.
 
 | Migration Marker | What to do |
 |---|---|
@@ -134,6 +152,7 @@ void readsTheView(UnifiedPage page) {
 | `was fireShortcut(..); pressKey also reaches the focused component and an open dialog` | `fireShortcut` fired the shortcut on the UI only; `pressKey` also reaches the focused component and an open dialog (Escape closes it). Check the test still means the same |
 | `Browserless-only pattern: @Transactional ...` | The test's transaction reaches the views only on Browserless ([test data](spec/02-test-setup.md)): keep it, or commit test data and clean up |
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |
+| `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |
 | `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: make the page object take a `UnifiedPage`, then run the migration again |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
